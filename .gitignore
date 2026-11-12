@@ -1,0 +1,10 @@
+/.godot/
+/.import/
+/.mono/
+/export_credentials.cfg
+/.env
+/.env.*
+!/.env.example
+Thumbs.db
+Desktop.ini
+.DS_Store
