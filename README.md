@@ -7,7 +7,7 @@ Projeto da equipe para o NASA Space Apps Challenge, em Godot 4. A equipe combina
 1. Aceite o convite do GitHub com sua conta pessoal.
 2. Clone o repositório com `git clone https://github.com/devGustavoReis/Apollo6.git`.
 3. Configure seu nome e e-mail de commit no clone. Use o endereço verificado ou o endereço privado fornecido pelo GitHub.
-4. Quando os arquivos do jogo estiverem publicados e chegar sua vez, sincronize e importe o `project.godot` no gerenciador do Godot 4. Combine com a equipe a mesma versão do motor.
+4. Quando chegar sua vez, sincronize e importe o `project.godot` da raiz do clone no gerenciador do Godot 4. Use o Godot 4.7.2, a versão usada para validar o projeto inicial.
 
 ## Começar e terminar
 
