@@ -36,6 +36,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | `scripts/minigames/trajectory_minigame.gd` | Minigame de correção de rota, aberto pelo painel NAVIGATION no dia 1 |
 | `scripts/player/zero_g_player.gd` | Thomas em microgravidade |
 | `scripts/landing/landing_game.gd` | Física e HUD do pouso |
+| `scripts/ui/landing_radar.gd` | Radar do pouso: alvo visto de cima e deslizamento do módulo |
 | `scripts/ui/*` | Menu, planejamento, HUD da cabine e relatório |
 
 Nenhum sistema guarda recurso próprio: tudo lê e escreve em `MissionState`.
@@ -99,7 +100,7 @@ reais, inclusive falha e repetição da separação e do pouso.
 
 ## Pendências conhecidas
 
-- Modelos dos equipamentos, módulo lunar definitivo e cenário lunar.
+- Modelos dos equipamentos, módulo lunar definitivo e crateras com relevo.
 - Vídeos `.ogv`, trilha musical, vozes e efeitos sonoros (os barramentos já existem).
 - Música de exploração e redução de volume durante as falas.
 - O renderizador ainda é Forward Plus. O documento de design sugere testar o Compatibility.

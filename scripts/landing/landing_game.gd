@@ -10,6 +10,7 @@ const MAX_TILT := 20.0
 const TILT_RATE := 35.0
 const THROTTLE_RATE := 0.45
 const AREA_LIMIT := 260.0
+const RADAR_SCRIPT := preload("res://scripts/ui/landing_radar.gd")
 
 @onready var world: SubViewport = $ViewportContainer/SubViewport
 
@@ -22,6 +23,11 @@ var limits := {}
 var lm: Node3D
 var flame: MeshInstance3D
 var camera: Camera3D
+var marker: MeshInstance3D
+var marker_mat: StandardMaterial3D
+var beacon: MeshInstance3D
+var dust: CPUParticles3D
+var radar: Control
 var _readouts := {}
 var _panel: PanelContainer
 var _panel_box: VBoxContainer
@@ -68,20 +74,23 @@ func _build_world() -> void:
 	world.add_child(sun)
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(700, 700)
+	plane.size = Vector2(3000, 3000)
 	ground.mesh = plane
 	var mat := StandardMaterial3D.new()
 	var noise := NoiseTexture2D.new()
-	noise.width = 64
-	noise.height = 64
+	noise.width = 256
+	noise.height = 256
 	noise.seamless = true
-	noise.noise = FastNoiseLite.new()
+	var ground_noise := FastNoiseLite.new()
+	ground_noise.frequency = 0.03
+	ground_noise.fractal_octaves = 4
+	noise.noise = ground_noise
 	noise.color_ramp = Gradient.new()
 	noise.color_ramp.set_color(0, Color(0.38, 0.37, 0.35))
 	noise.color_ramp.set_color(1, Color(0.62, 0.61, 0.58))
 	mat.albedo_texture = noise
 	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	mat.uv1_scale = Vector3(60, 60, 1)
+	mat.uv1_scale = Vector3(50, 50, 1)
 	mat.roughness = 1.0
 	ground.material_override = mat
 	world.add_child(ground)
@@ -127,6 +136,40 @@ func _build_world() -> void:
 	pad_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	pad.material_override = pad_mat
 	world.add_child(pad)
+	var pad_marks := Node3D.new()
+	world.add_child(pad_marks)
+	for angle in [0.0, 90.0, 180.0, 270.0]:
+		var mark_dir := Vector3(cos(deg_to_rad(angle)), 0, sin(deg_to_rad(angle)))
+		_box(Vector3(1.4, 0.04, 1.4), Color(0.95, 0.95, 0.9), mark_dir * 8.0 + Vector3(0, 0.02, 0), pad_marks)
+	beacon = MeshInstance3D.new()
+	var beam := CylinderMesh.new()
+	beam.top_radius = 0.25
+	beam.bottom_radius = 0.25
+	beam.height = 60.0
+	beam.radial_segments = 6
+	beacon.mesh = beam
+	var beam_mat := _flat(Color(1.0, 0.7, 0.25, 0.4))
+	beam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	beam_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	beacon.material_override = beam_mat
+	beacon.position = Vector3(0, 30, 0)
+	world.add_child(beacon)
+	var stars := MultiMeshInstance3D.new()
+	var star_mm := MultiMesh.new()
+	star_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var star_mesh := BoxMesh.new()
+	star_mesh.size = Vector3(4, 4, 4)
+	var star_mat := _flat(Color(1, 0.97, 0.9))
+	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	star_mesh.material = star_mat
+	star_mm.mesh = star_mesh
+	star_mm.instance_count = 300
+	for i in star_mm.instance_count:
+		var star_dir := Vector3(rng.randf_range(-1, 1), rng.randf_range(0.03, 1), rng.randf_range(-1, 1)).normalized()
+		var star_size := rng.randf_range(0.8, 1.6)
+		star_mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ONE * star_size), star_dir * 1100.0))
+	stars.multimesh = star_mm
+	world.add_child(stars)
 	var earth := MeshInstance3D.new()
 	var earth_mesh := SphereMesh.new()
 	earth_mesh.radius = 12
@@ -134,17 +177,68 @@ func _build_world() -> void:
 	earth_mesh.radial_segments = 12
 	earth_mesh.rings = 6
 	earth.mesh = earth_mesh
-	var earth_mat := _flat(Color(0.25, 0.45, 0.85))
+	var earth_mat := _flat(Color.WHITE)
+	earth_mat.albedo_texture = _earth_texture()
+	earth_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	earth_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	earth.material_override = earth_mat
 	earth.position = Vector3(-120, 160, -400)
 	world.add_child(earth)
 	_build_lm()
+	marker = MeshInstance3D.new()
+	var marker_ring := TorusMesh.new()
+	marker_ring.inner_radius = 2.7
+	marker_ring.outer_radius = 3.0
+	marker_ring.rings = 16
+	marker_ring.ring_segments = 3
+	marker.mesh = marker_ring
+	marker.scale = Vector3(1, 0.05, 1)
+	marker_mat = _flat(Game.GOOD)
+	marker_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	marker.material_override = marker_mat
+	world.add_child(marker)
+	dust = CPUParticles3D.new()
+	dust.emitting = false
+	dust.amount = 40
+	dust.lifetime = 1.2
+	dust.direction = Vector3(1, 0, 0)
+	dust.spread = 180.0
+	dust.flatness = 1.0
+	dust.gravity = Vector3(0, -MOON_G, 0)
+	dust.initial_velocity_min = 5.0
+	dust.initial_velocity_max = 11.0
+	var grain := BoxMesh.new()
+	grain.size = Vector3(0.35, 0.35, 0.35)
+	var grain_mat := _flat(Color(0.75, 0.74, 0.7, 0.6))
+	grain_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	grain_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	grain.material = grain_mat
+	dust.mesh = grain
+	world.add_child(dust)
 	camera = Camera3D.new()
 	camera.fov = 70
-	camera.far = 1500
+	camera.near = 0.5
+	camera.far = 3000
 	world.add_child(camera)
 	camera.make_current()
+
+
+func _earth_texture() -> ImageTexture:
+	var image := Image.create(64, 32, false, Image.FORMAT_RGB8)
+	var land := FastNoiseLite.new()
+	land.seed = 6
+	land.frequency = 0.05
+	for y in 32:
+		for x in 64:
+			var around := x / 64.0 * TAU
+			var point := Vector3(cos(around) * 14.0, sin(around) * 14.0, y * 1.4)
+			var color := Color(0.16, 0.36, 0.78)
+			if land.get_noise_3dv(point) > 0.1:
+				color = Color(0.3, 0.55, 0.3)
+			if y < 3 or y > 28 or land.get_noise_3dv(point * 2.3 + Vector3(50, 0, 0)) > 0.35:
+				color = Color(0.92, 0.94, 0.96)
+			image.set_pixel(x, y, color)
+	return ImageTexture.create_from_image(image)
 
 
 func _flat(color: Color) -> StandardMaterial3D:
@@ -231,12 +325,18 @@ func _build_hud() -> void:
 		_readouts[key] = label
 	var limits_label := Game.make_label("Limites para tocar o solo:\nV.vert ≤ %.1f · V.horiz ≤ %.1f m/s · Incl. ≤ %.0f°" % [limits["land_vy"], limits["land_vh"], limits["land_tilt"]], 14, Color(0.7, 0.7, 0.65))
 	box.add_child(limits_label)
-	var keys := Game.make_label("W/S potência · A/D inclinar lados · ↑/↓ inclinar frente/trás · soltar = nivelar", 15, Color(0.8, 0.8, 0.72))
-	keys.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	keys.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	keys.size = Vector2(900, 24)
-	keys.position = Vector2(-450, 64)
-	layer.add_child(keys)
+	box.add_child(Game.make_label("W/S potência · A/D e ↑/↓ inclinam\nsoltar as teclas = nivelar", 14, Color(0.8, 0.8, 0.72)))
+	var radar_panel := PanelContainer.new()
+	radar_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	radar_panel.position = Vector2(-206, 16)
+	layer.add_child(radar_panel)
+	var radar_box := VBoxContainer.new()
+	radar_panel.add_child(radar_box)
+	radar_box.add_child(Game.make_label("ALVO · VISTA DE CIMA", 14, Game.AMBER))
+	radar = Control.new()
+	radar.set_script(RADAR_SCRIPT)
+	radar_box.add_child(radar)
+	radar_box.add_child(Game.make_label("ponto = alvo\nlinha = deslizamento", 13, Color(0.7, 0.7, 0.65)))
 	_message = Game.make_label("", 22, Game.AMBER)
 	_message.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -359,6 +459,11 @@ func _apply_visuals() -> void:
 	var target_cam := pos + Vector3(0, 6.0, 15.0)
 	camera.position = camera.position.lerp(target_cam, 0.15) if camera.position != Vector3.ZERO else target_cam
 	camera.look_at(pos + Vector3(0, 2.0, 0), Vector3.UP)
+	marker.position = Vector3(pos.x, 0.08, pos.z)
+	marker_mat.albedo_color = Game.level_color(horizontal_speed() / limits["land_vh"])
+	beacon.visible = pos.y > 12.0
+	dust.position = Vector3(pos.x, 0.3, pos.z)
+	dust.emitting = flame.visible and pos.y < 15.0
 	_update_readouts()
 
 
@@ -373,6 +478,10 @@ func _update_readouts() -> void:
 	var fuel_ratio := MissionState.lm_fuel / MissionState.lm_fuel_max
 	_set_readout("fuel", "PROPELENTE    %6.0f s" % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
 	_set_readout("dist", "DIST. DO ALVO %6.0f m" % Vector2(pos.x, pos.z).length(), 0.0)
+	radar.alvo = Vector2(-pos.x, -pos.z)
+	radar.velocidade = Vector2(vel.x, vel.z)
+	radar.cor_velocidade = Game.level_color(horizontal_speed() / limits["land_vh"])
+	radar.queue_redraw()
 	if state == "flying":
 		if MissionState.lm_fuel <= 0.0:
 			_message.text = "SEM PROPELENTE!"
