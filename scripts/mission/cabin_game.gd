@@ -76,6 +76,7 @@ func _ready() -> void:
 		cabin.remove_child(preview)
 		preview.queue_free()
 	_build_interaction_zones()
+	_build_hatch_barrier()
 	_build_backdrop()
 	MissionState.changed.connect(_update_supplies)
 	_update_supplies()
@@ -110,7 +111,26 @@ func _build_interaction_zones() -> void:
 	cabin.add_child(hatch)
 	var anchor: Node3D = cabin.get_node("CabinStructure/HatchOpening/DockingAnchor")
 	hatch.global_position = anchor.global_position - Vector3(0, 0.75, 0)
-	_add_zone(hatch, "hatch", "LUNAR MODULE HATCH", Vector3(0.8, 0.4, 0.9))
+	# A zona vai até o teto (Y=2,60): encostado na escotilha, o olho fica dentro dela.
+	_add_zone(hatch, "hatch", "LUNAR MODULE HATCH", Vector3(0.8, 2.6 - hatch.global_position.y, 0.9))
+
+
+## O vão da escotilha fica aberto na cena para o acoplamento futuro. Em microgravidade,
+## o jogador subiria por ele e sairia da nave: este tampão invisível na base do colar
+## bloqueia só o jogador (camada BARRIER_LAYER), sem afetar raios de interação.
+func _build_hatch_barrier() -> void:
+	var barrier := StaticBody3D.new()
+	barrier.name = "HatchBarrier"
+	barrier.collision_layer = PLAYER_SCRIPT.BARRIER_LAYER
+	barrier.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(1.1, 0.1, 1.2)
+	shape.shape = box
+	barrier.add_child(shape)
+	var anchor: Node3D = cabin.get_node("CabinStructure/HatchOpening/DockingAnchor")
+	cabin.get_node("CabinStructure/HatchOpening").add_child(barrier)
+	barrier.global_position = Vector3(anchor.global_position.x, 2.65, anchor.global_position.z)
 
 
 func _add_zone(marker: Node3D, id: String, text: String, size: Vector3) -> void:
@@ -388,9 +408,18 @@ func _physics_process(_delta: float) -> void:
 		var query := PhysicsRayQueryParameters3D.create(from, from - cam.global_basis.z * REACH)
 		query.collision_mask = 1 | INTERACT_LAYER
 		query.exclude = [player.get_rid()]
-		var hit := cabin.get_world_3d().direct_space_state.intersect_ray(query)
+		var space := cabin.get_world_3d().direct_space_state
+		var hit := space.intersect_ray(query)
 		if not hit.is_empty():
 			new_target = _resolve_id(hit["collider"])
+		else:
+			# Olhando para o vazio com a cabeça dentro de uma zona (ex.: encostado na
+			# escotilha, olhando para o vão aberto), a estação dessa zona continua alvo.
+			var point := PhysicsPointQueryParameters3D.new()
+			point.position = from
+			point.collision_mask = INTERACT_LAYER
+			for inside in space.intersect_point(point, 1):
+				new_target = _resolve_id(inside["collider"])
 	if new_target != target_id:
 		if _labels.has(target_id):
 			_labels[target_id].modulate.a = 0.75 if not target_id in ["food", "water"] else 1.0

@@ -17,6 +17,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 
 | Etapa | Controles |
 | --- | --- |
+| Menu | Setas ou mouse escolhem · ENTER confirma · ←/→ mudam a dificuldade · ESC fecha o painel |
 | Cabine | Mouse olha · ESPAÇO solta o cinto/sobe · CTRL desce · WASD move · E interage · TAB checklist · ENTER pula fala/dica · ESC pausa |
 | Comida e água | E em FOOD ou WATER pega o item do suporte · E de novo come ou bebe |
 | Correção de rota | Clique na nave e arraste pela linha tracejada até a Lua · setas também movem · ESC pausa |
@@ -38,11 +39,30 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | `scripts/player/zero_g_player.gd` | Thomas em microgravidade |
 | `scripts/landing/landing_game.gd` | Física e HUD do pouso |
 | `scripts/ui/landing_radar.gd` | Radar do pouso: alvo visto de cima e deslizamento do módulo |
-| `scripts/ui/*` | Menu, planejamento, HUD da cabine e relatório |
+| `scripts/ui/main_menu.gd` | Menu principal: itens, dificuldade, painéis, tema de pixels e filtro de TV |
+| `scripts/ui/menu_backdrop.gd` | Cenário 3D do menu: módulo lunar, solo, pedras, bandeira e Terra |
+| `scripts/ui/menu_logo.gd` | Logotipo APOLLO6 desenhado por polígonos |
+| `scripts/ui/pixel_font.gd` | Fonte de pixels 5×7 montada em tempo de execução |
+| `assets/shaders/menu/*` | Shaders do menu: solo, Terra, bandeira, manta dourada, estrelas, paleta e TV |
+| `scripts/ui/*` | Planejamento, HUD da cabine e relatório |
 
 Nenhum sistema guarda recurso próprio: tudo lê e escreve em `MissionState`.
 Os checkpoints copiam os campos de `MissionState.SAVED_FIELDS`. Contadores de tentativas
 ficam fora, para o relatório registrar quantas vezes cada etapa foi repetida.
+
+## Menu principal
+
+O menu não usa imagens prontas: o cenário é a cena 3D de `menu_backdrop.gd` (com o
+`lunar_module.glb` do pouso), o logotipo e a fonte são desenhados por código e a Terra,
+o solo e a bandeira saem de shaders. Para ajustar:
+
+- Enquadramento: `CAMERA_POS`, `CAMERA_PITCH`, `LM_YAW` e a lista `ROCKS` em `menu_backdrop.gd`.
+  As posições usam frações da tela 16:9.
+- Textos e ordem dos itens: `_build_interface()` em `main_menu.gd`.
+- Letras novas na fonte: tabela `GLYPHS` em `pixel_font.gd`. Só há maiúsculas, e o que
+  faltar aparece na fonte do sistema.
+- Filtro de TV: parâmetros no topo de `assets/shaders/menu/crt.gdshader`. O jogador pode
+  desligá-lo em CONFIGURAÇÕES.
 
 O 3D da cabine e do pouso é renderizado em um `SubViewport` com metade da resolução
 (640×360) e filtro *nearest*, para o visual pixelado. A interface fica em resolução cheia.
@@ -104,9 +124,13 @@ Exemplo de conversão: `ffmpeg -i cena.mp4 -c:v libtheora -q:v 7 -c:a libvorbis 
 godot --headless --path . --script tests/cabin_layout_test.gd
 godot --headless --path . --script tests/flow_test.gd
 godot --headless --path . --script tests/scene_flow_test.gd
+godot --headless --path . --script tests/cabin_controls_test.gd
 ```
 
-`flow_test` verifica o planejamento, os 3 dias com cada evento, o raio de interação,
+`cabin_controls_test` cobre regressões de controle: o jogador em microgravidade não sai
+pela escotilha aberta e continua mirando nela encostado no teto, o Enter do teclado
+numérico funciona na cena de inspeção e um segundo ESPAÇO após o corte da TLI não aciona
+interruptores da separação. `flow_test` verifica o planejamento, os 3 dias com cada evento, o raio de interação,
 o minigame de correção de rota, os checkpoints e se um piloto automático simples
 consegue pousar em todas as dificuldades sem a reserva de propelente. `scene_flow_test` percorre as trocas de cena
 reais, inclusive falha e repetição da separação e do pouso.

@@ -6,7 +6,7 @@ A cena principal instancia `scenes/spacecraft_interior.tscn`. Abra essa cena par
 editar a arquitetura e instalar equipamentos. Todos os meshes e colisores estão
 salvos como nós editáveis. A geometria é independente do controlador de inspeção.
 
-A cena `scenes/main.tscn` (F6) abre a cabine com o controlador de inspeção e Thomas sentado. O jogo completo (F5) começa no menu e usa `scenes/spacecraft/cabin_game.tscn`. Enter alterna entre a câmera sentada e a posição de
+A cena `scenes/main.tscn` (F6) abre a cabine com o controlador de inspeção e Thomas sentado. O jogo completo (F5) começa no menu e usa `scenes/spacecraft/cabin_game.tscn`. Enter (principal ou do teclado numérico) alterna entre a câmera sentada e a posição de
 exploração. Clique captura o mouse, WASD move e Esc libera o cursor. A troca de
 posição é instantânea e serve para inspeção. O controlador é
 `scripts/cabin_preview.gd`, no nó `PreviewPlayer`. Ao integrar o jogador
@@ -117,7 +117,10 @@ o raccord com a cutscene. O encosto da cadeira central deve respeitar esse ponto
 correspondentes às peças visuais. Paredes e armações usam caixas. Piso e teto
 usam triângulos com colisão nas duas faces. Mantenha as transformações das
 peças visuais e dos colisores correspondentes ao modificar a arquitetura.
-O vão da escotilha está livre. As janelas usam peças de parede separadas
+O vão da escotilha está livre na cena. No jogo, `cabin_game.gd` cria o tampão
+invisível `HatchBarrier` na base do colar, na camada 8, que só o jogador em
+microgravidade enxerga: assim ele não sai da nave pelo vão, e os raios de
+interação e o volume reservado ao acoplamento continuam livres. As janelas usam peças de parede separadas
 ao redor do vidro, sem parede contínua atravessando os vãos.
 
 Adicione colisões dos equipamentos às próprias cenas dos modelos. Respeite
@@ -131,5 +134,6 @@ Execute `godot --headless --path . --script tests/cabin_layout_test.gd`.
 O teste verifica câmera inicial, abertura da escotilha, vidro frontal,
 suporte do piso, parada na parede traseira, folga da cápsula na passagem e
 interseção dos envelopes dos equipamentos com o casco.
+`tests/cabin_controls_test.gd` cobre os controles da cabine do jogo e da inspeção.
 Em execução gráfica, também salva uma imagem em `.godot/cabin_review.png`.
 Execute F5 para revisar o interior visualmente e experimentar os controles.

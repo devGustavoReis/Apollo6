@@ -10,6 +10,8 @@ const DAMPING := 2.6
 const EYE_OFFSET := Vector3(0, 0.35, 0)
 ## Ponto livre atrás das cadeiras, usado ao soltar o cinto (ver docs/cabin_layout.md).
 const FLOAT_START := Vector3(0, 1.0, 0.55)
+## Camada das barreiras que só o jogador enxerga, como o tampão do vão da escotilha.
+const BARRIER_LAYER := 8
 
 var camera: Camera3D
 var seated := true
@@ -24,7 +26,7 @@ var _shape: CollisionShape3D
 func setup(cabin: Node3D) -> void:
 	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
 	collision_layer = 4
-	collision_mask = 1
+	collision_mask = 1 | BARRIER_LAYER
 	_shape = CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = 0.24

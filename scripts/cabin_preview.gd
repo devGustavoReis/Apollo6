@@ -29,7 +29,7 @@ func _set_seated(value: bool) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_ENTER:
+		if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
 			_set_seated(not seated)
 		if event.keycode == KEY_ESCAPE:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

@@ -71,6 +71,9 @@ func _ready() -> void:
 		var button := Button.new()
 		button.text = "[%d] %s" % [key_index + 1, SWITCHES[switch_index][0]]
 		button.custom_minimum_size = Vector2(220, 60)
+		# Sem foco de teclado: ESPAÇO é a tecla do corte da TLI, e um segundo toque
+		# acionaria o interruptor focado. Os interruptores usam as teclas 1-3 ou o mouse.
+		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_on_switch.bind(switch_index))
 		_switch_row.add_child(button)
 		_switch_buttons.append(button)
@@ -187,7 +190,6 @@ func _start_sep() -> void:
 	_title.text = "PAINEL DE MANOBRA · SEPARAÇÃO DO CSM"
 	_body.text = "Siga o checklist. A ordem importa: os interruptores estão embaralhados no painel."
 	_switch_row.visible = true
-	_switch_buttons[0].grab_focus()
 	_update_checklist()
 
 
