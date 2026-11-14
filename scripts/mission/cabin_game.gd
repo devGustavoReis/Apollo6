@@ -69,6 +69,8 @@ func _ready() -> void:
 		preview.queue_free()
 	_build_interaction_zones()
 	_build_backdrop()
+	MissionState.changed.connect(_update_supplies)
+	_update_supplies()
 	player = CharacterBody3D.new()
 	player.set_script(PLAYER_SCRIPT)
 	cabin.add_child(player)
@@ -128,6 +130,8 @@ func _add_zone(marker: Node3D, id: String, text: String, size: Vector3) -> void:
 	label.fixed_size = false
 	label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	label.position = Vector3(0, size.y + 0.07, 0) if id != "hatch" else Vector3(0, -0.05, 0)
+	if id == "food":
+		label.position = Vector3(0, 0.56, 0)
 	marker.add_child(label)
 	_labels[id] = label
 
@@ -158,6 +162,21 @@ func _build_backdrop() -> void:
 	stars.multimesh = mm
 	backdrop.add_child(stars)
 	_update_backdrop()
+
+
+func _update_supplies() -> void:
+	_show_supplies("FoodStorage/FoodRack/Packs", MissionState.food_days)
+	_show_supplies("WaterStorage/WaterRack/Pouches", MissionState.water_days)
+
+
+func _show_supplies(path: String, days: float) -> void:
+	var group := cabin.get_node_or_null("EquipmentSlots/" + path)
+	if group == null:
+		return
+	var total := group.get_child_count()
+	var left := mini(ceili(days), total)
+	for i in total:
+		group.get_child(i).visible = i >= total - left
 
 
 func _sphere(color: Color, radius: float) -> MeshInstance3D:

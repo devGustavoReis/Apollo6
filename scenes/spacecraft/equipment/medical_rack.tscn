@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/equipment/equipment_bag.glb" id="1_bag"]
+
+[sub_resource type="StandardMaterial3D" id="mat_board"]
+albedo_color = Color(0.33, 0.36, 0.33, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="mesh_board"]
+size = Vector3(0.4, 0.52, 0.02)
+
+[sub_resource type="BoxMesh" id="mesh_shelf"]
+size = Vector3(0.36, 0.02, 0.24)
+
+[node name="MedicalRack" type="Node3D"]
+
+[node name="Board" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.26, 0.15)
+mesh = SubResource("mesh_board")
+surface_material_override/0 = SubResource("mat_board")
+
+[node name="Shelf" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0.03)
+mesh = SubResource("mesh_shelf")
+surface_material_override/0 = SubResource("mat_board")
+
+[node name="Bag" parent="." instance=ExtResource("1_bag")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.01, 0.02, 0.05)

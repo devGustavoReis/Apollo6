@@ -68,6 +68,11 @@ com o metadado `interact_id`. Então:
 3. Se a etiqueta flutuante atrapalhar, ajuste `_add_zone()` em `cabin_game.gd`.
 
 FOOD e WATER ficam em `FoodStorage` e `WaterStorage`.
+
+Já instalados: `scenes/spacecraft/equipment/food_rack.tscn` (8 pacotes de biscoito e bacon),
+`water_rack.tscn` (8 bolsas de água) e `medical_rack.tscn` (bolsa MEDICAL KIT), com os modelos
+de `assets/models/equipment/`. Os suportes não têm colisão. `cabin_game.gd` esconde um pacote
+e uma bolsa a cada dia consumido (`_update_supplies`), seguindo `food_days` e `water_days`.
 A escotilha do LM usa o marcador criado em `CabinStructure/HatchOpening/DockingAnchor`.
 
 ## Cutscenes
@@ -100,7 +105,7 @@ reais, inclusive falha e repetição da separação e do pouso.
 
 ## Pendências conhecidas
 
-- Modelos dos equipamentos, módulo lunar definitivo e crateras com relevo.
+- Modelos dos demais equipamentos (painéis, assentos, instrumentos), módulo lunar definitivo e crateras com relevo.
 - Vídeos `.ogv`, trilha musical, vozes e efeitos sonoros (os barramentos já existem).
 - Música de exploração e redução de volume durante as falas.
 - O renderizador ainda é Forward Plus. O documento de design sugere testar o Compatibility.

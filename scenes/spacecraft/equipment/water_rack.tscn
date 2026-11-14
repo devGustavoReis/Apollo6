@@ -1,0 +1,61 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/equipment/water_pouch.glb" id="1_pouch"]
+
+[sub_resource type="StandardMaterial3D" id="mat_board"]
+albedo_color = Color(0.33, 0.36, 0.33, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="mat_strap"]
+albedo_color = Color(0.8, 0.74, 0.6, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="mesh_board"]
+size = Vector3(0.53, 0.3, 0.02)
+
+[sub_resource type="BoxMesh" id="mesh_strap"]
+size = Vector3(0.53, 0.03, 0.01)
+
+[node name="WaterRack" type="Node3D"]
+
+[node name="Board" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0.2)
+mesh = SubResource("mesh_board")
+surface_material_override/0 = SubResource("mat_board")
+
+[node name="Strap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.075, 0.117)
+mesh = SubResource("mesh_strap")
+surface_material_override/0 = SubResource("mat_strap")
+
+[node name="Pouches" type="Node3D" parent="."]
+
+[node name="Pouch1" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.195, 0.04, 0.14)
+
+[node name="Pouch2" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.065, 0.04, 0.14)
+
+[node name="Pouch3" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.065, 0.04, 0.14)
+
+[node name="Pouch4" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.195, 0.04, 0.14)
+
+[node name="Pouch5" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.195, 0.085, 0.172)
+
+[node name="Pouch6" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -0.065, 0.085, 0.172)
+
+[node name="Pouch7" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.065, 0.085, 0.172)
+
+[node name="Pouch8" parent="Pouches" instance=ExtResource("1_pouch")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.195, 0.085, 0.172)
+
+[node name="Highlight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -0.3)
+light_color = Color(1, 0.82, 0.55, 1)
+light_energy = 0.5
+omni_range = 0.9

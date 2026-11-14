@@ -1,6 +1,9 @@
 [gd_scene format=4]
 
 [ext_resource type="Script" path="res://scripts/cabin_preview.gd" id="1_5ib6t"]
+[ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/food_rack.tscn" id="2_food"]
+[ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/water_rack.tscn" id="3_water"]
+[ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/medical_rack.tscn" id="4_medical"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8v58"]
 cull_mode = 2
@@ -1428,12 +1431,16 @@ metadata/max_size_m = Vector3(0.55, 0.65, 0.38)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
 
+[node name="FoodRack" parent="EquipmentSlots/FoodStorage" instance=ExtResource("2_food")]
+
 [node name="WaterStorage" type="Marker3D" parent="EquipmentSlots" unique_id=2012777871]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.72, 0.85, 0.35)
 gizmo_extents = 0.18
 metadata/max_size_m = Vector3(0.55, 0.65, 0.38)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
+
+[node name="WaterRack" parent="EquipmentSlots/WaterStorage" instance=ExtResource("3_water")]
 
 [node name="GeneralStorage" type="Marker3D" parent="EquipmentSlots" unique_id=2039371158]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.65, 0.15, 1)
@@ -1469,6 +1476,8 @@ gizmo_extents = 0.18
 metadata/max_size_m = Vector3(0.45, 0.55, 0.32)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
+
+[node name="MedicalRack" parent="EquipmentSlots/MedicalStorage" instance=ExtResource("4_medical")]
 
 [node name="Checklist" type="Marker3D" parent="EquipmentSlots" unique_id=1274647994]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 1.73)

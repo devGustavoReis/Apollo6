@@ -116,6 +116,20 @@ func run() -> void:
 		await physics_frame
 		await physics_frame
 		check(cabin.target_id == "food", "Raio de interação encontra FOOD (achou '%s')" % cabin.target_id)
+		var packs: Node = cabin.cabin.get_node_or_null("EquipmentSlots/FoodStorage/FoodRack/Packs")
+		var pouches: Node = cabin.cabin.get_node_or_null("EquipmentSlots/WaterStorage/WaterRack/Pouches")
+		check(packs != null and pouches != null and cabin.cabin.get_node_or_null("EquipmentSlots/MedicalStorage/MedicalRack/Bag") != null, "Modelos de comida, água e kit médico nos slots")
+		if packs != null and pouches != null:
+			var shown := 0
+			for pack in packs.get_children():
+				if pack.visible:
+					shown += 1
+			check(packs.get_child_count() == 8 and shown == mini(ceili(ms().food_days), 8), "Pacotes de comida visíveis acompanham a reserva (%d visíveis, %.1f dias)" % [shown, ms().food_days])
+			shown = 0
+			for pouch in pouches.get_children():
+				if pouch.visible:
+					shown += 1
+			check(shown == mini(ceili(ms().water_days), 8), "Bolsas de água visíveis acompanham a reserva (%d visíveis, %.1f dias)" % [shown, ms().water_days])
 		cabin.queue_free()
 		await process_frame
 
