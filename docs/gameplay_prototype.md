@@ -77,7 +77,9 @@ e uma bolsa a cada dia consumido (`_update_supplies`), seguindo `food_days` e `w
 
 Também instalados: `main_console.tscn` em `MainConsole` (modelo `assets/models/cabin/main_console.glb`
 com colisão do painel e do gabinete inferior) e `assets/models/cabin/crew_seat.glb` nos três assentos
-(sem colisão). O pouso usa `assets/models/landing/lunar_module.glb`. Se o arquivo faltar,
+(sem colisão). `nav_panel`, `radio_panel`, `life_support` e `power_panel` estão nos seus slots e
+`lm_hatch` fecha a abertura do teto, todos sem colisão. O painel POWER é baixo para não tapar a
+janela direita. O pouso usa `assets/models/landing/lunar_module.glb`. Se o arquivo faltar,
 `landing_game.gd` monta o módulo provisório de caixas.
 A escotilha do LM usa o marcador criado em `CabinStructure/HatchOpening/DockingAnchor`.
 
@@ -111,7 +113,7 @@ reais, inclusive falha e repetição da separação e do pouso.
 
 ## Pendências conhecidas
 
-- Modelos dos demais equipamentos (painéis laterais, escotilha, instrumentos) e crateras com relevo.
+- Modelos de TOOLS, STORAGE, CHECKLIST e REST, instrumentos científicos e crateras com relevo.
 - Vídeos `.ogv`, trilha musical, vozes e efeitos sonoros (os barramentos já existem).
 - Música de exploração e redução de volume durante as falas.
 - O renderizador ainda é Forward Plus. O documento de design sugere testar o Compatibility.

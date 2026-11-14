@@ -6,6 +6,11 @@
 [ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/medical_rack.tscn" id="4_medical"]
 [ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/main_console.tscn" id="5_console"]
 [ext_resource type="PackedScene" path="res://assets/models/cabin/crew_seat.glb" id="6_seat"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/nav_panel.glb" id="7_nav"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/radio_panel.glb" id="8_radio"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/life_support.glb" id="9_life"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/power_panel.glb" id="10_power"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/lm_hatch.glb" id="11_hatch"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8v58"]
 cull_mode = 2
@@ -898,6 +903,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.65, 1.13)
 material_override = SubResource("StandardMaterial3D_qyflv")
 mesh = SubResource("BoxMesh_ktgta")
 
+[node name="HatchDoor" parent="CabinStructure/HatchOpening" instance=ExtResource("11_hatch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0.6)
+
 [node name="DockingAnchor" type="Node3D" parent="CabinStructure/HatchOpening" unique_id=787069094]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.78, 0.6)
 
@@ -1427,12 +1435,16 @@ metadata/max_size_m = Vector3(0.55, 0.32, 0.15)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
 
+[node name="Model" parent="EquipmentSlots/NavigationPanel" instance=ExtResource("7_nav")]
+
 [node name="RadioPanel" type="Marker3D" parent="EquipmentSlots" unique_id=1962156089]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0.97, 1.7, -1.48)
 gizmo_extents = 0.18
 metadata/max_size_m = Vector3(0.55, 0.32, 0.15)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
+
+[node name="Model" parent="EquipmentSlots/RadioPanel" instance=ExtResource("8_radio")]
 
 [node name="FoodStorage" type="Marker3D" parent="EquipmentSlots" unique_id=1227018086]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.72, 0.15, 0.35)
@@ -1466,12 +1478,16 @@ metadata/max_size_m = Vector3(0.55, 0.65, 0.38)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
 
+[node name="Model" parent="EquipmentSlots/LifeSupport" instance=ExtResource("9_life")]
+
 [node name="PowerPanel" type="Marker3D" parent="EquipmentSlots" unique_id=1389225715]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 1.72, 0.85, 0.35)
 gizmo_extents = 0.18
 metadata/max_size_m = Vector3(0.55, 0.65, 0.38)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
+
+[node name="Model" parent="EquipmentSlots/PowerPanel" instance=ExtResource("10_power")]
 
 [node name="ToolsStorage" type="Marker3D" parent="EquipmentSlots" unique_id=960261170]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 1.65, 0.15, 1)
