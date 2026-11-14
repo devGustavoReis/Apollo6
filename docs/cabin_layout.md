@@ -6,7 +6,7 @@ A cena principal instancia `scenes/spacecraft_interior.tscn`. Abra essa cena par
 editar a arquitetura e instalar equipamentos. Todos os meshes e colisores estão
 salvos como nós editáveis. A geometria é independente do controlador de inspeção.
 
-F5 inicia Thomas sentado. Enter alterna entre a câmera sentada e a posição de
+A cena `scenes/main.tscn` (F6) abre a cabine com o controlador de inspeção e Thomas sentado. O jogo completo (F5) começa no menu e usa `scenes/spacecraft/cabin_game.tscn`. Enter alterna entre a câmera sentada e a posição de
 exploração. Clique captura o mouse, WASD move e Esc libera o cursor. A troca de
 posição é instantânea e serve para inspeção. O controlador é
 `scripts/cabin_preview.gd`, no nó `PreviewPlayer`. Ao integrar o jogador

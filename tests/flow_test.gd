@@ -1,0 +1,171 @@
+extends SceneTree
+## Teste automático do protótipo: carrega todas as cenas, percorre a missão,
+## verifica checkpoints e confirma que o pouso é possível em todas as dificuldades
+## sem a reserva de propelente.
+## Uso: godot --headless --path . --script tests/flow_test.gd
+
+var failures: Array[String] = []
+
+
+func check(value: bool, message: String) -> void:
+	if not value:
+		failures.append(message)
+		push_error("FALHA: " + message)
+
+
+func _initialize() -> void:
+	call_deferred("run")
+
+
+func ms() -> Node:
+	return root.get_node("MissionState")
+
+
+func run() -> void:
+	var game := root.get_node("Game")
+	await process_frame
+	# 1. Todas as cenas carregam e rodam alguns quadros.
+	game.cutscene_entries = []
+	for key in ["menu", "planning", "separation", "report"]:
+		ms().reset("normal")
+		var scene: Node = load(game.SCENES[key]).instantiate()
+		root.add_child(scene)
+		for i in 5:
+			await process_frame
+		check(is_instance_valid(scene), "Cena %s carregou" % key)
+		scene.queue_free()
+		await process_frame
+
+	var cut: GDScript = load("res://scripts/cutscenes/cutscene_player.gd")
+	check(cut != null and cut.can_instantiate(), "Script de cutscene compila")
+
+	# 2. Planejamento: plano padrão inválido (sem ciência), plano mínimo viável em todas as dificuldades.
+	for diff in ["easy", "normal", "hard"]:
+		ms().reset(diff)
+		check(not ms().validate_plan()["ok"], "%s: plano sem ciência deve ser bloqueado" % diff)
+		ms().set_qty("sample_kit", 1)
+		check(ms().validate_plan()["ok"], "%s: plano mínimo deve ser viável" % diff)
+		ms().set_qty("food_day", 7)
+		check(not ms().validate_plan()["ok"], "%s: comida insuficiente deve bloquear" % diff)
+		ms().set_qty("food_day", 8)
+		for id in ms().items:
+			ms().set_qty(id, 99)
+		check(not ms().validate_plan()["ok"], "%s: levar tudo deve estourar orçamento/massa" % diff)
+
+	# 3. Missão completa na cabine (normal), com cada evento aleatório.
+	for event_id in ["comm_dropout", "water_leak", "ptc"]:
+		ms().reset("normal")
+		ms().set_qty("sample_kit", 1)
+		ms().set_qty("seismometer", 1)
+		ms().apply_plan()
+		ms().random_event = event_id
+		ms().trajectory_error = 0.3
+		ms().day = 1
+		ms().stage = "cabin"
+		var cabin: Node = load(game.SCENES["cabin"]).instantiate()
+		root.add_child(cabin)
+		await physics_frame
+		await physics_frame
+		check(cabin.cabin.get_node_or_null("PreviewPlayer") == null, "PreviewPlayer removido")
+		check(cabin.player.seated, "Thomas começa sentado")
+		check(cabin.player.camera.global_position.is_equal_approx(Vector3(0, 1.12, -0.3)), "Câmera no SeatedEye")
+		cabin.player.unbuckle()
+		for i in 70:
+			await physics_frame
+		check(not cabin.player.seated, "Cinto solto")
+		var hud = cabin.hud
+		for day in [1, 2, 3]:
+			check(ms().day == day, "Dia %d" % day)
+			for task in cabin.day_tasks():
+				if task["id"] == "hatch":
+					continue
+				var guard := 0
+				while not (cabin._done(task["id"]) or ms().day > day) and guard < 4:
+					cabin.interact(task["id"])
+					while hud.modal_open():
+						hud._on_modal_button(0)
+					guard += 1
+				check(cabin._done(task["id"]) or ms().day > day, "Dia %d: tarefa %s concluída" % [day, task["id"]])
+		check(ms().day == 3, "Chegou ao dia 3 (%s)" % event_id)
+		check(ms().food_eaten == 3 and ms().water_drunk == 3, "Comeu e bebeu 3 vezes")
+		check(ms().decisions.size() >= 3, "Registrou decisões (%d)" % ms().decisions.size())
+		check(ms().sps_fuel > 0.0, "Propelente do CSM positivo")
+		var all_correct := true
+		for d in ms().decisions:
+			all_correct = all_correct and d["correct"]
+		check(all_correct, "Opção 1 é a correta em todas as decisões (%s)" % event_id)
+		# Interação via raio: aponta a câmera para FOOD.
+		var food: Node3D = cabin.cabin.get_node("EquipmentSlots/FoodStorage")
+		cabin.player.global_position = Vector3(-0.9, 0.6, 0.35)
+		cabin.player.camera.look_at(food.global_position + Vector3(0, 0.3, 0))
+		await physics_frame
+		await physics_frame
+		check(cabin.target_id == "food", "Raio de interação encontra FOOD (achou '%s')" % cabin.target_id)
+		cabin.queue_free()
+		await process_frame
+
+	# 4. Checkpoint do pouso restaura combustível e estado.
+	ms().reset("normal")
+	ms().set_qty("sample_kit", 1)
+	ms().apply_plan()
+	ms().day = 3
+	ms().save_checkpoint("landing")
+	ms().lm_fuel = 1.0
+	ms().day = 99
+	ms().landing_attempts = 2
+	check(ms().restore_checkpoint("landing"), "Restaurou checkpoint")
+	check(ms().day == 3 and is_equal_approx(ms().lm_fuel, ms().lm_fuel_max), "Checkpoint restaurou dia e combustível")
+	check(ms().landing_attempts == 2, "Tentativas preservadas após restaurar")
+
+	# 5. Pouso possível com piloto automático simples, sem reserva de propelente.
+	for diff in ["easy", "normal", "hard"]:
+		ms().reset(diff)
+		ms().set_qty("sample_kit", 1)
+		ms().apply_plan()
+		ms().last_failure = {}
+		var landing: Node = load(game.SCENES["landing"]).instantiate()
+		root.add_child(landing)
+		await process_frame
+		landing.state = "flying"
+		landing.set_physics_process(false)
+		var dt := 1.0 / 60.0
+		var t := 0.0
+		while landing.state == "flying" and t < 300.0:
+			var hv := Vector2(landing.vel.x, landing.vel.z)
+			var tilt_in := Vector2(-hv.x, hv.y) * 0.8
+			var target_vy := -clampf(landing.pos.y * 0.15, 0.8, 9.0)
+			var hover: float = landing.MOON_G / landing.MAX_ACCEL
+			var wanted := clampf(hover + (target_vy - landing.vel.y) * 0.5, 0.0, 1.0)
+			var throttle_in := clampf((wanted - landing.throttle) * 10.0, -1.0, 1.0)
+			if landing.pos.y < 3.0:
+				tilt_in = Vector2.ZERO
+			landing.step(dt, throttle_in, tilt_in)
+			t += dt
+		check(landing.state == "landed", "%s: pouso possível com propelente base (estado %s, %s)" % [diff, landing.state, str(ms().last_failure.get("reasons", []))])
+		print("%s: pouso em %.0f s, sobrou %.0f s de propelente de %.0f" % [diff, t, ms().lm_fuel, ms().lm_fuel_max])
+		landing.queue_free()
+		await process_frame
+
+	# 6. Pouso desastroso é detectado como falha.
+	ms().reset("normal")
+	ms().apply_plan()
+	var crash: Node = load(game.SCENES["landing"]).instantiate()
+	root.add_child(crash)
+	await process_frame
+	crash.state = "flying"
+	crash.set_physics_process(false)
+	var guard := 0
+	while crash.state == "flying" and guard < 20000:
+		guard += 1
+		crash.step(1.0 / 60.0, -1.0, Vector2.ZERO)
+	check(crash.state == "crashed" and ms().last_failure.get("stage", "") == "landing", "Queda livre gera falha explicada")
+	crash.queue_free()
+
+	# 7. Relatório.
+	ms().landing_result = {"success": true, "vy": 1.0, "vh": 0.3, "tilt": 2.0, "fuel_left": 20.0, "distance": 12.0}
+	ms().landing_attempts = 1
+	var report: Dictionary = load("res://scripts/ui/report_screen.gd").evaluate()
+	check(report["score"] > 0.0 and report["tips"].size() > 0, "Relatório gera pontuação e dicas")
+
+	print("FLOW CHECKS: ", failures.size(), " failures")
+	quit(0 if failures.is_empty() else 1)

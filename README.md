@@ -2,6 +2,12 @@
 
 Projeto da equipe para o NASA Space Apps Challenge, em Godot 4. A equipe combina a ordem de trabalho e usa a branch `main`.
 
+## Jogar
+
+Abra o projeto no Godot 4.7.2 e pressione F5. O jogo começa no menu principal.
+Fluxo, controles, arquitetura, instalação de modelos e nomes dos vídeos: [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
+Fontes científicas e simplificações: [docs/nasa_sources.md](docs/nasa_sources.md).
+
 ## Primeiro acesso
 
 1. Aceite o convite do GitHub com sua conta pessoal.
