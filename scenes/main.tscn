@@ -1,3 +1,7 @@
 [gd_scene format=3 uid="uid://dyho465fsykyq"]
 
+[ext_resource type="PackedScene" path="res://scenes/spacecraft_interior.tscn" id="1_cabin"]
+
 [node name="Main" type="Node" unique_id=1996515219]
+
+[node name="SpacecraftInterior" parent="." instance=ExtResource("1_cabin")]
