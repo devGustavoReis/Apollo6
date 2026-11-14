@@ -84,6 +84,12 @@ func run() -> void:
 			await physics_frame
 		check(not cabin.player.seated, "Cinto solto")
 		var hud = cabin.hud
+		cabin.interact("food")
+		check(cabin.held == "food" and not cabin._done("food") and ms().food_eaten == 0, "Pegar a comida ainda não conclui a refeição")
+		cabin.interact("food")
+		while hud.modal_open():
+			hud._on_modal_button(0)
+		check(cabin.held == "" and cabin._done("food") and ms().food_eaten == 1, "Comer o item segurado conclui a refeição")
 		for day in [1, 2, 3]:
 			check(ms().day == day, "Dia %d" % day)
 			for task in cabin.day_tasks():

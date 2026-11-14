@@ -7,6 +7,11 @@ extends Node
 const PLAYER_SCRIPT := preload("res://scripts/player/zero_g_player.gd")
 const HUD_SCRIPT := preload("res://scripts/ui/cabin_hud.gd")
 const TRAJECTORY_SCENE := preload("res://scenes/minigames/trajectory_minigame.tscn")
+const HELD_MODELS := {
+	"food_odd": "res://assets/models/equipment/sugar_cookie_cubes.glb",
+	"food_even": "res://assets/models/equipment/bacon_bars.glb",
+	"water": "res://assets/models/equipment/water_pouch.glb",
+}
 const INTERACT_LAYER := 2
 const REACH := 2.3
 
@@ -42,6 +47,9 @@ var _labels := {}
 var _moon: MeshInstance3D
 var _earth: MeshInstance3D
 var _interacted := false
+var held := ""
+var _held_node: Node3D
+var _held_time := 0.0
 
 var TUTORIAL := [
 	["Mova o MOUSE para olhar ao redor.",
@@ -165,8 +173,45 @@ func _build_backdrop() -> void:
 
 
 func _update_supplies() -> void:
-	_show_supplies("FoodStorage/FoodRack/Packs", MissionState.food_days)
-	_show_supplies("WaterStorage/WaterRack/Pouches", MissionState.water_days)
+	_show_supplies("FoodStorage/FoodRack/Packs", MissionState.food_days - (1.0 if held == "food" else 0.0))
+	_show_supplies("WaterStorage/WaterRack/Pouches", MissionState.water_days - (1.0 if held == "water" else 0.0))
+
+
+func _hold(id: String) -> void:
+	held = id
+	var key := id
+	if id == "food":
+		key = "food_odd" if MissionState.day % 2 == 1 else "food_even"
+	if ResourceLoader.exists(HELD_MODELS[key]):
+		_held_node = load(HELD_MODELS[key]).instantiate()
+		player.camera.add_child(_held_node)
+		_held_node.position = Vector3(0.13, -0.09, -0.3)
+		_held_node.rotation = Vector3(0.1, -0.3, 0.05)
+	_held_time = 0.0
+	_update_supplies()
+
+
+func _consume() -> void:
+	var ms := MissionState
+	var id := held
+	held = ""
+	if _held_node != null:
+		_held_node.queue_free()
+		_held_node = null
+	if id == "food":
+		ms.eat()
+		_complete("food")
+		var ok := ms.food_days >= ms.days_still_needed()
+		_modal("FOOD · REFEIÇÃO", "A tripulação reidratou e comeu as rações do dia.\n\nReserva: [b]%.1f dias[/b] · Necessários até o fim da missão: [b]%d dias[/b]\n%s" % [
+			ms.food_days, ms.days_still_needed(),
+			"[color=#77ee77]Suprimento suficiente.[/color]" if ok else "[color=#ff8866]Atenção: a comida não cobre o resto da missão. Será preciso racionar.[/color]"])
+	else:
+		ms.drink()
+		_complete("water")
+		var enough := ms.water_days >= ms.days_still_needed()
+		_modal("WATER · ÁGUA", "Água consumida para beber e reidratar alimentos.\n\nReserva: [b]%.1f dias[/b] · Necessários até o fim: [b]%d dias[/b]\n%s" % [
+			ms.water_days, ms.days_still_needed(),
+			"[color=#77ee77]Suprimento suficiente.[/color]" if enough else "[color=#ff8866]A água não cobre o resto da missão. A tripulação terá de racionar.[/color]"])
 
 
 func _show_supplies(path: String, days: float) -> void:
@@ -326,8 +371,11 @@ func _start_day_briefing() -> void:
 
 # ---------- Interação ----------
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_check_tutorial()
+	if _held_node != null:
+		_held_time += delta
+		_held_node.position.y = -0.09 + sin(_held_time * 2.0) * 0.006
 
 
 func _physics_process(_delta: float) -> void:
@@ -353,6 +401,8 @@ func _physics_process(_delta: float) -> void:
 			_labels[target_id].outline_modulate = Color(0.5, 0.3, 0.0)
 	if player.seated:
 		hud.set_prompt("[ESPAÇO] Soltar o cinto")
+	elif held != "":
+		hud.set_prompt("[E] Comer a refeição" if held == "food" else "[E] Beber a água")
 	elif target_id != "":
 		hud.set_prompt("[E] " + LABELS[target_id])
 	else:
@@ -382,7 +432,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_checklist(day_tasks())
 	elif event.is_action_pressed("advance") and tutorial_step >= 0 and not Houston.is_busy():
 		_set_tutorial(tutorial_step + 1)
-	elif event.is_action_pressed("interact") and target_id != "":
+	elif event.is_action_pressed("interact") and (target_id != "" or held != ""):
 		interact(target_id)
 
 
@@ -431,17 +481,15 @@ func _decision_result(id: String, task_id: String, d: Dictionary, choice: int, e
 func interact(id: String) -> void:
 	var ms := MissionState
 	_interacted = true
+	if held != "":
+		_consume()
+		return
 	match id:
 		"food":
 			if _done("food"):
 				_modal("FOOD", "A refeição de hoje já foi feita.\nReserva: [b]%.1f dias[/b]. Necessários depois de hoje: [b]%d[/b]." % [ms.food_days, ms.days_still_needed()])
 				return
-			ms.eat()
-			_complete("food")
-			var ok := ms.food_days >= ms.days_still_needed()
-			_modal("FOOD · REFEIÇÃO", "A tripulação reidratou e comeu as rações do dia.\n\nReserva: [b]%.1f dias[/b] · Necessários até o fim da missão: [b]%d dias[/b]\n%s" % [
-				ms.food_days, ms.days_still_needed(),
-				"[color=#77ee77]Suprimento suficiente.[/color]" if ok else "[color=#ff8866]Atenção: a comida não cobre o resto da missão. Será preciso racionar.[/color]"])
+			_hold("food")
 		"water":
 			if ms.day == 2 and ms.random_event == "water_leak" and not ms.tasks_done.has("2:leak"):
 				_decision("water_leak", "leak")
@@ -449,12 +497,7 @@ func interact(id: String) -> void:
 			if _done("water"):
 				_modal("WATER", "A água de hoje já foi consumida.\nReserva: [b]%.1f dias[/b]. Necessários depois de hoje: [b]%d[/b]." % [ms.water_days, ms.days_still_needed()])
 				return
-			ms.drink()
-			_complete("water")
-			var enough := ms.water_days >= ms.days_still_needed()
-			_modal("WATER · ÁGUA", "Água consumida para beber e reidratar alimentos.\n\nReserva: [b]%.1f dias[/b] · Necessários até o fim: [b]%d dias[/b]\n%s" % [
-				ms.water_days, ms.days_still_needed(),
-				"[color=#77ee77]Suprimento suficiente.[/color]" if enough else "[color=#ff8866]A água não cobre o resto da missão. A tripulação terá de racionar.[/color]"])
+			_hold("water")
 		"lifesupport":
 			var info := "Oxigênio da cabine: [b]%.0f%%[/b] do nominal\nPressão da cabine: cerca de 5 psi de oxigênio puro, como no módulo de comando Apollo\nRemoção de CO₂: cartuchos de hidróxido de lítio (LiOH)" % ms.life_support
 			if _has_task("lifesupport") and not _done("lifesupport"):

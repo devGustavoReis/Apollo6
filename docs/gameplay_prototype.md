@@ -18,6 +18,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | Etapa | Controles |
 | --- | --- |
 | Cabine | Mouse olha · ESPAÇO solta o cinto/sobe · CTRL desce · WASD move · E interage · TAB checklist · ENTER pula fala/dica · ESC pausa |
+| Comida e água | E em FOOD ou WATER pega o item do suporte · E de novo come ou bebe |
 | Correção de rota | Clique na nave e arraste pela linha tracejada até a Lua · setas também movem · ESC pausa |
 | Separação | ESPAÇO desliga o motor · 1, 2, 3 ou clique nos interruptores |
 | Pouso | W/S potência · A/D e setas inclinam · sem teclas o módulo se nivela |
