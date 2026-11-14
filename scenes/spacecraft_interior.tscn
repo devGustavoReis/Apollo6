@@ -4,6 +4,8 @@
 [ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/food_rack.tscn" id="2_food"]
 [ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/water_rack.tscn" id="3_water"]
 [ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/medical_rack.tscn" id="4_medical"]
+[ext_resource type="PackedScene" path="res://scenes/spacecraft/equipment/main_console.tscn" id="5_console"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/crew_seat.glb" id="6_seat"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8v58"]
 cull_mode = 2
@@ -1389,12 +1391,16 @@ metadata/max_size_m = Vector3(0.66, 1.05, 1)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
 
+[node name="Seat" parent="EquipmentSlots/SeatLeft" instance=ExtResource("6_seat")]
+
 [node name="SeatCenter" type="Marker3D" parent="EquipmentSlots" unique_id=1030263032]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.45)
 gizmo_extents = 0.18
 metadata/max_size_m = Vector3(0.66, 1.05, 1)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
+
+[node name="Seat" parent="EquipmentSlots/SeatCenter" instance=ExtResource("6_seat")]
 
 [node name="SeatRight" type="Marker3D" parent="EquipmentSlots" unique_id=468614091]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.85, 0, -0.45)
@@ -1403,12 +1409,16 @@ metadata/max_size_m = Vector3(0.66, 1.05, 1)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
 
+[node name="Seat" parent="EquipmentSlots/SeatRight" instance=ExtResource("6_seat")]
+
 [node name="MainConsole" type="Marker3D" parent="EquipmentSlots" unique_id=1458908480]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0.65, -1.5)
 gizmo_extents = 0.18
 metadata/max_size_m = Vector3(2.4, 0.45, 0.48)
 metadata/model_origin = "bottom_center"
 metadata/model_front = "-Z"
+
+[node name="Console" parent="EquipmentSlots/MainConsole" instance=ExtResource("5_console")]
 
 [node name="NavigationPanel" type="Marker3D" parent="EquipmentSlots" unique_id=1182155869]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -0.97, 1.7, -1.48)

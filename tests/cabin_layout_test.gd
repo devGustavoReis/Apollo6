@@ -55,6 +55,9 @@ func run() -> void:
 	check(player.position.z < 1.65 and player.position.z > 1.4,"Rear wall must stop the player")
 	# Reserve future equipment envelopes and check access from the aisle.
 	var envelopes: Array[AABB] = []
+	var ignored: Array[RID] = [player.get_rid()]
+	for body in cabin.get_node("EquipmentSlots").find_children("*", "CollisionObject3D", true, false):
+		ignored.append(body.get_rid())
 	for marker in cabin.get_node("EquipmentSlots").get_children():
 		var dimensions: Vector3 = marker.get_meta("max_size_m")
 		var envelope: AABB = marker.global_transform * AABB(
@@ -67,7 +70,7 @@ func run() -> void:
 		var query := PhysicsShapeQueryParameters3D.new()
 		query.shape = shape
 		query.transform = marker.global_transform.translated(Vector3(0,dimensions.y*0.5+0.01,0))
-		query.exclude = [player.get_rid()]
+		query.exclude = ignored
 		check(cabin.get_world_3d().direct_space_state.intersect_shape(query).is_empty(),"Equipment intersects shell: "+str(marker.name))
 	# Capture a rendered review image when using a graphics driver.
 	if DisplayServer.get_name() != "headless":

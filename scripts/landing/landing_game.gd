@@ -11,6 +11,7 @@ const TILT_RATE := 35.0
 const THROTTLE_RATE := 0.45
 const AREA_LIMIT := 260.0
 const RADAR_SCRIPT := preload("res://scripts/ui/landing_radar.gd")
+const LM_MODEL := "res://assets/models/landing/lunar_module.glb"
 
 @onready var world: SubViewport = $ViewportContainer/SubViewport
 
@@ -263,6 +264,26 @@ func _box(size: Vector3, color: Color, at: Vector3, parent: Node3D) -> MeshInsta
 func _build_lm() -> void:
 	lm = Node3D.new()
 	world.add_child(lm)
+	if ResourceLoader.exists(LM_MODEL):
+		lm.add_child(load(LM_MODEL).instantiate())
+	else:
+		_build_provisional_lm()
+	flame = MeshInstance3D.new()
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.45
+	cone.bottom_radius = 0.02
+	cone.height = 1.0
+	cone.radial_segments = 6
+	flame.mesh = cone
+	var flame_mat := StandardMaterial3D.new()
+	flame_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flame_mat.albedo_color = Color(1.0, 0.7, 0.3, 0.8)
+	flame_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flame.material_override = flame_mat
+	lm.add_child(flame)
+
+
+func _build_provisional_lm() -> void:
 	var descent := MeshInstance3D.new()
 	var oct := CylinderMesh.new()
 	oct.top_radius = 1.7
@@ -292,19 +313,6 @@ func _build_lm() -> void:
 		pad.material_override = _flat(Color(0.7, 0.7, 0.68))
 		pad.position = foot + Vector3(0, 0.05, 0)
 		lm.add_child(pad)
-	flame = MeshInstance3D.new()
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.45
-	cone.bottom_radius = 0.02
-	cone.height = 1.0
-	cone.radial_segments = 6
-	flame.mesh = cone
-	var flame_mat := StandardMaterial3D.new()
-	flame_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	flame_mat.albedo_color = Color(1.0, 0.7, 0.3, 0.8)
-	flame_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	flame.material_override = flame_mat
-	lm.add_child(flame)
 
 
 # ---------- HUD ----------
