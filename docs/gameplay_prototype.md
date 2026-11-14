@@ -18,6 +18,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | Etapa | Controles |
 | --- | --- |
 | Cabine | Mouse olha · ESPAÇO solta o cinto/sobe · CTRL desce · WASD move · E interage · TAB checklist · ENTER pula fala/dica · ESC pausa |
+| Correção de rota | Clique na nave e arraste pela linha tracejada até a Lua · setas também movem · ESC pausa |
 | Separação | ESPAÇO desliga o motor · 1, 2, 3 ou clique nos interruptores |
 | Pouso | W/S potência · A/D e setas inclinam · sem teclas o módulo se nivela |
 | Cutscenes | ESPAÇO, ENTER, ESC ou clique pulam |
@@ -32,6 +33,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | `data/equipment/equipment.json` | Catálogo do planejamento (custo, massa, energia, ciência e origem dos números) |
 | `scripts/mission/mission_decisions.gd` | Decisões e eventos, com efeitos e explicações |
 | `scripts/mission/cabin_game.gd` | Tutorial, tarefas por dia, interação e checklist de aproximação |
+| `scripts/minigames/trajectory_minigame.gd` | Minigame de correção de rota, aberto pelo painel NAVIGATION no dia 1 |
 | `scripts/player/zero_g_player.gd` | Thomas em microgravidade |
 | `scripts/landing/landing_game.gd` | Física e HUD do pouso |
 | `scripts/ui/*` | Menu, planejamento, HUD da cabine e relatório |
@@ -42,6 +44,15 @@ ficam fora, para o relatório registrar quantas vezes cada etapa foi repetida.
 
 O 3D da cabine e do pouso é renderizado em um `SubViewport` com metade da resolução
 (640×360) e filtro *nearest*, para o visual pixelado. A interface fica em resolução cheia.
+
+## Correção de rota
+
+No dia 1, o painel NAVIGATION mostra o desvio deixado pela TLI. Ao escolher corrigir
+agora, abre o minigame: o jogador arrasta a nave pela rota até a Lua. Sair da faixa
+(`traj_tol` em `MissionState.DIFFICULTIES`: 50, 36 e 26 px) conta um desvio e devolve
+a nave ao último ponto. A correção custa `2 + 10 × desvio da TLI` % do propelente do
+CSM, mais 1,5% por desvio (até 6). Sem desvios, o erro de trajetória zera. Cada desvio
+mantém 25% dele. Até 1 desvio conta como decisão adequada no relatório.
 
 ## Como instalar os modelos dos equipamentos
 
@@ -82,8 +93,8 @@ godot --headless --path . --script tests/scene_flow_test.gd
 ```
 
 `flow_test` verifica o planejamento, os 3 dias com cada evento, o raio de interação,
-os checkpoints e se um piloto automático simples consegue pousar em todas as
-dificuldades sem a reserva de propelente. `scene_flow_test` percorre as trocas de cena
+o minigame de correção de rota, os checkpoints e se um piloto automático simples
+consegue pousar em todas as dificuldades sem a reserva de propelente. `scene_flow_test` percorre as trocas de cena
 reais, inclusive falha e repetição da separação e do pouso.
 
 ## Pendências conhecidas

@@ -21,6 +21,16 @@ func ms() -> Node:
 	return root.get_node("MissionState")
 
 
+func fly_trajectory(minigame: Node, wrong_moves: int) -> void:
+	minigame.espera = 0.0
+	for i in wrong_moves:
+		minigame.mover(minigame.nave + Vector2(0, 400))
+	for i in range(1, minigame.pontos.size()):
+		minigame.mover(minigame.pontos[i])
+	for i in 5:
+		await process_frame
+
+
 func run() -> void:
 	var game := root.get_node("Game")
 	await process_frame
@@ -83,7 +93,10 @@ func run() -> void:
 				while not (cabin._done(task["id"]) or ms().day > day) and guard < 4:
 					cabin.interact(task["id"])
 					while hud.modal_open():
-						hud._on_modal_button(0)
+						if hud.minigame != null:
+							await fly_trajectory(hud.minigame, 0)
+						else:
+							hud._on_modal_button(0)
 					guard += 1
 				check(cabin._done(task["id"]) or ms().day > day, "Dia %d: tarefa %s concluída" % [day, task["id"]])
 		check(ms().day == 3, "Chegou ao dia 3 (%s)" % event_id)
@@ -94,6 +107,8 @@ func run() -> void:
 		for d in ms().decisions:
 			all_correct = all_correct and d["correct"]
 		check(all_correct, "Opção 1 é a correta em todas as decisões (%s)" % event_id)
+		check(is_zero_approx(ms().trajectory_error), "Correção sem desvios zera o erro de trajetória")
+		check(hud.minigame == null and not cabin.player.frozen, "Minigame de trajetória fechado e jogador livre")
 		# Interação via raio: aponta a câmera para FOOD.
 		var food: Node3D = cabin.cabin.get_node("EquipmentSlots/FoodStorage")
 		cabin.player.global_position = Vector3(-0.9, 0.6, 0.35)
@@ -166,6 +181,38 @@ func run() -> void:
 	ms().landing_attempts = 1
 	var report: Dictionary = load("res://scripts/ui/report_screen.gd").evaluate()
 	check(report["score"] > 0.0 and report["tips"].size() > 0, "Relatório gera pontuação e dicas")
+
+	var tolerances := []
+	for diff in ["easy", "normal", "hard"]:
+		tolerances.append(ms().DIFFICULTIES[diff].get("traj_tol", 0.0))
+	check(tolerances[0] > tolerances[1] and tolerances[1] > tolerances[2] and tolerances[2] > 0.0, "Tolerância da trajetória diminui com a dificuldade")
+	var decisions: GDScript = load("res://scripts/mission/mission_decisions.gd")
+	ms().reset("normal")
+	ms().trajectory_error = 0.3
+	decisions.apply("midcourse", 0, 0)
+	var clean_fuel: float = ms().sps_fuel
+	ms().reset("normal")
+	ms().trajectory_error = 0.3
+	var sloppy: Dictionary = decisions.apply("midcourse", 0, 3)
+	check(ms().sps_fuel < clean_fuel, "Desvios no minigame gastam mais propelente")
+	check(not sloppy["correct"] and ms().trajectory_error > 0.0, "Três desvios deixam a correção imprecisa")
+	ms().reset("normal")
+	ms().trajectory_error = 1.0
+	decisions.apply("midcourse", 0, 99)
+	check(ms().sps_fuel >= 70.0, "Pior correção ainda deixa propelente para a órbita lunar (%.1f%%)" % ms().sps_fuel)
+	var minigame: Node = load("res://scenes/minigames/trajectory_minigame.tscn").instantiate()
+	root.add_child(minigame)
+	await process_frame
+	var reported := [-1]
+	minigame.terminou.connect(func(errors): reported[0] = errors)
+	minigame.mover(minigame.pontos[0] + Vector2(0, 400))
+	check(minigame.erros == 1 and minigame.nave == minigame.pontos[0], "Sair da rota conta um desvio e devolve a nave")
+	minigame.mover((minigame.pontos[0] + minigame.pontos[1]) / 2.0)
+	check(minigame.erros == 1 and minigame.indice == 0 and minigame.nave != minigame.pontos[0], "Seguir a linha move a nave sem desvio")
+	await fly_trajectory(minigame, 1)
+	check(minigame.acabou and reported[0] == 2, "Minigame termina e informa os desvios (informou %d)" % reported[0])
+	minigame.queue_free()
+	await process_frame
 
 	print("FLOW CHECKS: ", failures.size(), " failures")
 	quit(0 if failures.is_empty() else 1)

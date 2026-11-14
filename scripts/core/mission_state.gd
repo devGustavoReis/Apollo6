@@ -17,19 +17,19 @@ const DIFFICULTIES := {
 	"easy": {
 		"name": "FÁCIL", "budget": 30.0, "mass_limit": 260.0, "power": 80.0,
 		"land_vy": 3.0, "land_vh": 1.5, "land_tilt": 12.0, "land_alt": 110.0,
-		"land_fuel": 80.0, "land_drift": 1.5, "tli_tol": 0.12, "sep_time": 40.0,
+		"land_fuel": 80.0, "land_drift": 1.5, "tli_tol": 0.12, "sep_time": 40.0, "traj_tol": 50.0,
 		"summary": "Orçamento folgado, alertas claros e maior tolerância nos procedimentos.",
 	},
 	"normal": {
 		"name": "NORMAL", "budget": 22.0, "mass_limit": 220.0, "power": 60.0,
 		"land_vy": 2.5, "land_vh": 1.2, "land_tilt": 10.0, "land_alt": 140.0,
-		"land_fuel": 70.0, "land_drift": 2.5, "tli_tol": 0.08, "sep_time": 30.0,
+		"land_fuel": 70.0, "land_drift": 2.5, "tli_tol": 0.08, "sep_time": 30.0, "traj_tol": 36.0,
 		"summary": "Orçamento equilibrado. Você terá de fazer algumas escolhas.",
 	},
 	"hard": {
 		"name": "DIFÍCIL", "budget": 17.0, "mass_limit": 190.0, "power": 50.0,
 		"land_vy": 2.0, "land_vh": 1.0, "land_tilt": 8.0, "land_alt": 160.0,
-		"land_fuel": 64.0, "land_drift": 3.5, "tli_tol": 0.06, "sep_time": 24.0,
+		"land_fuel": 64.0, "land_drift": 3.5, "tli_tol": 0.06, "sep_time": 24.0, "traj_tol": 26.0,
 		"summary": "Orçamento apertado e menos margem para erros. O planejamento decide.",
 	},
 }

@@ -23,4 +23,6 @@
   são valores de jogo próximos da ordem de grandeza do projeto real, não reproduções exatas.
 - Propelente do CSM em % e do LM em segundos de motor são abstrações.
 - Eventos (falha de rádio, vazamento de água, controle térmico, alerta de energia) são plausíveis, mas fictícios nesta missão.
+- Correção de rota: as missões Apollo previam janelas de correção de meio de curso na ida à Lua. O minigame de arrastar a nave
+  pela rota é uma abstração: a correção real era uma queima curta de motor calculada com Houston.
 - Diálogos de Houston são fictícios e não reproduzem registros históricos.

@@ -6,6 +6,7 @@ extends Node
 
 const PLAYER_SCRIPT := preload("res://scripts/player/zero_g_player.gd")
 const HUD_SCRIPT := preload("res://scripts/ui/cabin_hud.gd")
+const TRAJECTORY_SCENE := preload("res://scenes/minigames/trajectory_minigame.tscn")
 const INTERACT_LAYER := 2
 const REACH := 2.3
 
@@ -377,13 +378,35 @@ func _modal(title: String, body: String, buttons := ["OK"], callback := Callable
 func _decision(id: String, task_id: String, after := Callable()) -> void:
 	var d := MissionDecisions.get_decision(id)
 	_modal(d["title"], d["body"], d["options"], func(choice):
-		var result := MissionDecisions.apply(id, choice)
-		var verdict := "[color=#77ee77]BOA DECISÃO[/color]" if result["correct"] else "[color=#ff8866]DECISÃO RUIM[/color]"
-		MissionState.add_event(id, d["title"], d["options"][choice])
-		_complete(task_id)
-		_modal(d["title"], "%s\n\n%s" % [verdict, result["explanation"]], ["CONTINUAR"], func(_i):
-			if after.is_valid():
-				after.call()))
+		if id == "midcourse" and choice == 0:
+			_open_trajectory(d, task_id, after)
+		else:
+			_decision_result(id, task_id, d, choice, 0, after))
+
+
+func _open_trajectory(d: Dictionary, task_id: String, after: Callable) -> void:
+	player.frozen = true
+	var minigame: Control = TRAJECTORY_SCENE.instantiate()
+	minigame.tolerancia = MissionState.settings()["traj_tol"]
+	minigame.terminou.connect(func(errors):
+		hud.close_minigame()
+		player.frozen = false
+		_decision_result("midcourse", task_id, d, 0, errors, after))
+	hud.open_minigame(minigame)
+	Houston.say("Apollo, Houston. Fly the correction by hand. Keep her on the line.",
+		"Apollo, aqui é Houston. Façam a correção manualmente. Mantenham a nave na linha.")
+
+
+func _decision_result(id: String, task_id: String, d: Dictionary, choice: int, errors: int, after: Callable) -> void:
+	var result := MissionDecisions.apply(id, choice, errors)
+	var verdict := "[color=#77ee77]BOA DECISÃO[/color]" if result["correct"] else "[color=#ff8866]DECISÃO RUIM[/color]"
+	if id == "midcourse" and choice == 0:
+		verdict = "[color=#77ee77]CORREÇÃO PRECISA[/color]" if result["correct"] else "[color=#ff8866]CORREÇÃO IMPRECISA[/color]"
+	MissionState.add_event(id, d["title"], d["options"][choice])
+	_complete(task_id)
+	_modal(d["title"], "%s\n\n%s" % [verdict, result["explanation"]], ["CONTINUAR"], func(_i):
+		if after.is_valid():
+			after.call())
 
 
 func interact(id: String) -> void:
@@ -425,7 +448,7 @@ func interact(id: String) -> void:
 			if _has_task("nav") and not _done("nav"):
 				_decision("midcourse", "nav")
 			else:
-				_modal("NAVIGATION", "Desvio de trajetória registrado após a TLI: [b]%.0f%%[/b]\nPropelente do CSM: [b]%.0f%%[/b]\nO propelente do CSM é necessário para entrar em órbita lunar e voltar para casa." % [ms.trajectory_error * 100.0, ms.sps_fuel])
+				_modal("NAVIGATION", "Desvio de trajetória atual: [b]%.0f%%[/b]\nPropelente do CSM: [b]%.0f%%[/b]\nO propelente do CSM é necessário para entrar em órbita lunar e voltar para casa." % [ms.trajectory_error * 100.0, ms.sps_fuel])
 		"power":
 			if _has_task("power") and not _done("power"):
 				_decision("power", "power")

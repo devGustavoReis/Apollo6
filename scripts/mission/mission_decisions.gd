@@ -21,7 +21,7 @@ static func get_decision(id: String) -> Dictionary:
 				"title": "CORREÇÃO DE ROTA",
 				"body": "O desvio deixado pela injeção translunar é [b]%s[/b] (%.0f%%).\nUm desvio pequeno cresce com a distância percorrida: corrigir cedo exige menos propelente do que corrigir tarde.\n\nPropelente do CSM: %.0f%%" % [size, e * 100.0, ms.sps_fuel],
 				"options": [
-					"Corrigir agora (gasta %.1f%% do propelente do CSM)" % cost,
+					"Corrigir agora pilotando a nave (custo mínimo: %.1f%%)" % cost,
 					"Esperar e corrigir amanhã (custo estimado: %.1f%%)" % (cost * 2.0),
 					"Não corrigir",
 				],
@@ -76,7 +76,7 @@ static func get_decision(id: String) -> Dictionary:
 
 
 ## Aplica a opção escolhida e devolve {correct, explanation}.
-static func apply(id: String, option: int) -> Dictionary:
+static func apply(id: String, option: int, errors := 0) -> Dictionary:
 	var ms := MissionState
 	var decision := get_decision(id)
 	var correct := false
@@ -86,9 +86,14 @@ static func apply(id: String, option: int) -> Dictionary:
 			var cost := midcourse_cost()
 			var small := ms.trajectory_error < 0.12
 			if option == 0:
-				ms.sps_fuel -= cost
-				correct = true
-				explanation = "Correção feita cedo, com o menor custo possível. As missões Apollo planejavam várias janelas de correção durante a viagem."
+				var extra := 1.5 * mini(errors, 6)
+				ms.sps_fuel -= cost + extra
+				ms.trajectory_error *= minf(errors * 0.25, 1.0)
+				correct = errors <= 1
+				if errors == 0:
+					explanation = "Correção feita cedo e sem sair da rota, com o menor custo possível. As missões Apollo planejavam várias janelas de correção durante a viagem."
+				else:
+					explanation = "Correção feita cedo, mas a nave saiu da rota %d vez(es). Cada desvio exigiu um ajuste extra do motor: a manobra gastou %.1f%% do propelente do CSM, em vez de %.1f%%. As missões Apollo planejavam várias janelas de correção durante a viagem." % [errors, cost + extra, cost]
 			elif option == 1:
 				ms.sps_fuel -= cost * 2.0
 				explanation = "Esperar dobrou o custo: quanto mais longe, maior o desvio a corrigir. Corrigir cedo é mais barato."

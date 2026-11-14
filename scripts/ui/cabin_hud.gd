@@ -16,6 +16,8 @@ var _modal_body: RichTextLabel
 var _modal_buttons: VBoxContainer
 var _modal_callback: Callable
 var _pause: PanelContainer
+var _dim: ColorRect
+var minigame: Control
 
 
 func _ready() -> void:
@@ -77,6 +79,12 @@ func _ready() -> void:
 	_checklist_text.fit_content = true
 	_checklist_text.custom_minimum_size = Vector2(390, 0)
 	_checklist.add_child(_checklist_text)
+
+	_dim = ColorRect.new()
+	_dim.color = Color(0, 0, 0, 0.7)
+	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dim.visible = false
+	add_child(_dim)
 
 	_modal = PanelContainer.new()
 	_modal.set_anchors_preset(Control.PRESET_CENTER)
@@ -204,7 +212,22 @@ func _on_modal_button(index: int) -> void:
 
 
 func modal_open() -> bool:
-	return _modal.visible
+	return _modal.visible or minigame != null
+
+
+func open_minigame(node: Control) -> void:
+	minigame = node
+	_dim.visible = true
+	add_child(node)
+	move_child(node, _modal.get_index())
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func close_minigame() -> void:
+	minigame.queue_free()
+	minigame = null
+	_dim.visible = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func paused() -> bool:
@@ -222,5 +245,5 @@ func toggle_pause() -> void:
 	get_tree().paused = _pause.visible
 	if _pause.visible:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	elif not _modal.visible:
+	elif not modal_open():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
