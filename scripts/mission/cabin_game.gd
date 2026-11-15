@@ -13,7 +13,7 @@ const HELD_MODELS := {
 	"food_even": "res://assets/models/equipment/bacon_bars.glb",
 	"water": "res://assets/models/equipment/water_pouch.glb",
 }
-const SCIENCE_SCALE := {"lunar_sample_container_open": 0.8, "laser_retroreflector": 0.65, "surface_camera": 1.0}
+const SCIENCE_SCALE := {"lunar_sample_container_open": 0.8, "lunar_sample_container_closed": 0.8, "laser_retroreflector": 0.65, "surface_camera": 1.0}
 const INTERACT_LAYER := 2
 const REACH := 2.3
 const EAT_TIME := 1.6
@@ -954,6 +954,8 @@ func _build_science_cargo() -> void:
 	var model := ""
 	if MissionState.objective == "sample_kit" and MissionState.science_completed and MissionState.day >= 4:
 		model = "lunar_sample_container_open"
+	elif MissionState.objective == "sample_kit" and MissionState.qty("sample_kit") > 0 and MissionState.day <= 3:
+		model = "lunar_sample_container_closed"
 	elif MissionState.objective in ["retroreflector", "camera"] and MissionState.qty(MissionState.objective) > 0 and MissionState.day <= 3:
 		model = "laser_retroreflector" if MissionState.objective == "retroreflector" else "surface_camera"
 	if model != "":
