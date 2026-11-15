@@ -151,6 +151,7 @@ func run() -> void:
 	ms.day = 5
 	station_key(cabin, "radio")
 	cabin.hud._on_modal_button(0)
+	cabin._decision_motion.custom_step(1.0)
 	check(cabin.hud.minigame == null and cabin.hud._modal_body.text == cabin.BRIEFINGS.TEXTOS["M03"]["instrucoes"], "Decisão leva às instruções do M03")
 	cabin.hud._on_modal_button(0)
 	check(cabin.hud.minigame != null, "Realinhamento escolhido na decisão abre M03")

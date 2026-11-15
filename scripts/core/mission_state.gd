@@ -96,7 +96,7 @@ var next_supply_token := 1
 
 ## Campos salvos nos checkpoints. Contadores de tentativas ficam de fora de propósito.
 const SAVED_FIELDS := [
-	"supply_tokens", "next_supply_token", "objective", "science_completed", "nourishment", "hydration", "slept_days",
+	"supply_tokens", "next_supply_token", "decision_seed", "objective", "science_completed", "nourishment", "hydration", "slept_days",
 	"need_critical", "need_warned", "critical_wake_pending",
 	"difficulty", "cargo", "food_days", "water_days", "food_eaten", "water_drunk",
 	"power_capacity", "instruments_active", "spare_parts", "battery_used",
@@ -140,6 +140,7 @@ var minigame_completions: Dictionary = {}
 var events: Array = []
 var decisions: Array = []
 var random_event := ""
+var decision_seed := 0
 var separation_mistakes := 0
 
 var phase := "outbound"
@@ -247,6 +248,7 @@ func reset(new_difficulty: String) -> void:
 	separation_mistakes = 0
 	var pool := ["comm_dropout", "water_leak", "ptc"]
 	random_event = pool[randi() % pool.size()]
+	decision_seed = randi_range(0, 1)
 	checkpoints = {}
 	current_checkpoint = ""
 	separation_attempts = 0
@@ -254,6 +256,17 @@ func reset(new_difficulty: String) -> void:
 	landing_result = {}
 	last_failure = {}
 	changed.emit()
+
+
+func day_two_decision_order() -> Array[String]:
+	var stations: Array[String] = ["power"]
+	if random_event == "water_leak":
+		stations.append("water")
+	elif random_event == "ptc":
+		stations.append("console")
+	if decision_seed == 1:
+		stations.reverse()
+	return stations
 
 
 func settings() -> Dictionary:
@@ -503,6 +516,10 @@ func intake_on(day_number: int, kind: String) -> int:
 func consume(kind: String) -> bool:
 	if not can_consume(kind) or available_supply(kind) < 1.0 - 0.0001:
 		return false
+	return _consume_ration(kind)
+
+
+func _consume_ration(kind: String) -> bool:
 	_set_stock(kind, stock(kind) - 1.0)
 	_restore_need(kind)
 	var key := str(day)
@@ -869,8 +886,8 @@ func consume_supply_token(token: int) -> bool:
 	if not supply_tokens.has(token):
 		return false
 	var entry: Dictionary = supply_tokens[token]
+	var kind: String = entry["kind"]
+	if not can_consume(kind):
+		return false
 	supply_tokens.erase(token)
-	var success := consume(entry["kind"])
-	if not success:
-		supply_tokens[token] = entry
-	return success
+	return _consume_ration(kind)

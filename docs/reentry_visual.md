@@ -3,7 +3,7 @@
 A lógica continua em `scripts/reentry/reentry_game.gd`, que mantém fases, controles, janela de 2 s,
 resultados, HUD e transições. A apresentação 3D fica em `scripts/reentry/reentry_visual.gd`, que só
 lê o estado (`phase`, `phase_time`, `altitude`, `attitude`, `paused`, `result`) e nunca o altera.
-O visual é um `SubViewportContainer` (meia resolução, filtro *nearest*, como no pouso lunar)
+O visual é um `SubViewportContainer` (resolução integral da janela, como no pouso lunar)
 inserido como primeiro filho da cena, atrás dos indicadores.
 
 ## Modelos (Blender)

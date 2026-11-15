@@ -152,13 +152,14 @@ static func _effects(id: String, option: int, good: bool, favorable: bool, error
 		"midcourse":
 			var cost := midcourse_cost()
 			if option == 0:
+				var deviation_cost := 1.0 * mini(maxi(errors, 0), 6)
 				if favorable:
-					ms.sps_fuel -= cost
+					ms.sps_fuel -= cost + deviation_cost
 					ms.trajectory_error = 0.0
-					return "Correção feita cedo pelo computador, com o custo previsto de %.1f%%. As missões Apollo planejavam várias janelas de correção." % cost
-				ms.sps_fuel -= cost + 1.5
+					return "Correção executada cedo por %.1f%% de propelente. Desvios de pilotagem acrescentaram %.1f%%." % [cost + deviation_cost, deviation_cost]
+				ms.sps_fuel -= cost + deviation_cost + 1.5
 				ms.trajectory_error *= 0.3
-				return "Boa escolha, mas a queima ficou um pouco curta e exigiu um ajuste: gastou %.1f%% e ficou um desvio pequeno. Complicações acontecem mesmo com a decisão certa." % (cost + 1.5)
+				return "Boa escolha, mas a queima ficou um pouco curta e exigiu um ajuste: gastou %.1f%% e ficou um desvio pequeno. Complicações acontecem mesmo com a decisão certa." % (cost + deviation_cost + 1.5)
 			if option == 1:
 				if favorable:
 					ms.sps_fuel -= cost * 1.2

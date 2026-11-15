@@ -15,7 +15,7 @@ A cabine do módulo de comando usa módulos modelados no Blender 5.3. A referên
 | `cabin_markings` | Placas no gabinete frontal e na parede traseira, sob `CabinStructure`. |
 | `cabin_front_trim` | `CabinStructure/FrontTrim`: luminária frontal entre navegação e rádio, moldura da janela frontal, placas de inspeção e travessa. A luz `Lighting/FrontLampGlow` acompanha o difusor. |
 | `supply_water_niche`, `supply_food_niche` | `Niche` dentro de `WaterRack` e `FoodRack`: nichos chanfrados, prateleiras com batente, mãos-francesas e luminária compacta da água. Os nós `Pouches` e `Packs` continuam controlando o estoque visível. |
-| `supply_pouch`, `ration_pack_cream`, `ration_pack_orange` | Unidades visíveis nos suportes de água e comida, em `assets/models/equipment/`. Os modelos segurados na mão continuam em `HELD_MODELS`. |
+| `water_pouch`, `sugar_cookie_cubes`, `bacon_bars` | Mesmos modelos 3D no estoque, na mão e em microgravidade. A ração alterna conforme o dia da missão. |
 | `disposal_bin` | `MealDisposal/Model`, criado por `cabin_game.gd` sobre a zona de descarte. Sem colisor próprio. |
 | `lunar_flag` | `scripts/ui/menu_backdrop.gd`, no cenário em que o módulo já está pousado. A escala do mastro segue o ponto de composição do menu. |
 | `laser_retroreflector`, `surface_camera` | `ScienceCargo/Model`, na raiz da cabine, nos Dias 1 a 3, quando o objetivo é o retrorrefletor ou a câmera estéreo. Fontes em `assets/source/science/`, GLBs em `assets/models/science/`. |
@@ -36,6 +36,10 @@ $script = (Resolve-Path assets/source/cabin/modelar_cabine.py).Path
 ```
 
 O modo `reexport` mantém a fonte e exporta as coleções editadas. Para gerar a fonte do zero, use `--factory-startup`, tire o caminho da fonte e o argumento `reexport`, e use uma cópia de trabalho para preservar edições já feitas no Blender. Os GLBs vão para `assets/models/cabin/`. A bandeira lunar vai para `assets/models/landing/`. Salve os metadados de importação junto dos recursos.
+
+## Carga científica na cabine
+
+A função `_build_science_cargo` monta a carga sob `ScienceCargo/Model` conforme o objetivo, o manifesto e o andamento da missão. As fontes editáveis e os modelos definitivos estão na tabela acima.
 
 ## Referências e autoria
 

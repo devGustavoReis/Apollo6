@@ -5,7 +5,7 @@ extends CharacterBody3D
 
 signal unbuckled
 
-const EYE_OFFSET := Vector3(0, 0.35, 0)
+const EYE_OFFSET := Vector3(0, 0.43, 0)
 const FLOAT_START := Vector3(0, 1.0, 0.55)
 const BARRIER_LAYER := 8
 const PUSH_SPEED := 1.4
@@ -63,6 +63,7 @@ func setup(cabin: Node3D) -> void:
 	left_hand = _make_hand(-1.0)
 	left_hand.position = LEFT_HAND
 	body = _make_body()
+	body.scale = Vector3(1.10, 1.14, 1.08)
 	add_child(body)
 	var eye: Marker3D = cabin.get_node("PlayerStart/SeatedEye")
 	global_position = eye.global_position - EYE_OFFSET
@@ -140,7 +141,9 @@ func unbuckle() -> void:
 	frozen = true
 	var tween := create_tween()
 	tween.tween_property(self, "global_position", FLOAT_START, 0.9).set_trans(Tween.TRANS_SINE)
+	tween.parallel().tween_property(left_hand, "rotation:z", -0.30, 0.28)
 	tween.finished.connect(func():
+		left_hand.rotation.z = 0.0
 		_shape.disabled = false
 		frozen = false
 		grabbing = true

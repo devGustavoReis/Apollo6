@@ -104,14 +104,13 @@ o solo e a bandeira saem de shaders. Para ajustar:
 - Filtro de TV: parâmetros no topo de `assets/shaders/menu/crt.gdshader`. O jogador pode
   desligá-lo em CONFIGURAÇÕES.
 
-O 3D da cabine e do pouso é renderizado em um `SubViewport` com metade da resolução
-(640×360) e filtro *nearest*, para o visual pixelado. A interface fica em resolução cheia.
+A janela base é 1920×1080. O 3D da cabine, do pouso e da reentrada acompanha a resolução
+completa da janela. O menu mantém o filtro de TV e o cenário 3D em resolução reduzida.
 
 ## Painel de manobra (TLI e separação)
 
 `scripts/minigames/separation_minigame.gd` conduz a injeção translunar e desenha os
-instrumentos. `scripts/minigames/tli_view.gd` é a cena 3D low poly, em meia resolução como a
-cabine e o pouso: a Terra, o S-IVB com o LM guardado no adaptador (SLA) e o CSM na frente.
+instrumentos. `scripts/minigames/tli_view.gd` é a cena 3D low poly, em meia resolução no painel: a Terra, o S-IVB com o LM guardado no adaptador (SLA) e o CSM na frente.
 
 1. **Contagem.** ARMAR IGNIÇÃO inicia 5 s de contagem, com as luzes do painel acendendo e o
    anel de orientação aparecendo à frente da nave.

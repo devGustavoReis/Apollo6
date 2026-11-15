@@ -192,7 +192,7 @@ func set_tutorial(text: String) -> void:
 func refresh_status() -> void:
 	var ms := MissionState
 	_needs.queue_redraw()
-	var lines :="[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
+	var lines := "[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
 	lines += _line("COMIDA", "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
 	lines += _line("ÁGUA", "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
 	var use := ms.power_use()

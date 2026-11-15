@@ -28,6 +28,11 @@ var _title: Label
 var _body: RichTextLabel
 var _buttons: HBoxContainer
 var _busy := false
+const SCIENCE_TASKS := {
+	"sample_kit": ["Escolha a amostra que preserva o contexto da coleta.", "Rocha solta fora da trilha", "Material preso na sapata", "A sapata pode misturar resíduos. Colete uma rocha fora da trilha e registre o local."],
+	"retroreflector": ["O retorno do laser deve apontar para a estação emissora.", "Orientar o painel para a Terra", "Orientar o painel para o Sol", "Os prismas devolvem a luz em direção à sua origem. A estação emissora está na Terra."],
+	"camera": ["Escolha o enquadramento para medir o relevo do solo.", "Duas vistas próximas do mesmo trecho", "Uma foto ampla do horizonte", "A visão estéreo usa duas perspectivas do mesmo trecho para revelar profundidade."],
+}
 var _wait := 0.0
 var _locked: Array = []
 
@@ -97,6 +102,8 @@ func _button(text: String, action: Callable) -> Button:
 
 func _clear_buttons() -> void:
 	for child in _buttons.get_children():
+		child.disabled = true
+		child.hide()
 		child.queue_free()
 	_locked = []
 
@@ -190,17 +197,29 @@ func _show_end(text: String) -> void:
 	_lock(0.6)
 
 
-func _show_science() -> void:
+func _show_science(feedback := "") -> void:
 	var ms := MissionState
 	if not ms.OBJECTIVES.has(ms.objective):
 		_show_end("Objetivo ausente. Reveja o planejamento em uma nova missão.")
 		return
 	var objective: Dictionary = ms.OBJECTIVES[ms.objective]
 	_title.text = "Pouso confirmado · Atividade científica"
-	_body.text = objective["title"] + "\n\nInstrumento: " + ms.items[ms.objective]["name"] + "\n\nPrepare o instrumento e confirme a atividade. A viagem de volta ainda precisa ser concluída."
+	var task: Array = SCIENCE_TASKS[ms.objective]
+	_body.text = objective["title"] + "\nInstrumento: " + ms.items[ms.objective]["name"] + "\n\n" + task[0]
+	if not feedback.is_empty():
+		_body.text += "\n\n[color=#ffcc75]" + feedback + "[/color]"
 	_clear_buttons()
-	_button(objective["action"], _confirm_science)
-	_lock(MIN_READ)
+	_button(task[2], _show_science.bind(task[3]))
+	_button(task[1], _prepare_science.bind(objective["action"], task[3]))
+	_lock(MIN_READ if feedback.is_empty() else 0.4)
+
+
+func _prepare_science(action: String, explanation: String) -> void:
+	_title.text = "Instrumento preparado"
+	_body.text = explanation + "\n\nConfirme a operação para registrar a evidência."
+	_clear_buttons()
+	_button(action, _confirm_science)
+	_lock(0.5)
 
 
 func _confirm_science() -> void:

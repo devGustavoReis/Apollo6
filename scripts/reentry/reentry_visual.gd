@@ -66,13 +66,10 @@ func setup(owner_game: Node) -> void:
 	container.name = "ReentryView3D"
 	container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	container.stretch = true
-	container.stretch_shrink = 2
-	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	owner_game.add_child(container)
 	owner_game.move_child(container, 0)
 	world = SubViewport.new()
-	world.size = Vector2i(640, 360)
 	world.audio_listener_enable_3d = false
 	world.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	container.add_child(world)

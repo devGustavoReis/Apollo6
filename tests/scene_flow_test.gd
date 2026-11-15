@@ -128,6 +128,8 @@ func run() -> void:
 	check(transition.id == "B" and ms.landing_result.get("success", false), "Pouso seguro leva à transição B, não ao relatório")
 	check(transition._title.text.contains("Atividade científica"), "Atividade científica oferecida após pouso")
 	await press_first(transition)
+	check(not ms.science_completed, "Preparar instrumento ainda não concede ciência")
+	await press_first(transition)
 	check(ms.science_completed, "Ciência registrada pela ação do jogador")
 	await press_first(transition)
 	check(transition._body.text.contains("21 h e 36 min") and transition._body.text.contains("3 de cada"), "Transição B resume a Lua e a reserva de 3")

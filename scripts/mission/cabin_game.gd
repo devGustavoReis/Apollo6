@@ -52,6 +52,9 @@ var tutorial_step := -1
 var _labels := {}
 var _markers := {}
 var _alarm_time := 0.0
+var _decision_motion: Tween
+var _control_closeup: Node3D
+var _gesture_active := false
 var _alarm_light: OmniLight3D
 var _alarm_voice: AudioStreamPlayer
 var _moon: MeshInstance3D
@@ -254,11 +257,11 @@ func _build_backdrop() -> void:
 
 func _update_supplies() -> void:
 	var ms := MissionState
-	_show_supplies("FoodStorage/FoodRack/Packs", floorf(ms.available_supply("food") + 0.0001))
+	_show_supplies("FoodStorage/FoodRack/Packs", floorf(ms.available_supply("food") + 0.0001), _supply_model_key("food"))
 	_show_supplies("WaterStorage/WaterRack/Pouches", floorf(ms.available_supply("water") + 0.0001))
 	if _labels.has("food"):
-		_labels["food"].text = "FOOD · %s" % ms.amount_text(ms.food_days)
-		_labels["water"].text = "WATER · %s" % ms.amount_text(ms.water_days)
+		_labels["food"].text = "FOOD · %s" % ms.amount_text(ms.available_supply("food"))
+		_labels["water"].text = "WATER · %s" % ms.amount_text(ms.available_supply("water"))
 
 
 func _hold(id: String, existing := 0) -> void:
@@ -273,9 +276,7 @@ func _hold(id: String, existing := 0) -> void:
 	var marker: Node3D = cabin.get_node_or_null("EquipmentSlots/" + slot)
 	if marker != null:
 		Sound.play_at(id, marker)
-	var key := id
-	if id == "food":
-		key = "food_odd" if MissionState.day % 2 == 1 else "food_even"
+	var key := _supply_model_key(id)
 	if ResourceLoader.exists(HELD_MODELS[key]):
 		_held_node = load(HELD_MODELS[key]).instantiate()
 		player.camera.add_child(_held_node)
@@ -343,14 +344,24 @@ func _finish_eating() -> void:
 	hud.show_note("%s · hoje: %d · saldo: %s %s" % [noun, ms.intake_on(ms.day, id), ms.amount_text(ms.stock(id)), "comida" if id == "food" else "água"])
 
 
-func _show_supplies(path: String, days: float) -> void:
+func _supply_model_key(kind: String) -> String:
+	if kind == "food":
+		return "food_odd" if MissionState.day % 2 == 1 else "food_even"
+	return kind
+
+
+func _show_supplies(path: String, days: float, food_model := "") -> void:
 	var group := cabin.get_node_or_null("EquipmentSlots/" + path)
 	if group == null:
 		return
 	var total := group.get_child_count()
 	var left := mini(ceili(days), total)
 	for i in total:
-		group.get_child(i).visible = i >= total - left
+		var item := group.get_child(i) as Node3D
+		item.visible = i >= total - left
+		if not food_model.is_empty():
+			item.get_node("Cookies").visible = food_model == "food_odd"
+			item.get_node("Bacon").visible = food_model == "food_even"
 
 
 func _sphere(color: Color, radius: float) -> MeshInstance3D:
@@ -385,13 +396,15 @@ func day_tasks() -> Array:
 				["nav", "Verificar a trajetória de ida"],
 				["rest", "Descansar e encerrar o dia"]]
 		2:
-			list = [["power", "Resolver o alerta de energia"],
-				["radio", "Enviar o relatório diário a Houston"],
-				["rest", "Descansar e encerrar o dia"]]
-			if ms.random_event == "ptc":
-				list.insert(1, ["console", "Resolver o controle térmico da nave"])
-			if ms.random_event == "water_leak":
-				list.insert(1, ["water", "Vazamento no reservatório de água"])
+			var decision_tasks := {
+				"power": "Resolver o alerta de energia",
+				"console": "Resolver o controle térmico da nave",
+				"water": "Vazamento no reservatório de água",
+			}
+			for station: String in ms.day_two_decision_order():
+				list.append([station, decision_tasks[station]])
+			list.append(["radio", "Enviar o relatório diário a Houston"])
+			list.append(["rest", "Descansar e encerrar o dia"])
 		3:
 			list = [["console", "Checklist de aproximação lunar"],
 				["hatch", "Entrar no módulo lunar"]]
@@ -491,15 +504,14 @@ func _start_day_briefing() -> void:
 		1:
 			Houston.say_recorded("day_one_checklist", "Apollo, Houston. Follow today's checklist.", "Apollo, aqui é Houston. Sigam o checklist de hoje.")
 		2:
-			Houston.say_recorded("day_two_power", "Good morning, Apollo. We see a power problem on your main bus. Check the POWER panel.",
-				"Bom dia, Apollo. Vemos um problema de energia no barramento principal. Verifiquem o painel POWER.")
-			match MissionState.random_event:
-				"water_leak":
-					Houston.say_recorded("day_two_water", "We also show a pressure drop in the water system. Take a look at WATER.",
-						"Também vemos queda de pressão no sistema de água. Verifiquem o WATER.")
-				"ptc":
-					Houston.say_recorded("day_two_thermal", "Thermal readings are uneven. Check the COMMAND CONSOLE.",
-						"As leituras térmicas estão desiguais. Verifiquem o COMMAND CONSOLE.")
+			for station: String in MissionState.day_two_decision_order():
+				match station:
+					"power":
+						Houston.say_recorded("day_two_power", "Apollo, we see a power problem on your main bus. Check the POWER panel.", "Apollo, vemos um problema de energia no barramento principal. Verifiquem o painel POWER.")
+					"water":
+						Houston.say_recorded("day_two_water", "We show a pressure drop in the water system. Take a look at WATER.", "Vemos queda de pressão no sistema de água. Verifiquem a estação WATER.")
+					"console":
+						Houston.say_recorded("day_two_thermal", "Thermal readings are uneven. Check the COMMAND CONSOLE.", "As leituras térmicas estão desiguais. Verifiquem o COMMAND CONSOLE.")
 		3:
 			Houston.say_recorded("day_three_approach", "Apollo, the Moon is close. Run the approach checklist on the COMMAND CONSOLE.",
 				"Apollo, a Lua está próxima. Executem o checklist de aproximação no COMMAND CONSOLE.")
@@ -520,7 +532,6 @@ func _start_day_briefing() -> void:
 func _process(delta: float) -> void:
 	if not hud.modal_open() and not player.frozen and tutorial_step < 0:
 		MissionState.advance_survival(delta)
-		hud.refresh_status()
 		if MissionState.ended.get("stage", "") == "survival":
 			player.frozen = true
 			# Falas pendentes de fome e sede não vazam para a tela de derrota.
@@ -534,15 +545,19 @@ func _process(delta: float) -> void:
 	_check_tutorial()
 	if _held_node != null and not eating:
 		_held_time += delta
-		_held_node.position = HAND_POS + Vector3(0, sin(_held_time * 2.0) * 0.006, 0)
+		var lift := smoothstep(0.0, 0.32, _held_time)
+		var pick := Vector3(0.24, -0.34, -0.43)
+		_held_node.position = pick.lerp(HAND_POS, lift) + Vector3(0, sin(_held_time * 2.0) * 0.006, 0)
 	if eating:
 		_eat_time += delta
-		var reach := clampf(minf(_eat_time / 0.6, (EAT_TIME - _eat_time) / 0.5), 0.0, 1.0)
+		var reach := smoothstep(0.0, 1.0, clampf(minf(_eat_time / 0.6, (EAT_TIME - _eat_time) / 0.5), 0.0, 1.0))
 		if _held_node != null:
 			var chew := sin(_eat_time * 14.0) * 0.008 * reach
-			_held_node.position = HAND_POS.lerp(MOUTH_POS, reach) + Vector3(0, chew, 0)
-			_held_node.rotation = Vector3(0.1 + reach * 0.8, -0.3, 0.05)
-	player.hand_busy = _held_node != null
+			var drink := held == "water"
+			var mouth := Vector3(0.06, -0.10, -0.32) if drink else MOUTH_POS
+			_held_node.position = HAND_POS.lerp(mouth, reach) + Vector3(0, chew if not drink else 0.0, 0)
+			_held_node.rotation = Vector3(0.1 + reach * (-0.63 if drink else 0.8), -0.3, 0.05 + (0.22 * reach if drink else 0.0))
+	player.hand_busy = _held_node != null or _gesture_active
 	if _held_node != null:
 		player.right_hand.position = _held_node.position + Vector3(0.03, -0.05, 0.06)
 		player.right_hand.rotation = Vector3(_held_node.rotation.x * 0.6, 0, 0)
@@ -592,7 +607,7 @@ func _physics_process(_delta: float) -> void:
 	elif target_id != "":
 		var task_id := _station_minigame(target_id)
 		var prompt := "[E] " + str(LABELS.get(target_id, "RECOLHER"))
-		if target_id == "water" and _has_task("water") and not _done("water"):
+		if target_id == "water" and _has_task("water") and not _done("water") and _decision_station_ready("water"):
 			prompt += " · [F] Resolver vazamento"
 		if not task_id.is_empty():
 			var title: String = MissionState.CABIN_MINIGAMES[task_id]["title"]
@@ -619,10 +634,11 @@ func _resolve_id(node: Node) -> String:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.echo:
 		return
-	if event.is_action_pressed("drop_supply") and not hud.modal_open() and not eating and held != "":
-		_release_supply()
+	if hud.modal_open() or hud.paused() or _gesture_active:
 		return
-	if hud.modal_open() or hud.paused():
+	if event.is_action_pressed("drop_supply") and not eating and held != "":
+		_release_supply()
+		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		player.look(event.relative)
@@ -646,7 +662,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			_interact_minigame(task_id)
 			get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact") and (target_id != "" or held != ""):
-		interact(target_id)
+		if held == "" and target_id in ["radio", "hatch", "storage", "medkit", "tools", "disposal"]:
+			var lever_id := "hatch" if target_id == "hatch" else target_id
+			_play_decision_control(lever_id, 0, interact.bind(target_id))
+		else:
+			interact(target_id)
+		get_viewport().set_input_as_handled()
 
 
 func _modal(title: String, body: String, buttons := ["OK"], callback := Callable()) -> void:
@@ -657,17 +678,92 @@ func _modal(title: String, body: String, buttons := ["OK"], callback := Callable
 			callback.call(i))
 
 
+func _decision_station_ready(station: String) -> bool:
+	if MissionState.day != 2:
+		return true
+	var order := MissionState.day_two_decision_order()
+	if station not in order:
+		return true
+	for next: String in order:
+		if not _done(next):
+			return station == next
+	return true
+
+
 func _decision(id: String, task_id: String, after := Callable()) -> void:
+	if _gesture_active or _done(task_id):
+		return
+	if not _decision_station_ready(task_id):
+		var pending := _pending()
+		if not pending.is_empty():
+			hud.show_note("Aguarde o procedimento em %s." % pending[0]["station"])
+		return
 	var d := MissionDecisions.get_decision(id)
 	Sound.play_cue("radio" if id in ["midcourse", "return_course"] else "warning", "Voice", true)
 	_modal(d["title"], d["body"], d["options"], func(choice):
-		if id in ["midcourse", "return_course"] and choice == 0:
-			_open_trajectory(d, task_id, after, id)
-		elif id == "comm_dropout" and choice == 0 and not MissionState.minigame_completions.has("M03"):
-			_open_cabin_minigame("M03", func(recovered: bool):
-				_decision_result(id, task_id, d, choice, 0 if recovered else 1, after))
-		else:
-			_decision_result(id, task_id, d, choice, 0, after))
+		_play_decision_control(id, choice, _resolve_decision_choice.bind(id, task_id, d, choice, after)))
+
+
+func _resolve_decision_choice(id: String, task_id: String, d: Dictionary, choice: int, after: Callable) -> void:
+	if id in ["midcourse", "return_course"] and choice == 0:
+		_open_trajectory(d, task_id, after, id)
+	elif id == "comm_dropout" and choice == 0 and not MissionState.minigame_completions.has("M03"):
+		_open_cabin_minigame("M03", func(recovered: bool):
+			_decision_result(id, task_id, d, choice, 0 if recovered else 1, after))
+	else:
+		_decision_result(id, task_id, d, choice, 0, after)
+
+
+func _play_decision_control(id: String, choice: int, resolve: Callable) -> void:
+	_gesture_active = true
+	player.frozen = true
+	player.hand_busy = true
+	var hand: Node3D = player.right_hand
+	var grip := Vector3(0.13, -0.13, -0.52)
+	var lever := id in ["power", "water_leak", "ptc", "hatch", "storage"]
+	var stroke := Vector3(0.0, -0.067 if choice == 0 else 0.067, 0.0) if lever else Vector3(0.0, 0.0, -0.032)
+	var actuator := _make_control_closeup(grip, lever)
+	var start := actuator.position
+	_decision_motion = create_tween().set_trans(Tween.TRANS_SINE)
+	_decision_motion.tween_property(hand, "position", grip, 0.23)
+	_decision_motion.tween_property(hand, "position", grip + stroke, 0.16)
+	if lever:
+		_decision_motion.parallel().tween_property(actuator, "rotation:x", -0.46 if choice == 0 else 0.46, 0.16)
+	else:
+		_decision_motion.parallel().tween_property(actuator, "position", start - Vector3(0, 0, 0.018), 0.16)
+	_decision_motion.tween_callback(Sound.play_cue.bind("switch"))
+	_decision_motion.tween_property(hand, "position", player.RIGHT_HAND, 0.21)
+	if not lever:
+		_decision_motion.parallel().tween_property(actuator, "position", start, 0.21)
+	_decision_motion.tween_callback(_finish_decision_control.bind(resolve))
+
+
+func _make_control_closeup(grip: Vector3, lever: bool) -> Node3D:
+	_control_closeup = Node3D.new()
+	player.camera.add_child(_control_closeup)
+	_control_closeup.position = grip + Vector3(-0.045, 0.032, -0.095)
+	_add_station_prop(_control_closeup, Vector3(0.24, 0.19, 0.025), Vector3.ZERO, Color("#263642"))
+	_add_station_prop(_control_closeup, Vector3(0.10, 0.13, 0.02), Vector3(0, 0, 0.02), Color("#111b21"))
+	var actuator := Node3D.new()
+	_control_closeup.add_child(actuator)
+	actuator.position.z = 0.034
+	if lever:
+		_add_station_prop(actuator, Vector3(0.020, 0.024, 0.075), Vector3(0, 0, 0.032), Color("#a0a8a5"))
+		_add_station_prop(actuator, Vector3(0.059, 0.033, 0.024), Vector3(0, 0, 0.076), Color("#e5ad58"))
+	else:
+		_add_station_prop(actuator, Vector3(0.071, 0.064, 0.043), Vector3(0, 0, 0.022), Color("#aacec4"))
+	return actuator
+
+
+func _finish_decision_control(resolve: Callable) -> void:
+	_control_closeup.queue_free()
+	_control_closeup = null
+	_gesture_active = false
+	player.hand_busy = false
+	player.frozen = false
+	_decision_motion = null
+	if MissionState.ended.is_empty() and resolve.is_valid():
+		resolve.call()
 
 
 func _station_minigame(station: String) -> String:
@@ -959,7 +1055,11 @@ func _update_markers() -> void:
 	for id: String in _markers:
 		var task := _station_minigame(id)
 		var optional: bool = task != "" and not MissionState.minigame_completions.has(task)
-		var required: bool = _has_task(id) and not _done(id)
+		var required: bool = _has_task(id) and not _done(id) and _decision_station_ready(id)
+		if id == "hatch":
+			required = required and _done("console")
+		elif id == "console" and MissionState.day == 5:
+			required = required and _done("radio")
 		_markers[id].visible = (required or optional) and not hud.modal_open()
 		_markers[id].text = "!" if required else "! +"
 
@@ -1065,7 +1165,7 @@ func _spawn_loose_supply(token: int) -> void:
 	sphere.radius = 0.1
 	shape.shape = sphere
 	body.add_child(shape)
-	var key: String = "water" if entry["kind"] == "water" else "food_odd"
+	var key := _supply_model_key(entry["kind"])
 	body.add_child(load(HELD_MODELS[key]).instantiate())
 	cabin.add_child(body)
 	body.global_position = entry["position"]

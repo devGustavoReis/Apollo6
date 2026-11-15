@@ -17,7 +17,7 @@ const ASSIST_SPRITES := {
 	"signal_meter": Vector2i(0, 1), "blackout_kit": Vector2i(1, 1),
 }
 const CATEGORIES := {
-	"science": ["Instrumentos", "Leve pelo menos um instrumento científico."],
+	"science": ["Instrumentos", "Adicione o instrumento do objetivo científico escolhido."],
 	"supply": ["Suprimentos", "Leve ao menos %d cotas de comida e de água: 5 dias jogáveis e 3 saltos."],
 	"reserve": ["Reservas", "Leve reservas para lidar com imprevistos na viagem e no pouso."],
 	"assist": ["Ferramentas", "Ferramentas opcionais: %d%% de chance de recuperar um erro na tarefa correspondente."],
@@ -33,6 +33,7 @@ const AMBER := Color("#f7c584")
 const RED := Color("#ffaeac")
 
 var _objective_hint: Label
+var _objective_choice: OptionButton
 var _tabs: Dictionary = {}
 var _category_grids: Dictionary = {}
 var _item_controls: Dictionary = {}
@@ -71,12 +72,12 @@ func _ready() -> void:
 	var layout := _stack(14)
 	margin.add_child(layout)
 	_build_header(layout)
-	var choice := OptionButton.new()
-	choice.add_item("Escolha o objetivo científico")
+	_objective_choice = OptionButton.new()
+	_objective_choice.add_item("Escolha o objetivo científico")
 	for id: String in MissionState.OBJECTIVES:
-		choice.add_item(MissionState.OBJECTIVES[id]["title"])
-	choice.item_selected.connect(_choose_objective)
-	layout.add_child(choice)
+		_objective_choice.add_item(MissionState.OBJECTIVES[id]["title"])
+	_objective_choice.item_selected.connect(_choose_objective)
+	layout.add_child(_objective_choice)
 	_objective_hint = _label("", 15, MINT, true)
 	layout.add_child(_objective_hint)
 	var columns := HBoxContainer.new()
@@ -383,6 +384,7 @@ func _refresh() -> void:
 	for id: String in _item_controls:
 		_refresh_card(id)
 	var ms := MissionState
+	_objective_choice.select(ms.OBJECTIVES.keys().find(ms.objective) + 1)
 	_objective_hint.text = "Escolha um objetivo e adicione seu instrumento na carga."
 	if ms.OBJECTIVES.has(ms.objective):
 		_objective_hint.text = ms.OBJECTIVES[ms.objective]["title"] + " · Instrumento necessário: " + ms.items[ms.objective]["name"]
@@ -568,5 +570,6 @@ func _planning_theme() -> Theme:
 
 func _choose_objective(index: int) -> void:
 	if index == 0:
+		_refresh()
 		return
 	MissionState.select_objective(MissionState.OBJECTIVES.keys()[index - 1])

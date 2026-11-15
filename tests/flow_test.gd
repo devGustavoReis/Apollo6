@@ -74,9 +74,18 @@ func do_tasks(cabin: Node, day: int, skip: Array) -> void:
 			continue
 		var guard := 0
 		while not (cabin._done(task["id"]) or ms().day > day) and guard < 4:
-			cabin.interact(task["id"])
-			while hud.modal_open():
-				if hud.minigame != null:
+			if task["id"] == "water":
+				cabin.target_id = "water"
+				var event := InputEventAction.new()
+				event.action = "cabin_task"
+				event.pressed = true
+				cabin._unhandled_input(event)
+			else:
+				cabin.interact(task["id"])
+			while hud.modal_open() or cabin._gesture_active:
+				if cabin._gesture_active:
+					cabin._decision_motion.custom_step(1.0)
+				elif hud.minigame != null:
 					if hud.minigame.scene_file_path.ends_with("/antenna_minigame.tscn"):
 						var antenna: Node = hud.minigame
 						for step in range(23):
@@ -89,6 +98,7 @@ func do_tasks(cabin: Node, day: int, skip: Array) -> void:
 						while hud.minigame == cartridge:
 							cartridge.angle = 0.0
 							cartridge._advance()
+							cartridge._motion.custom_step(0.5)
 					else:
 						await fly_trajectory(hud.minigame, 0)
 				elif hud._night != null:
@@ -157,9 +167,7 @@ func run() -> void:
 		for day in [1, 2, 3]:
 			check(ms().day == day, "Dia %d" % day)
 			if cabin._has_task("water") and not cabin._done("water"):
-				cabin._decision("water_leak", "water")
-				while cabin.hud.modal_open():
-					cabin.hud._on_modal_button(0)
+				await do_tasks(cabin, day, ["rest", "hatch"])
 				check(cabin._done("water") and ms().lost_water > 0.0, "Vazamento tratado antes de beber")
 			if day > 1:
 				await eat(cabin, "food")

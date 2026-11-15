@@ -10,7 +10,9 @@ Fontes científicas e simplificações: [docs/nasa_sources.md](docs/nasa_sources
 
 ## Objetivo científico
 
-Escolha no planejamento entre coleta de amostras, medição da distância Terra–Lua e fotografia estéreo do regolito. Acrescente à carga o instrumento correspondente. Após o pouso, confirme a atividade científica antes de preparar a partida. O relatório apresenta o resultado científico e a situação da tripulação.
+Escolha no planejamento entre coleta de amostras, medição da distância Terra–Lua e fotografia estéreo do regolito. Acrescente à carga o instrumento correspondente. Após o pouso, prepare o instrumento com a opção adequada e confirme a atividade antes de iniciar a partida. O relatório apresenta o resultado científico e a situação da tripulação.
+
+No Dia 2, a ordem do alerta de energia e da ocorrência sorteada pode variar. O checklist mostra o comando que deve ser executado primeiro. Em **LIFE SUPPORT**, abra o compartimento, retire o cartucho usado, alinhe o novo com o controle deslizante e confirme o encaixe.
 
 ## Áudio
 

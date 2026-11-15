@@ -232,6 +232,8 @@ func _reentry_block() -> String:
 		t += "Não alcançada.\n" if ms.departure.get("ok", false) == false or not ms.jumps.has("C") else "Em aberto.\n"
 		return t
 	var last: Dictionary = ms.reentry_history.back()
+	if last.has("stabilization"):
+		t += "Estabilidade antes dos paraquedas: %d%%.\n" % roundi(float(last["stabilization"]) * 100.0)
 	if last["success"]:
 		t += "Paraquedas abertos a %.0f m, %.2f s depois da abertura da janela.\n" % [last["altitude"], last["time"]]
 		t += "Amerissagem confirmada.\n" if ms.splashdown else "Paraquedas abertos, toque na água não registrado.\n"
