@@ -623,29 +623,51 @@ def badge(col, p, u, v, width, country):
             mesh(col,"Estrela",pts,[(0,k+1,(k+1)%10+1) for k in range(10)],"FlagWhite")
 
 
+def wall_panel(col,name,q,u,v,n,pw,ph,mat,bolts=True):
+    box(col,"Chapa "+name,q+n*.014,(pw,ph,.026),mat,.012,(u,v,n))
+    if pw>.22 and ph>.22:
+        cut=min(.06,pw*.12,ph*.12)
+        corners=octagon(0,0,pw-.07,ph-.07,cut)
+        back=[q+n*.027+u*x+v*z for x,z in corners]
+        front=[q+n*.034+u*x*.98+v*z*.98 for x,z in corners]
+        solid(col,"Relevo "+name,back,front,"PlateLit" if mat!="PlateLit" else "Plate")
+    if bolts and pw>.14 and ph>.14:
+        for side in (-1,1):
+            for top in (-1,1):
+                c=q+u*side*(pw*.5-.03)+v*top*(ph*.5-.03)
+                rod(col,"Fixação de parede",c+n*.026,c+n*.04,.009,"Bolt",8)
+
+
 def wall_details(wall_parts):
     col=group("cabin_wall_panels")
     for name,p,(u,v,n),(w,h,d) in wall_parts:
         if w < .16 or h < .17:
             continue
         inner=p+n*(d*.5)
-        count=max(1,math.ceil(w/.75))
+        floor=abs((p.z-h*.5))<.02
+        bottom=.21 if floor else 0
+        count=max(1,math.ceil(w/.62))
         width=w/count
+        area=h-bottom
+        rows=2 if area>1.0 else 1
         for i in range(count):
-            q=inner+u*((i+.5)*width-w*.5)
-            pw=width-.026
-            ph=h-.045
-            box(col,"Chapa "+name,q+n*.014,(pw,ph,.026),
-                ("PlateAlt" if i%2 and h>.7 else "Plate") if h>.6 else "PlateDeep",.010,(u,v,n))
-            if ph > .58:
-                box(col,"Tampa embutida",q+n*.030+v*ph*.12,(pw-.074,ph*.66,.012),
-                    "PlateLit",.010,(u,v,n))
-                box(col,"Placa estreita",q+n*.039+v*ph*.355,(pw-.105,.061,.009),
-                    "Slate",.005,(u,v,n))
-                for side in (-1,1):
-                    for top in (-1,1):
-                        c=q+u*side*(pw*.5-.025)+v*top*(ph*.5-.030)
-                        rod(col,"Fixação de parede",c+n*.027,c+n*.035,.008,"Bolt",7)
+            for r in range(rows):
+                ph=area/rows-.04
+                z=-h*.5+bottom+(r+.5)*area/rows
+                q=inner+u*((i+.5)*width-w*.5)+v*z
+                mat=("PlateAlt" if (i+r)%2 else "Plate") if h>.6 else "PlateDeep"
+                wall_panel(col,name,q,u,v,n,width-.03,ph,mat)
+        if floor:
+            base=inner+v*(-h*.5+.105)
+            box(col,"Rodapé "+name,base+n*.02,(w,.2,.04),"TealDeep",.01,(u,v,n))
+            box(col,"Friso do rodapé",base+n*.042+v*.085,(w,.012,.006),"Teal",.002,(u,v,n))
+            steps=max(2,int(w/.3))
+            for k in range(steps):
+                c=base+u*((k+.5)*w/steps-w*.5)
+                rod(col,"Fixação do rodapé",c+n*.04,c+n*.05,.009,"Steel",8)
+            for side in (-1,1):
+                c=inner+u*side*(w*.5-.025)+v*(bottom*.5)
+                box(col,"Nervura estrutural",c+n*.03+v*((h-bottom)*.5),(.05,h-bottom,.05),"PlateLit",.012,(u,v,n))
     return col
 
 
@@ -676,14 +698,28 @@ def roof():
         u=(base_b-base_a).normalized()
         v=((tip_a+tip_b)-(base_a+base_b)).normalized()
         n=u.cross(v)
-        mid=(base_a+base_b+tip_a+tip_b)*.25+n*.023
+        center=(base_a+base_b+tip_a+tip_b)*.25
+        quad=[base_a,base_b,tip_b,tip_a]
+        inset=[center+(q-center)*.86 for q in quad]
+        solid(col,"Painel do teto",[q+n*.012 for q in inset],[q+n*.034 for q in inset],"Edge")
+        inner=[center+(q-center)*.66 for q in quad]
+        solid(col,"Relevo do teto",[q+n*.034 for q in inner],[q+n*.042 for q in inner],"PlateAlt")
+        for q in inset:
+            c=center+(q-center)*.9
+            rod(col,"Fixação do teto",c+n*.03,c+n*.045,.01,"Bolt",8)
+        edge=tip_a-base_a
+        box(col,"Nervura do teto",(base_a+tip_a)*.5+n*.03,(.07,edge.length,.06),"Teal",.014,(u.cross(edge.normalized()).normalized().cross(edge.normalized()),edge.normalized(),u.cross(edge.normalized()).normalized()))
+        mid=center+n*.023
         w=(base_b-base_a).length*.72
-        box(col,"Painel do teto",mid,(w,.47,.031),"PlateAlt" if i%2 else "Plate",.013,(u,v,n))
         if i%2==0 and i!=0:
             box(col,"Canal da luminária",mid+n*.027,(w*.62,.073,.035),"Edge",.007,(u,v,n))
             box(col,"Difusor da luminária",mid+n*.047,(w*.56,.038,.013),"Lamp",.005,(u,v,n))
-        else:
-            box(col,"Travessa do teto",mid+n*.025,(w*.46,.052,.024),"Slate",.006,(u,v,n))
+    box(col,"Viga do teto",(0,0,2.575),(3.0,.07,.05),"Teal",.012)
+    box(col,"Placa central do teto",(0,.75,2.585),(1.3,.62,.02),"PlateLit",.01)
+    box(col,"Relevo da placa",(0,.75,2.572),(1.12,.46,.008),"Plate",.006)
+    for x in (-.6,.6):
+        for y in (.48,1.02):
+            rod(col,"Fixação do teto",(x,y,2.575),(x,y,2.562),.011,"Bolt",8)
     for x in (-.97,.97):
         box(col,"Base da estação",(x,1.615,1.825),(.29,.177,.20),"Slate",.012)
         for dx in (-.095,.095):
