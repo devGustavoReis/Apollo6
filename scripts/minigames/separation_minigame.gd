@@ -433,7 +433,7 @@ func _show_failure() -> void:
 	var text := ""
 	for reason in failure.get("reasons", []):
 		text += "• " + reason + "\n"
-	text += "\nDica:\n"
+	text += str(TranslationServer.translate("\nDica:\n"))
 	for tip in failure.get("tips", []):
 		text += "• " + tip + "\n"
 	_make_panel(failure.get("title", str(TranslationServer.translate("FALHA"))), text)
@@ -815,7 +815,7 @@ func _update_checklist() -> void:
 		var mark := "[x]" if i < sep_step else ("[>]" if i == sep_step and phase == "sep" else "[ ]")
 		text += " %s %d. %s\n" % [mark, i + 1, SWITCHES[i][0]]
 	if phase == "sep" and sep_step < SWITCHES.size():
-		text += " → %s" % SWITCHES[sep_step][1]
+		text += " → %s" % str(TranslationServer.translate(SWITCHES[sep_step][1]))
 	_checklist.text = text
 	_checklist.visible = phase in ["sep", "done"]
 	for button in _switch_buttons:
@@ -863,7 +863,7 @@ func _notification(what: int) -> void:
 		qte_holding = false
 		qte_hold = 0.0
 		if is_instance_valid(_body):
-			_body.text = "Janela fora de foco: segure a tecla de novo até a barra encher."
+			_body.text = str(TranslationServer.translate("Janela fora de foco: segure a tecla de novo até a barra encher."))
 	# Fora de foco, a queima, a deriva e as janelas do QTE congelam até o foco voltar.
 	if not is_inside_tree():
 		return
@@ -917,7 +917,7 @@ func _update_qte(delta: float) -> void:
 		return
 	qte_time_left -= delta
 	if qte_time_left <= 0.0:
-		_qte_fail(str(TranslationServer.translate("Tempo esgotado em %s.")) % step[0])
+		_qte_fail(str(TranslationServer.translate("Tempo esgotado em %s.")) % str(TranslationServer.translate(step[0])))
 
 
 func _qte_advance() -> void:
@@ -1240,7 +1240,7 @@ func _draw_cluster() -> void:
 	var width := CLUSTER_SIZE.x - x
 	var digits := "--.-- km/s" if incident == "static" else "%.2f km/s" % velocity_kms
 	_cluster.draw_string(font, Vector2(x, 34), digits, HORIZONTAL_ALIGNMENT_CENTER, width, 28, speed_color)
-	_cluster.draw_string(font, Vector2(x, 54), "ALVO %.2f km/s" % target, HORIZONTAL_ALIGNMENT_CENTER, width, 13, Game.AMBER)
+	_cluster.draw_string(font, Vector2(x, 54), str(TranslationServer.translate("ALVO %.2f km/s")) % target, HORIZONTAL_ALIGNMENT_CENTER, width, 13, Game.AMBER)
 	var deviation := attitude.length()
 	var guidance := _guidance_color() if burning else Color(0.5, 0.5, 0.48)
 	_cluster.draw_string(font, Vector2(x, 80), str(TranslationServer.translate("NARIZ FORA DO ANEL  %.1f°")) % deviation, HORIZONTAL_ALIGNMENT_CENTER, width, 14, guidance)
@@ -1350,7 +1350,7 @@ func _draw_qte() -> void:
 
 	# Alavanca acabou de ser acionada (ou a separação terminou): confirmação em verde.
 	if _qte_done_time > 0.0 and qte_index < 0:
-		var done_text := str(TranslationServer.translate("SEPARAÇÃO CONFIRMADA!")) if phase == "done" else "%s ACIONADA!" % _qte_done_name
+		var done_text := str(TranslationServer.translate("SEPARAÇÃO CONFIRMADA!")) if phase == "done" else str(TranslationServer.translate("%s ACIONADA!")) % _qte_done_name
 		_big_text(Vector2(0, 86), done_text, 30, Game.GOOD)
 		_qte.draw_circle(key_center, 66.0, Color(0.06, 0.22, 0.08))
 		_qte.draw_arc(key_center, 66.0, 0.0, TAU, 48, Game.GOOD, 6.0)
@@ -1380,22 +1380,22 @@ func _draw_qte() -> void:
 		var position_index := _order.find(sep_step)
 		key_label = str(position_index + 1)
 		instruction = str(TranslationServer.translate("PRESSIONE A TECLA %s AGORA!")) % key_label
-		subtitle = "Abre a alavanca %s" % SWITCHES[sep_step][0]
+		subtitle = str(TranslationServer.translate("Abre a alavanca %s")) % SWITCHES[sep_step][0]
 		fraction = clampf(sep_time_left / _sep_window, 0.0, 1.0)
 	else:
 		var step: Array = PROCEDURES[qte_index][qte_step]
 		key_label = OS.get_keycode_string(step[1])
 		holding_step = step[2] == "hold"
 		if holding_step:
-			instruction = "CONTINUE SEGURANDO %s..." % key_label if qte_holding else "SEGURE A TECLA %s!" % key_label
+			instruction = str(TranslationServer.translate("CONTINUE SEGURANDO %s...")) % key_label if qte_holding else str(TranslationServer.translate("SEGURE A TECLA %s!")) % key_label
 			fill = clampf(qte_hold / HOLD_TIME, 0.0, 1.0)
 		else:
 			instruction = str(TranslationServer.translate("PRESSIONE A TECLA %s AGORA!")) % key_label
-		subtitle = "Passo %d de %d · %s" % [qte_step + 1, PROCEDURES[qte_index].size(), step[0]]
+		subtitle = str(TranslationServer.translate("Passo %d de %d · %s")) % [qte_step + 1, PROCEDURES[qte_index].size(), str(TranslationServer.translate(step[0]))]
 		fraction = fill if holding_step and qte_holding else clampf(qte_time_left / _qte_time(), 0.0, 1.0)
 	var alert := _qte_error > 0.35
 	if alert:
-		_big_text(Vector2(0, 86), "%s TENTE DE NOVO" % _qte_alert, 25, Game.BAD if blink else Game.CREAM)
+		_big_text(Vector2(0, 86), str(TranslationServer.translate("%s TENTE DE NOVO")) % _qte_alert, 25, Game.BAD if blink else Game.CREAM)
 	else:
 		_big_text(Vector2(0, 86), instruction, 30, Game.AMBER if blink else Game.CREAM)
 

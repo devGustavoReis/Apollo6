@@ -65,7 +65,7 @@ func _ready() -> void:
 	_buttons.add_theme_constant_override("separation", 12)
 	box.add_child(_buttons)
 	if not TEXTS.has(id):
-		_show_end("Etapa desconhecida.")
+		_show_end(str(TranslationServer.translate("Etapa desconhecida.")))
 		return
 	if id == "B" and (not MissionState.science_completed or not MissionState.lunar_flag_planted):
 		if MissionState.can_start_surface():
@@ -122,21 +122,21 @@ func cost_text() -> String:
 	if id == "B":
 		var ok: bool = p["ok"] and p["food_after"] >= ms.DEPARTURE_RESERVE - 0.0001 and p["water_after"] >= ms.DEPARTURE_RESERVE - 0.0001
 		t += str(TranslationServer.translate("Para partir rumo à Terra, devem sobrar [b]%d de cada[/b] depois deste salto: 2 para os dias de volta e 1 para a aproximação da Terra.\n")) % ms.DEPARTURE_RESERVE
-		t += "[color=#77ee77]Reserva suficiente.[/color]" if ok else str(TranslationServer.translate("[color=#ff8866]A reserva não basta para voltar.[/color]"))
+		t += str(TranslationServer.translate("[color=#77ee77]Reserva suficiente.[/color]")) if ok else str(TranslationServer.translate("[color=#ff8866]A reserva não basta para voltar.[/color]"))
 	return t
 
 
 func _show_offer() -> void:
 	var data: Dictionary = TEXTS[id]
-	_title.text = data["title"]
+	_title.text = str(TranslationServer.translate(data["title"]))
 	var body: String = tr(data["body"])
 	if id == "B":
 		body = body % ("%.0f" % MissionState.science_collected)
 	_body.text = body + "\n" + cost_text()
 	_clear_buttons()
 	if data["back"] != "":
-		_button(data["back"], _go_back)
-	var confirm := _button(data["confirm"], _confirm)
+		_button(str(TranslationServer.translate(data["back"])), _go_back)
+	var confirm := _button(str(TranslationServer.translate(data["confirm"])), _confirm)
 	_locked.erase(confirm)
 	_locked.push_front(confirm)
 	_lock(0.6)
@@ -155,7 +155,7 @@ func _confirm() -> void:
 	_busy = true
 	var paid := Game.confirm_jump(id)
 	if not paid["ok"]:
-		_show_end(str(TranslationServer.translate("[color=#ff8866]%s · %s[/color]\n\nA missão termina aqui. O relatório mostra o que foi alcançado e o que faltou.")) % [MissionState.JUMPS[id]["title"], MissionState.jump_text(id)])
+		_show_end(str(TranslationServer.translate("[color=#ff8866]%s · %s[/color]\n\nA missão termina aqui. O relatório mostra o que foi alcançado e o que faltou.")) % [str(TranslationServer.translate(MissionState.JUMPS[id]["title"])), MissionState.jump_text(id)])
 		return
 	if id == "A":
 		Game.start_descent()

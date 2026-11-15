@@ -142,7 +142,7 @@ func flutuar(i, delta):
 
 
 func atualizar_textos():
-	contador.text = "TEMPO %d · BATIDAS %d/%d" % [ceil(max(tempo, 0)), batidas, limites[nivel]]
+	contador.text = str(TranslationServer.translate("TEMPO %d · BATIDAS %d/%d")) % [ceil(max(tempo, 0)), batidas, limites[nivel]]
 	contador.modulate = Game.GOOD
 	if batidas > 0 or tempo < 10:
 		contador.modulate = Game.WARN

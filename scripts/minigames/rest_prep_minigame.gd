@@ -8,7 +8,7 @@ var tempos = [60.0, 50.0, 45.0]
 var pontos_por_janela = [2, 3, 4]
 var intervalos = [0.0, 7.0, 4.5]
 var janelas = [Vector2(150, 250), Vector2(315, 180), Vector2(480, 270), Vector2(645, 180), Vector2(810, 250)]
-var nomes = ["LATERAL", "ENCONTRO", "ESCOTILHA", "ENCONTRO", "LATERAL"]
+var nomes = [str(TranslationServer.translate("LATERAL")), "ENCONTRO", "ESCOTILHA", "ENCONTRO", str(TranslationServer.translate("LATERAL"))]
 var luzes = [Vector2(330, 440), Vector2(480, 440), Vector2(630, 440)]
 var acesas = [true, true, true]
 var velcros = []
@@ -131,7 +131,7 @@ func _process(delta):
 
 
 func atualizar_textos():
-	contador.text = "TEMPO %d · LUZ %d%%" % [ceil(max(tempo, 0)), luz()]
+	contador.text = str(TranslationServer.translate("TEMPO %d · LUZ %d%%")) % [ceil(max(tempo, 0)), luz()]
 	contador.modulate = Game.WARN
 	if luz() < 35:
 		contador.modulate = Game.GOOD

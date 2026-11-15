@@ -47,7 +47,7 @@ func _ready() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	padding.add_child(box)
-	box.add_child(Game.make_label("SUPORTE DE VIDA  /  FILTRO LiOH", 16, Game.AMBER))
+	box.add_child(Game.make_label(str(TranslationServer.translate("SUPORTE DE VIDA  /  FILTRO LiOH")), 16, Game.AMBER))
 	title = Game.make_label("", 24)
 	box.add_child(title)
 	description = Game.make_label("", 17)
@@ -73,7 +73,7 @@ func _ready() -> void:
 	action.pressed.connect(_advance)
 	action.custom_minimum_size.y = 44
 	box.add_child(action)
-	box.add_child(Game.make_label("Esc · Cancelar tentativa", 14))
+	box.add_child(Game.make_label(str(TranslationServer.translate("Esc · Cancelar tentativa")), 14))
 	_refresh()
 	action.grab_focus()
 func _draw_cartridge(view: Control) -> void:
@@ -146,9 +146,9 @@ func _refresh_alignment() -> void:
 
 
 func _refresh() -> void:
-	title.text = "%d/%d   %s" % [step + 1, STEPS.size(), STEPS[step]]
-	description.text = INSTRUCTIONS[step]
-	action.text = (str(TranslationServer.translate("CONFIRMAR ALINHAMENTO")) if step == ALIGN_STEP else STEPS[step].to_upper())
+	title.text = "%d/%d   %s" % [step + 1, STEPS.size(), str(TranslationServer.translate(STEPS[step]))]
+	description.text = str(TranslationServer.translate(INSTRUCTIONS[step]))
+	action.text = (str(TranslationServer.translate("CONFIRMAR ALINHAMENTO")) if step == ALIGN_STEP else str(TranslationServer.translate(STEPS[step])).to_upper())
 	pointer.visible = step == ALIGN_STEP
 	_alignment.visible = pointer.visible
 	action.disabled = false

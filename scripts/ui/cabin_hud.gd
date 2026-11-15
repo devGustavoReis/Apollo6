@@ -69,7 +69,7 @@ func _ready() -> void:
 	obox.add_child(_objective_title)
 	obox.add_child(_objective_text)
 	obox.add_child(_tutorial)
-	var keys := Game.make_label("TAB checklist · E interagir · F tarefa · ESC pausa", 13, Color(0.6, 0.6, 0.55))
+	var keys := Game.make_label(str(TranslationServer.translate("TAB checklist · E interagir · F tarefa · ESC pausa")), 13, Color(0.6, 0.6, 0.55))
 	obox.add_child(keys)
 
 	var status_panel := PanelContainer.new()
@@ -266,11 +266,11 @@ func refresh_status() -> void:
 	var ms := MissionState
 	_needs.queue_redraw()
 	var lines := str(TranslationServer.translate("[color=#f5bd5c]DIA %d/%d · %s[/color]\n")) % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
-	lines += _line(str(TranslationServer.translate("COMIDA")), "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
-	lines += _line(str(TranslationServer.translate("ÁGUA")), "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
+	lines += _line(str(TranslationServer.translate("COMIDA")), str(TranslationServer.translate("%s cotas")) % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
+	lines += _line(str(TranslationServer.translate("ÁGUA")), str(TranslationServer.translate("%s cotas")) % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
 	var use := ms.power_use()
 	lines += _line(str(TranslationServer.translate("ENERGIA")), "%.0f/%.0f W" % [use, ms.power_capacity], use > ms.power_capacity, use > ms.power_capacity * 0.8)
-	lines += _line("PROPEL. CSM", "%.0f%%" % ms.sps_fuel, ms.sps_fuel < 45, ms.sps_fuel < 70)
+	lines += _line(str(TranslationServer.translate("PROPEL. CSM")), "%.0f%%" % ms.sps_fuel, ms.sps_fuel < 45, ms.sps_fuel < 70)
 	lines += _line(str(TranslationServer.translate("SUPORTE VIDA")), "%.0f%%" % ms.life_support, ms.life_support < 50, ms.life_support < 85)
 	lines += _line(str(TranslationServer.translate("INTEGRIDADE")), "%.0f%%" % ms.integrity, ms.integrity < 60, ms.integrity < 90)
 	_status.text = lines
@@ -343,7 +343,7 @@ func show_checklist(tasks: Array) -> void:
 	for task in tasks:
 		var done: bool = task["done"]
 		var mark := "[color=#77ee77][x][/color]" if done else "[ ]"
-		var optional := " (opcional)" if task.get("optional", false) else ""
+		var optional := str(TranslationServer.translate(" (opcional)")) if task.get("optional", false) else ""
 		text += "%s [b]%s[/b] — %s%s\n" % [mark, tr(task["station"]), tr(task["text"]), optional]
 	text += str(TranslationServer.translate("\n[color=#999]TAB fecha · F inicia tarefas na estação[/color]"))
 	_checklist_text.text = text

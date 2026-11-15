@@ -356,7 +356,7 @@ func validate_plan() -> Dictionary:
 	var warnings: Array[String] = []
 	var s := settings()
 	if plan_items() > int(s["storage"]):
-		errors.append("Armazenamento excedido em %d itens." % (plan_items() - int(s["storage"])))
+		errors.append(str(TranslationServer.translate("Armazenamento excedido em %d itens.")) % (plan_items() - int(s["storage"])))
 	if plan_mass() > s["mass_limit"] + 0.001:
 		errors.append(str(TranslationServer.translate("Massa acima do limite do foguete em %.0f kg.")) % (plan_mass() - s["mass_limit"]))
 	if qty("food_day") < MISSION_DAYS:
@@ -453,7 +453,7 @@ func resolve_minigame_attempt(task_id: String, attempt_id: int, played_well: boo
 		title = str(TranslationServer.translate("Tarefa concluída com ajuda"))
 		message = str(TranslationServer.translate("Você errou o minigame. A tarefa foi concluída graças a: %s.")) % tool_name
 	elif not played_well:
-		title = "Tarefa pendente"
+		title = str(TranslationServer.translate("Tarefa pendente"))
 		message = str(TranslationServer.translate("Você errou o minigame. Tente novamente."))
 		if has_tool:
 			message = str(TranslationServer.translate("Você errou o minigame. A ferramenta %s não recuperou esta tentativa. Tente novamente.")) % tool_name
@@ -616,7 +616,7 @@ func pay_jump(id: String) -> Dictionary:
 		jump_food += 1.0
 		jump_water += 1.0
 	jumps[id] = result
-	add_event("jump_" + id, JUMPS[id]["title"], jump_text(id))
+	add_event("jump_" + id, str(TranslationServer.translate(JUMPS[id]["title"])), jump_text(id))
 	return result
 
 
@@ -627,8 +627,8 @@ func jump_text(id: String) -> String:
 	var parts := []
 	for kind: String in j["deficits"]:
 		var missing: float = j["deficits"][kind]
-		parts.append("%s cota de %s" % [amount_text(missing, true), str(TranslationServer.translate("comida")) if kind == "food" else str(TranslationServer.translate("água"))])
-	return str(TranslationServer.translate("Faltou %s para avançar.")) % " e ".join(PackedStringArray(parts))
+		parts.append(str(TranslationServer.translate("%s cota de %s")) % [amount_text(missing, true), str(TranslationServer.translate("comida")) if kind == "food" else str(TranslationServer.translate("água"))])
+	return str(TranslationServer.translate("Faltou %s para avançar.")) % str(TranslationServer.translate(" e ")).join(PackedStringArray(parts))
 
 
 func check_departure() -> Dictionary:
@@ -646,14 +646,14 @@ func check_departure() -> Dictionary:
 
 func departure_text() -> String:
 	var d := departure
-	var text := "Havia %s %s e %s %s." % [amount_text(d["food"]), kind_name("food", d["food"]),
+	var text := str(TranslationServer.translate("Havia %s %s e %s %s.")) % [amount_text(d["food"]), kind_name("food", d["food"]),
 		amount_text(d["water"]), kind_name("water", d["water"])]
 	var parts := []
 	for kind: String in d["deficits"]:
 		var missing: float = d["deficits"][kind]
 		parts.append("%s %s" % [amount_text(missing, true), kind_name(kind, missing)])
 	if not parts.is_empty():
-		text += " Faltou %s." % " e ".join(PackedStringArray(parts))
+		text += str(TranslationServer.translate(" Faltou %s.")) % str(TranslationServer.translate(" e ")).join(PackedStringArray(parts))
 	return text
 
 
@@ -692,7 +692,7 @@ func verdict() -> Dictionary:
 		causes.append(str(TranslationServer.translate("Objetivo científico não concluído.")))
 	for id: String in ["A", "B", "C"]:
 		if jumps.has(id) and not jumps[id]["ok"]:
-			causes.append("%s · %s" % [JUMPS[id]["title"], jump_text(id)])
+			causes.append("%s · %s" % [str(TranslationServer.translate(JUMPS[id]["title"])), jump_text(id)])
 	if not departure.is_empty() and not departure["ok"]:
 		causes.append(str(TranslationServer.translate("Partida para a Terra · ")) + departure_text())
 	if ended.get("stage", "") == "reentry":

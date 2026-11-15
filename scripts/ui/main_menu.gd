@@ -344,7 +344,7 @@ func _fullscreen_toggle(parent: Node) -> void:
 		button.disabled = true
 		return
 	var window := get_window()
-	var refresh := func(): button.text = "TELA CHEIA: %s" % (str(TranslationServer.translate("SIM")) if is_fullscreen(window.mode) else str(TranslationServer.translate("NÃO")))
+	var refresh := func(): button.text = str(TranslationServer.translate("TELA CHEIA: %s")) % (str(TranslationServer.translate("SIM")) if is_fullscreen(window.mode) else str(TranslationServer.translate("NÃO")))
 	button.pressed.connect(func():
 		if is_fullscreen(window.mode):
 			window.mode = Window.MODE_WINDOWED
@@ -395,7 +395,7 @@ func _on_settings() -> void:
 			continue
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
-		var label := _text(BUS_LABELS[bus_name], 2, Game.CREAM)
+		var label := _text(str(TranslationServer.translate(BUS_LABELS[bus_name])), 2, Game.CREAM)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		label.custom_minimum_size = Vector2(150, 0)
 		row.add_child(label)

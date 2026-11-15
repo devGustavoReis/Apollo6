@@ -136,7 +136,7 @@ func _build_interaction_zones() -> void:
 	disposal.name = "MealDisposal"
 	cabin.add_child(disposal)
 	disposal.position = Vector3(-1.17, 0.88, 1.66)
-	_add_zone(disposal, "disposal", LABELS["disposal"], Vector3(0.36, 0.28, 0.30))
+	_add_zone(disposal, "disposal", str(TranslationServer.translate(LABELS["disposal"])), Vector3(0.36, 0.28, 0.30))
 	var bin: Node3D = load("res://assets/models/cabin/disposal_bin.glb").instantiate()
 	bin.name = "Model"
 	disposal.add_child(bin)
@@ -398,7 +398,7 @@ func day_tasks() -> Array:
 				["rest", str(TranslationServer.translate("Descansar e encerrar o dia"))]]
 		2:
 			var decision_tasks := {
-				"power": "Resolver o alerta de energia",
+				"power": str(TranslationServer.translate("Resolver o alerta de energia")),
 				"console": str(TranslationServer.translate("Resolver o controle térmico da nave")),
 				"water": str(TranslationServer.translate("Vazamento no reservatório de água")),
 			}
@@ -415,14 +415,14 @@ func day_tasks() -> Array:
 				["rest", str(TranslationServer.translate("Descansar e encerrar o dia"))]]
 		_:
 			list = [["radio", str(TranslationServer.translate("Falha no rádio: restabelecer contato")) if ms.random_event == "comm_dropout" else str(TranslationServer.translate("Enviar o status da cápsula para a reentrada"))],
-				["console", "Preparar reentrada"]]
+				["console", str(TranslationServer.translate("Preparar reentrada"))]]
 	var result := []
 	for entry in list:
-		result.append({"id": entry[0], "station": LABELS[entry[0]], "text": entry[1], "done": _done(entry[0])})
+		result.append({"id": entry[0], "station": str(TranslationServer.translate(LABELS[entry[0]])), "text": entry[1], "done": _done(entry[0])})
 	for id: String in MissionState.CABIN_MINIGAMES:
 		var task: Dictionary = MissionState.CABIN_MINIGAMES[id]
 		if task["day"] == ms.day:
-			result.append({"id": id, "station": LABELS[task["station"]], "text": task["title"],
+			result.append({"id": id, "station": str(TranslationServer.translate(LABELS[task["station"]])), "text": str(TranslationServer.translate(task["title"])),
 				"done": ms.minigame_completions.has(id), "optional": true})
 	return result
 
@@ -478,7 +478,7 @@ func _set_tutorial(step: int) -> void:
 		tutorial_step = -1
 		hud.set_tutorial("")
 		return
-	hud.set_tutorial("TUTORIAL %d/%d · %s\n(ENTER pula a dica)" % [step + 1, TUTORIAL.size(), TUTORIAL[step][0]])
+	hud.set_tutorial(str(TranslationServer.translate("TUTORIAL %d/%d · %s\n(ENTER pula a dica)")) % [step + 1, TUTORIAL.size(), str(TranslationServer.translate(TUTORIAL[step][0]))])
 	Houston.say_recorded(TUTORIAL[step][3], TUTORIAL[step][1], TUTORIAL[step][2])
 
 
@@ -609,16 +609,16 @@ func _physics_process(_delta: float) -> void:
 	if player.seated:
 		hud.set_prompt(str(TranslationServer.translate("[ESPAÇO] Soltar o cinto")))
 	elif eating:
-		hud.set_prompt("Comendo..." if held == "food" else "Bebendo...")
+		hud.set_prompt(str(TranslationServer.translate("Comendo...")) if held == "food" else str(TranslationServer.translate("Bebendo...")))
 	elif held != "":
-		hud.set_prompt((str(TranslationServer.translate("[E] Comer a ração")) if held == "food" else str(TranslationServer.translate("[E] Beber a água"))) + " · [Q] Devolver · [G] Soltar")
+		hud.set_prompt((str(TranslationServer.translate("[E] Comer a ração")) if held == "food" else str(TranslationServer.translate("[E] Beber a água"))) + str(TranslationServer.translate(" · [Q] Devolver · [G] Soltar")))
 	elif target_id != "":
 		var task_id := _station_minigame(target_id)
-		var prompt := "[E] " + str(LABELS.get(target_id, str(TranslationServer.translate("RECOLHER"))))
+		var prompt := "[E] " + str(TranslationServer.translate(LABELS.get(target_id, "RECOLHER")))
 		if target_id == "water" and _has_task("water") and not _done("water") and _decision_station_ready("water"):
 			prompt += str(TranslationServer.translate(" · [F] Resolver vazamento"))
 		if not task_id.is_empty():
-			var title: String = MissionState.CABIN_MINIGAMES[task_id]["title"]
+			var title: String = str(TranslationServer.translate(MissionState.CABIN_MINIGAMES[task_id]["title"]))
 			var status := str(TranslationServer.translate(" · Concluída")) if MissionState.minigame_completions.has(task_id) else ""
 			var station := "" if target_id == "disposal" else prompt + "\n"
 			prompt = station + "[F] " + title + status
@@ -704,7 +704,7 @@ func _decision(id: String, task_id: String, after := Callable()) -> void:
 	if not _decision_station_ready(task_id):
 		var pending := _pending()
 		if not pending.is_empty():
-			hud.show_note("Aguarde o procedimento em %s." % pending[0]["station"])
+			hud.show_note(str(TranslationServer.translate("Aguarde o procedimento em %s.")) % pending[0]["station"])
 		return
 	var d := MissionDecisions.get_decision(id)
 	Sound.play_cue("radio" if id in ["midcourse", "return_course"] else "warning", "Voice", true)
@@ -800,8 +800,8 @@ func _open_cabin_minigame(id: String, after := Callable()) -> void:
 		_modal(complete["title"], complete["message"])
 		return
 	var texto: Dictionary = BRIEFINGS.TEXTOS[id]
-	var titulo := "%s · %s" % [LABELS[task["station"]], task["title"].to_upper()]
-	_modal(titulo, texto["instrucoes"], [str(TranslationServer.translate("COMEÇAR")), str(TranslationServer.translate("AGORA NÃO"))], func(choice):
+	var titulo := "%s · %s" % [str(TranslationServer.translate(LABELS[task["station"]])), str(TranslationServer.translate(task["title"])).to_upper()]
+	_modal(titulo, str(TranslationServer.translate(texto["instrucoes"])), [str(TranslationServer.translate("COMEÇAR")), str(TranslationServer.translate("AGORA NÃO"))], func(choice):
 		if choice == 0:
 			_start_cabin_minigame(id, after)
 		elif after.is_valid():
@@ -873,9 +873,9 @@ func _decision_result(id: String, task_id: String, d: Dictionary, choice: int, e
 	if result["correct"] and not result["favorable"]:
 		verdict += str(TranslationServer.translate(" · [color=#ffcc44]COMPLICAÇÃO[/color]"))
 	elif not result["correct"] and result["favorable"]:
-		verdict += " · [color=#ffcc44]DEU SORTE[/color]"
+		verdict += str(TranslationServer.translate(" · [color=#ffcc44]DEU SORTE[/color]"))
 	if id in ["midcourse", "return_course"] and choice == 0:
-		verdict += " · " + ("[color=#77ee77]PILOTAGEM PRECISA[/color]" if errors <= 1 else "[color=#ff8866]PILOTAGEM IMPRECISA[/color]")
+		verdict += " · " + (str(TranslationServer.translate("[color=#77ee77]PILOTAGEM PRECISA[/color]")) if errors <= 1 else str(TranslationServer.translate("[color=#ff8866]PILOTAGEM IMPRECISA[/color]")))
 	MissionState.add_event(id, d["title"], d["options"][choice])
 	_complete(task_id)
 	_modal(d["title"], "%s\n\n%s" % [verdict, result["explanation"]], [str(TranslationServer.translate("CONTINUAR"))], func(_i):
@@ -908,7 +908,7 @@ func interact(id: String) -> void:
 			if _has_task("nav") and not _done("nav"):
 				_decision("midcourse" if ms.day == 1 else "return_course", "nav")
 			else:
-				var leg := "Rota de ida" if ms.phase == "outbound" else str(TranslationServer.translate("Rota de volta"))
+				var leg := str(TranslationServer.translate("Rota de ida")) if ms.phase == "outbound" else str(TranslationServer.translate("Rota de volta"))
 				var err := ms.trajectory_error if ms.phase == "outbound" else ms.return_error
 				_modal("NAVIGATION", str(TranslationServer.translate("%s: desvio de [b]%.0f%%[/b] (tolerância %.0f%%)\nPropelente do CSM: [b]%.0f%%[/b]")) % [leg, err * 100.0, MissionDecisions.SMALL_ERROR * 100.0, ms.sps_fuel])
 		"power":
@@ -965,7 +965,7 @@ func interact(id: String) -> void:
 				return
 			var missing := _pending("rest")
 			if not missing.is_empty():
-				var text := "Antes de descansar, conclua:\n"
+				var text := str(TranslationServer.translate("Antes de descansar, conclua:\n"))
 				for t in missing:
 					text += "• %s — %s\n" % [t["station"], t["text"]]
 				_modal("REST", text)
@@ -985,7 +985,7 @@ func interact(id: String) -> void:
 			if not hud.checklist_visible():
 				hud.toggle_checklist(day_tasks())
 		"tools":
-			_modal("TOOLS", str(TranslationServer.translate("Kit de peças e ferramentas: %s.\nFerramentas permitem reparos mais rápidos em eventos.")) % ("a bordo" if ms.spare_parts else str(TranslationServer.translate("não trazido no planejamento"))))
+			_modal("TOOLS", str(TranslationServer.translate("Kit de peças e ferramentas: %s.\nFerramentas permitem reparos mais rápidos em eventos.")) % (str(TranslationServer.translate("a bordo")) if ms.spare_parts else str(TranslationServer.translate("não trazido no planejamento"))))
 		"medkit":
 			_modal("MEDKIT", str(TranslationServer.translate("Materiais médicos da tripulação. Todos estão bem.")))
 		"storage":
@@ -1002,7 +1002,7 @@ func _approach_checklist() -> void:
 		[str(TranslationServer.translate("Energia")), ms.power_use() <= ms.power_capacity or ms.battery_used or ms.science_multiplier < 1.0, "%.0f/%.0f W" % [ms.power_use(), ms.power_capacity]],
 		[str(TranslationServer.translate("Propelente do CSM")), ms.sps_fuel >= loi + 20.0, str(TranslationServer.translate("%.0f%% (inserção em órbita: %.0f%%)")) % [ms.sps_fuel, loi]],
 		[str(TranslationServer.translate("Navegação")), ms.trajectory_error < MissionDecisions.SMALL_ERROR, str(TranslationServer.translate("desvio de %.0f%% (tolerância %.0f%%)")) % [ms.trajectory_error * 100.0, MissionDecisions.SMALL_ERROR * 100.0]],
-		["Sistemas", ms.integrity >= 70.0, "integridade %.0f%%" % ms.integrity],
+		[str(TranslationServer.translate("Sistemas")), ms.integrity >= 70.0, str(TranslationServer.translate("integridade %.0f%%")) % ms.integrity],
 		[str(TranslationServer.translate("Módulo lunar")), true, str(TranslationServer.translate("propelente de descida: %.0f s")) % ms.lm_fuel],
 	]
 	var text := ""

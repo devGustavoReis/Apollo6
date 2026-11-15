@@ -41,4 +41,4 @@ const TEXTOS := {
 
 
 static func com_licao(id: String, texto: String) -> String:
-	return str(TranslationServer.translate("%s\n\n[color=#f5bd5c]POR QUE ISSO IMPORTA[/color]\n%s")) % [texto, TEXTOS[id]["licao"]]
+	return str(TranslationServer.translate("%s\n\n[color=#f5bd5c]POR QUE ISSO IMPORTA[/color]\n%s")) % [texto, str(TranslationServer.translate(TEXTOS[id]["licao"]))]

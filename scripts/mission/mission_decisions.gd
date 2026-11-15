@@ -61,10 +61,10 @@ static func get_decision(id: String) -> Dictionary:
 			var battery := ms.qty("battery_pack") > 0 and not ms.battery_used
 			return {
 				"title": str(TranslationServer.translate("ALERTA DE ENERGIA")),
-				"body": text + "\nBateria auxiliar: [b]%s[/b].\n\nO que fazer?" % (str(TranslationServer.translate("disponível")) if battery else str(TranslationServer.translate("não disponível"))),
+				"body": text + str(TranslationServer.translate("\nBateria auxiliar: [b]%s[/b].\n\nO que fazer?")) % (str(TranslationServer.translate("disponível")) if battery else str(TranslationServer.translate("não disponível"))),
 				"options": [
 					str(TranslationServer.translate("Desligar temporariamente um instrumento científico não essencial")),
-					"Manter todos os equipamentos ligados",
+					str(TranslationServer.translate("Manter todos os equipamentos ligados")),
 					str(TranslationServer.translate("Desligar o suporte à vida por algumas horas")),
 				],
 			}
@@ -268,7 +268,7 @@ static func _effects(id: String, option: int, good: bool, favorable: bool, error
 				var lost := ms.lose("water", loss, str(TranslationServer.translate("Vazamento no reservatório")))
 				var text := str(TranslationServer.translate("Correto. Isolar o vazamento limitou a perda a %s cota de água.")) % ms.amount_text(lost)
 				if ms.spare_parts:
-					text += " O kit de ferramentas acelerou o reparo."
+					text += str(TranslationServer.translate(" O kit de ferramentas acelerou o reparo."))
 				if not favorable:
 					text += str(TranslationServer.translate(" A válvula demorou a vedar e vazou um pouco mais."))
 				return text

@@ -135,7 +135,7 @@ func _process(delta):
 
 
 func atualizar_textos():
-	contador.text = "TEMPO %d · ERROS %d/%d" % [ceil(max(tempo, 0)), erros, limites[nivel]]
+	contador.text = str(TranslationServer.translate("TEMPO %d · ERROS %d/%d")) % [ceil(max(tempo, 0)), erros, limites[nivel]]
 	contador.modulate = Game.GOOD
 	if erros > 0 or tempo < 10:
 		contador.modulate = Game.WARN
@@ -201,9 +201,9 @@ func _draw():
 	draw_rect(Rect2(810 - limite * 2, 282, limite * 4, 22), Color(0.45, 0.9, 0.45, 0.35))
 	draw_rect(Rect2(810 + desvio() * 2 - 3, 278, 6, 30), cor_trava)
 	draw_rect(Rect2(690, 282, 240, 22), Game.AMBER, false, 2)
-	draw_string(fonte, Vector2(690, 350), "A / D ou ← / →   girar", HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.CREAM)
+	draw_string(fonte, Vector2(690, 350), str(TranslationServer.translate("A / D ou ← / →   girar")), HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.CREAM)
 	draw_string(fonte, Vector2(690, 372), str(TranslationServer.translate("ESPAÇO ou clique  empurrar")), HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.CREAM)
-	draw_string(fonte, Vector2(690, 394), "Azul entra, vermelho sai.", HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.AMBER)
+	draw_string(fonte, Vector2(690, 394), str(TranslationServer.translate("Azul entra, vermelho sai.")), HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.AMBER)
 	draw_rect(Rect2(0, 0, 960, 60), Color(0.06, 0.07, 0.065))
 	draw_rect(Rect2(0, 500, 960, 40), Color(0.06, 0.07, 0.065))
 	var borda = Game.AMBER

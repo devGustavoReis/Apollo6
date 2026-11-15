@@ -152,7 +152,7 @@ func _process(delta):
 
 
 func atualizar_textos():
-	contador.text = "TEMPO %d · GUARDADAS %d/%d" % [ceil(max(tempo, 0)), guardadas(), tamanhos.size()]
+	contador.text = str(TranslationServer.translate("TEMPO %d · GUARDADAS %d/%d")) % [ceil(max(tempo, 0)), guardadas(), tamanhos.size()]
 	contador.modulate = Game.GOOD
 	if tempo < 15:
 		contador.modulate = Game.WARN

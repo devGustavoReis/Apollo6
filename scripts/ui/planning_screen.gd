@@ -84,7 +84,7 @@ func _ready() -> void:
 	_info_dialog = AcceptDialog.new()
 	_info_dialog.theme = theme
 	_info_dialog.dialog_autowrap = true
-	_info_dialog.get_ok_button().text = "Fechar"
+	_info_dialog.get_ok_button().text = str(TranslationServer.translate("Fechar"))
 	add_child(_info_dialog)
 
 	MissionState.changed.connect(_refresh)
@@ -204,7 +204,7 @@ func _build_catalog(parent: HBoxContainer) -> void:
 	contents.add_child(tabs)
 	for category: String in CATEGORIES:
 		var tab := Button.new()
-		tab.text = CATEGORIES[category][0]
+		tab.text = str(TranslationServer.translate(CATEGORIES[category][0]))
 		tab.toggle_mode = true
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.pressed.connect(_select_category.bind(category))
@@ -280,7 +280,7 @@ func _item_card(item: Dictionary) -> PanelContainer:
 	contents.add_child(actions)
 	var details := Button.new()
 	details.text = str(TranslationServer.translate("Detalhes"))
-	details.tooltip_text = "Ver detalhes de " + str(item["name"])
+	details.tooltip_text = str(TranslationServer.translate("Ver detalhes de ")) + str(item["name"])
 	details.theme_type_variation = &"TextButton"
 	details.pressed.connect(_show_item_info.bind(item))
 	actions.add_child(details)
@@ -332,7 +332,7 @@ func _equipment_icon(id: String, pixels: int) -> TextureRect:
 
 
 func _item_stats(item: Dictionary) -> String:
-	var stats := "1 vaga  ·  %d kg" % int(item["mass"])
+	var stats := str(TranslationServer.translate("1 vaga  ·  %d kg")) % int(item["mass"])
 	if item["category"] == "supply":
 		return str(TranslationServer.translate("1 vaga e %d kg por dia")) % int(item["mass"])
 	if float(item["power"]) > 0.0:
@@ -471,13 +471,13 @@ func _refresh() -> void:
 	var mass := ms.plan_mass()
 	var power := ms.plan_power()
 	var capacity := ms.plan_power_capacity()
-	_set_meter("storage", "%d / %d itens" % [used, int(s["storage"])], used, s["storage"], RED)
+	_set_meter("storage", str(TranslationServer.translate("%d / %d itens")) % [used, int(s["storage"])], used, s["storage"], RED)
 	if used == int(s["storage"]):
 		_meters["storage"][0].add_theme_color_override("font_color", AMBER)
 	_set_meter("mass", "%d / %d kg" % [int(mass), int(s["mass_limit"])], mass, s["mass_limit"], RED)
 	_set_meter("power", "%d / %d W" % [int(power), int(capacity)], power, capacity, AMBER)
 	var science := ms.plan_science()
-	_science.text = "%d pontos" % science
+	_science.text = str(TranslationServer.translate("%d pontos")) % science
 	_science.add_theme_color_override("font_color", MINT if science > 0 else AMBER)
 	_show_days(_food, ms.qty("food_day"))
 	_show_days(_water, ms.qty("water_day"))
@@ -489,7 +489,7 @@ func _refresh() -> void:
 	_launch.tooltip_text = "\n".join(validation["errors"]) if _launch.disabled else ""
 	var missing: int = validation["errors"].size()
 	_status.text = str(TranslationServer.translate("Plano pronto para lançar")) if missing == 0 else (
-		"1 requisito pendente" if missing == 1 else "%d requisitos pendentes" % missing
+		str(TranslationServer.translate("1 requisito pendente")) if missing == 1 else str(TranslationServer.translate("%d requisitos pendentes")) % missing
 	)
 	if ms.objective.is_empty():
 		_status.text = str(TranslationServer.translate("Escolha o objetivo científico acima"))
@@ -515,7 +515,7 @@ func _refresh_card(id: String) -> void:
 		if not selected and MissionState.plan_items() >= int(MissionState.settings()["storage"]):
 			toggle.disabled = true
 		toggle.text = str(TranslationServer.translate("Retirar")) if selected else str(TranslationServer.translate("+ Adicionar"))
-		toggle.tooltip_text = ("Retirar " if selected else "Adicionar ") + str(MissionState.items[id]["name"])
+		toggle.tooltip_text = (str(TranslationServer.translate("Retirar ")) if selected else str(TranslationServer.translate("Adicionar "))) + str(MissionState.items[id]["name"])
 		toggle.theme_type_variation = &"SelectedButton" if selected else &"AddButton"
 	else:
 		controls["count"].text = str(TranslationServer.translate("%d dia%s")) % [quantity, "" if quantity == 1 else "s"]
@@ -536,7 +536,7 @@ func _set_meter(id: String, text: String, value: float, limit: float, over_color
 
 func _show_days(label: Label, days: int) -> void:
 	var minimum := MissionState.MISSION_DAYS
-	label.text = "%d / %d cotas" % [days, minimum]
+	label.text = str(TranslationServer.translate("%d / %d cotas")) % [days, minimum]
 	label.add_theme_color_override("font_color", RED if days < minimum else AMBER if days == minimum else MINT)
 
 

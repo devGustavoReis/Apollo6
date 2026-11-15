@@ -287,7 +287,7 @@ func _splash() -> void:
 	phase_time = 0.0
 	altitude = 0.0
 	MissionState.splashdown = true
-	MissionState.add_event("splashdown", "Amerissagem", str(TranslationServer.translate("Paraquedas abertos a %.0f m, %.2f s depois da abertura da janela. Contato com a água no Pacífico.")) % [result["altitude"], result["time"]])
+	MissionState.add_event("splashdown", str(TranslationServer.translate("Amerissagem")), str(TranslationServer.translate("Paraquedas abertos a %.0f m, %.2f s depois da abertura da janela. Contato com a água no Pacífico.")) % [result["altitude"], result["time"]])
 	Sound.set_motor(0.0)
 	Sound.play_cue("impact")
 	Houston.say("Columbia, Houston. We have splashdown. Welcome home.", "Columbia, aqui é Houston. Amerissagem confirmada. Bem-vindos de volta.")
@@ -311,7 +311,7 @@ func _update_hud() -> void:
 		_hint.text = str(TranslationServer.translate("ESPAÇO · ABRIR PARAQUEDAS"))
 		_hint.modulate = Game.WARN
 	elif early_note > 0.0:
-		_hint.text = "Aguarde a altitude de abertura: 3.050 m"
+		_hint.text = str(TranslationServer.translate("Aguarde a altitude de abertura: 3.050 m"))
 	elif phase == "drogue":
 		_hint.text = str(TranslationServer.translate("←/→ ou A/D · Centralize a cápsula · Estabilidade %d%%")) % roundi(stabilization * 100.0)
 	elif phase in ["separation", "entry"]:

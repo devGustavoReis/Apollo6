@@ -21,11 +21,11 @@ func _set_seated(value: bool) -> void:
 	if seated:
 		global_transform = cabin.get_node("PlayerStart/SeatedEye").global_transform
 		camera.position = Vector3.ZERO
-		help.text = "ENTER · levantar   |   Clique · olhar   |   ESC · liberar mouse"
+		help.text = str(TranslationServer.translate("ENTER · levantar   |   Clique · olhar   |   ESC · liberar mouse"))
 	else:
 		global_transform = cabin.get_node("PlayerStart/ExplorationStart").global_transform
 		camera.position = Vector3(0, 1.55, 0)
-		help.text = "WASD · mover   |   Mouse · olhar   |   ENTER · sentar   |   ESC · liberar mouse"
+		help.text = str(TranslationServer.translate("WASD · mover   |   Mouse · olhar   |   ENTER · sentar   |   ESC · liberar mouse"))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:

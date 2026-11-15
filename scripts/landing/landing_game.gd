@@ -380,7 +380,7 @@ func _show_failure() -> void:
 	var text := ""
 	for reason in f.get("reasons", []):
 		text += "• " + reason + "\n"
-	text += "\nComo melhorar:\n"
+	text += str(TranslationServer.translate("\nComo melhorar:\n"))
 	for tip in f.get("tips", []):
 		text += "• " + tip + "\n"
 	text += str(TranslationServer.translate("\nTentativas até agora: %d")) % MissionState.landing_attempts
@@ -535,9 +535,9 @@ func _update_readouts() -> void:
 	_set_readout("tilt", str(TranslationServer.translate("INCLINAÇÃO    %6.1f°")) % tilt_angle(), tilt_angle() / limits["land_tilt"])
 	var bars := int(roundf(throttle * 10.0))
 	# Só ASCII: a fonte do HUD não tem os blocos ▮▯ e eles viravam quadrados vazios.
-	_set_readout("throttle", "MOTOR  [%s] %3.0f%%" % ["=".repeat(bars) + "-".repeat(10 - bars), throttle * 100.0], 0.0)
+	_set_readout("throttle", str(TranslationServer.translate("MOTOR  [%s] %3.0f%%")) % ["=".repeat(bars) + "-".repeat(10 - bars), throttle * 100.0], 0.0)
 	var fuel_ratio := MissionState.lm_fuel / MissionState.lm_fuel_max
-	_set_readout("fuel", "PROPELENTE    %6.1f s" % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
+	_set_readout("fuel", str(TranslationServer.translate("PROPELENTE    %6.1f s")) % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
 	_set_readout("dist", str(TranslationServer.translate("DIST. DO ALVO %6.0f m")) % Vector2(pos.x, pos.z).length(), 0.0)
 	radar.modulo = map_point(pos)
 	radar.velocidade = map_point(vel)
@@ -556,7 +556,7 @@ func _update_readouts() -> void:
 			if pos.y > 65.0:
 				_message.text = str(TranslationServer.translate("APROXIMAÇÃO · Observe o vetor de deslizamento no radar"))
 			elif pos.y > 18.0:
-				_message.text = "ALINHAMENTO · Centralize o alvo e reduza a velocidade lateral"
+				_message.text = str(TranslationServer.translate("ALINHAMENTO · Centralize o alvo e reduza a velocidade lateral"))
 			else:
 				_message.text = str(TranslationServer.translate("TOQUE · Controle a descida e nivele o módulo"))
 
@@ -582,7 +582,7 @@ static func direction_name(v: Vector2) -> String:
 		names.append(str(TranslationServer.translate("para a direita")))
 	elif v.x < -0.35 * v.length():
 		names.append(str(TranslationServer.translate("para a esquerda")))
-	return " e ".join(PackedStringArray(names))
+	return str(TranslationServer.translate(" e ")).join(PackedStringArray(names))
 
 
 func _touchdown() -> void:
