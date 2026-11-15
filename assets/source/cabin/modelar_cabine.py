@@ -558,6 +558,34 @@ def disposal_bin():
     return col
 
 
+def science_cargo_bay():
+    col=group("science_cargo_bay")
+    w,d,h=.54,.40,.40
+    box(col,"Gabinete",(0,0,h*.5),(w,d,h),"Teal",.02)
+    box(col,"Rodapé do gabinete",(0,.004,.035),(w+.01,d+.01,.07),"TealDeep",.01)
+    for sx in (-1,1):
+        box(col,"Trilho lateral",(sx*(w*.5-.02),0,h+.02),(.04,d,.04),"TealDeep",.008)
+    box(col,"Trilho traseiro",(0,-d*.5+.02,h+.02),(w,.04,.04),"TealDeep",.008)
+    box(col,"Fundo do berço",(0,0,h+.003),(w-.08,d-.06,.006),"Niche")
+    box(col,"Barra de retenção",(0,d*.5-.012,h+.045),(w-.04,.016,.016),"PlateLit",.004)
+    for sx in (-1,1):
+        box(col,"Montante da barra",(sx*(w*.5-.03),d*.5-.012,h+.022),(.018,.018,.05),"Steel",.003)
+        for sy in (-1,1):
+            rod(col,"Olhal de amarração",(sx*(w*.5-.06),sy*(d*.5-.06),h+.006),(sx*(w*.5-.06),sy*(d*.5-.06),h+.022),.014,"Metal",10)
+    box(col,"Painel frontal",(0,d*.5+.002,h*.5+.02),(w-.08,.006,h-.15),"Graphite",.004)
+    inscription(col,"SCIENCE CARGO",(0,d*.5+.006,h-.085),.024,"Paper",center=True)
+    box(col,"Faixa âmbar",(0,d*.5+.006,h-.045),(w-.12,.004,.01),"Amber")
+    for k in range(5):
+        box(col,"Ventilação",(-.1+k*.05,d*.5+.006,.15),(.012,.004,.07),"Black",.002)
+    for sx in (-1,1):
+        box(col,"Trinco",(sx*(w*.5-.07),d*.5+.008,.27),(.05,.012,.03),"Steel",.004)
+    for x,z in ((-w*.5+.03,.09),(w*.5-.03,.09),(-w*.5+.03,h-.03),(w*.5-.03,h-.03)):
+        bolt(col,x,z,d*.5+.003,.006)
+    for sx in (-1,1):
+        box(col,"Suporte de parede",(sx*(w*.5-.05),-d*.5-.012,h*.6),(.06,.024,h*.8),"Steel",.006)
+    return col
+
+
 def godot_vec(point):
     x,y,z = point
     return Vector((x,-z,y))
@@ -875,6 +903,8 @@ def review_scene(slots):
                 inst.location=p
             if key=="disposal_bin":
                 inst.location=(-1.17,-1.66,.88)
+            if key=="science_cargo_bay":
+                inst.location=(1.08,-1.58,0)
             review.collection.objects.link(inst)
     for at,target,watts,size in [((0,-1.04,2.12),(0,1,.8),105,1.8),
                                   ((.7,.3,2.2),(0,0,.7),52,1.15),((-.6,1.1,1.7),(0,-1,1),34,1.8)]:
@@ -904,7 +934,7 @@ if reexport:
         "crew_seat", "cabin_wall_panels", "cabin_deck_panels", "cabin_roof_trim",
         "cabin_hatch_trim", "cabin_markings", "lunar_flag", "cabin_front_trim",
         "supply_food_niche", "supply_water_niche", "supply_pouch", "ration_pack_cream",
-        "ration_pack_orange", "disposal_bin",
+        "ration_pack_orange", "disposal_bin", "science_cargo_bay",
     )
     for name in names:
         export(bpy.data.collections[name])
@@ -931,6 +961,7 @@ else:
         ration_pack("ration_pack_cream","Paper")
         ration_pack("ration_pack_orange","LabelOrange")
         disposal_bin()
+        science_cargo_bay()
 
     for collection in collections.values():
         export(collection)

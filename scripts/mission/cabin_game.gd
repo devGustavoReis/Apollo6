@@ -1068,7 +1068,18 @@ func _build_science_cargo() -> void:
 	var slot := Node3D.new()
 	slot.name = "ScienceCargo"
 	cabin.add_child(slot)
-	slot.position = Vector3(1.05, 0.75, 1.4)
+	slot.position = Vector3(1.08, 0.0, 1.58)
+	var bay: Node3D = load("res://assets/models/cabin/science_cargo_bay.glb").instantiate()
+	bay.name = "Bay"
+	slot.add_child(bay)
+	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(0.54, 0.44, 0.4)
+	shape.shape = box
+	shape.position = Vector3(0, 0.22, 0)
+	body.add_child(shape)
+	slot.add_child(body)
 	var model := ""
 	if MissionState.objective == "sample_kit" and MissionState.science_completed and MissionState.day >= 4:
 		model = "lunar_sample_container_open"
@@ -1080,6 +1091,8 @@ func _build_science_cargo() -> void:
 		var cargo: Node3D = load("res://assets/models/science/" + model + ".glb").instantiate()
 		cargo.name = "Model"
 		cargo.scale = Vector3.ONE * SCIENCE_SCALE[model]
+		cargo.position = Vector3(0, 0.406, 0)
+		cargo.rotation.y = PI
 		slot.add_child(cargo)
 
 
