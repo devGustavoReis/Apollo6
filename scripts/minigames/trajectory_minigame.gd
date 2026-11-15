@@ -49,7 +49,9 @@ func _ready():
 
 func centralizar():
 	var tela = get_viewport_rect().size
-	position = Vector2((tela.x - 960) / 2, 16)
+	var factor: float = minf(1.0, minf((tela.x - 32.0) / 960.0, (tela.y - 32.0) / 540.0))
+	scale = Vector2.ONE * maxf(factor, 0.2)
+	position = (tela - size * scale) * 0.5
 
 
 func _gui_input(event):
@@ -60,6 +62,7 @@ func _gui_input(event):
 			arrastando = true
 		if not event.pressed:
 			arrastando = false
+			mira = nave
 	if event is InputEventMouseMotion and arrastando:
 		mira = event.position
 		mover(mira)
@@ -71,6 +74,9 @@ func _notification(what):
 
 
 func _process(delta):
+	if arrastando and not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		arrastando = false
+		mira = nave
 	tempo += delta
 	if alerta > 0:
 		alerta -= delta
@@ -89,6 +95,8 @@ func _process(delta):
 
 
 func mover(pos):
+	if acabou or indice >= pontos.size() - 1:
+		return
 	var a = pontos[indice]
 	var b = pontos[indice + 1]
 	var perto = Geometry2D.get_closest_point_to_segment(pos, a, b)

@@ -32,6 +32,7 @@ const MINT := Color("#83e4ce")
 const AMBER := Color("#f7c584")
 const RED := Color("#ffaeac")
 
+var _objective_hint: Label
 var _tabs: Dictionary = {}
 var _category_grids: Dictionary = {}
 var _item_controls: Dictionary = {}
@@ -70,6 +71,14 @@ func _ready() -> void:
 	var layout := _stack(14)
 	margin.add_child(layout)
 	_build_header(layout)
+	var choice := OptionButton.new()
+	choice.add_item("Escolha o objetivo científico")
+	for id: String in MissionState.OBJECTIVES:
+		choice.add_item(MissionState.OBJECTIVES[id]["title"])
+	choice.item_selected.connect(_choose_objective)
+	layout.add_child(choice)
+	_objective_hint = _label("", 15, MINT, true)
+	layout.add_child(_objective_hint)
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 16)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -374,6 +383,9 @@ func _refresh() -> void:
 	for id: String in _item_controls:
 		_refresh_card(id)
 	var ms := MissionState
+	_objective_hint.text = "Escolha um objetivo e adicione seu instrumento na carga."
+	if ms.OBJECTIVES.has(ms.objective):
+		_objective_hint.text = ms.OBJECTIVES[ms.objective]["title"] + " · Instrumento necessário: " + ms.items[ms.objective]["name"]
 	var s := ms.settings()
 	var cost := ms.plan_cost()
 	var mass := ms.plan_mass()
@@ -409,6 +421,7 @@ func _refresh_card(id: String) -> void:
 	if controls.has("toggle"):
 		controls["loaded"].visible = selected
 		var toggle: Button = controls["toggle"]
+		toggle.disabled = MissionState.items[id]["category"] == "science" and id != MissionState.objective
 		toggle.text = "Retirar" if selected else "+ Adicionar"
 		toggle.tooltip_text = ("Retirar " if selected else "Adicionar ") + str(MissionState.items[id]["name"])
 		toggle.theme_type_variation = &"SelectedButton" if selected else &"AddButton"
@@ -551,3 +564,9 @@ func _planning_theme() -> Theme:
 	result.set_color("font_pressed_color", &"LaunchButton", INK)
 	result.set_stylebox("background", "ProgressBar", _box(INK, Color.TRANSPARENT, 3, 0, 0))
 	return result
+
+
+func _choose_objective(index: int) -> void:
+	if index == 0:
+		return
+	MissionState.select_objective(MissionState.OBJECTIVES.keys()[index - 1])

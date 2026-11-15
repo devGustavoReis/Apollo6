@@ -134,7 +134,7 @@ func start_descent() -> void:
 	_music_level = -60.0
 	_descent_active = true
 	_descent_player.volume_db = -60.0
-	_descent_player.play()
+	_descent_player.play(48.0)
 
 
 func end_maneuver() -> void:
@@ -216,7 +216,7 @@ func _process(delta: float) -> void:
 	var music_db := (-33.0 if _report_wait > 0.0 else _music_level) - (12.0 if priority else 0.0) - (8.0 if _risk else 0.0)
 	_fade(_theme_player, music_db, delta)
 	_theme_player.stream_paused = paused
-	var descent_db := -12.0 - (12.0 if priority else 0.0) - (8.0 if _risk else 0.0)
+	var descent_db := -10.0 - (12.0 if priority else 0.0) - (8.0 if _risk else 0.0)
 	_fade(_descent_player, descent_db if _descent_active else -60.0, delta)
 	if not _descent_active and _descent_player.playing and _descent_player.volume_db <= -58.0:
 		_descent_player.stop()

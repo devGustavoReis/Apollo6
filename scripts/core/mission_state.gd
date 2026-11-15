@@ -56,8 +56,22 @@ const DIFFICULTIES := {
 	},
 }
 
+const OBJECTIVES := {
+	"sample_kit": {"title": "Composição das rochas e do solo", "action": "COLETAR E ARMAZENAR AMOSTRA", "evidence": "Amostra armazenada para análise na Terra."},
+	"retroreflector": {"title": "Distância entre Terra e Lua", "action": "POSICIONAR O RETRORREFLETOR", "evidence": "Retrorrefletor instalado na Lua para medições por estações terrestres."},
+	"camera": {"title": "Textura e relevo do regolito", "action": "REGISTRAR PAR ESTÉREO", "evidence": "Par de fotografias próximas do solo registrado."},
+}
+var objective := ""
+var science_completed := false
+var nourishment := 1.0
+var hydration := 1.0
+var slept_days: Dictionary = {}
+var supply_tokens: Dictionary = {}
+var next_supply_token := 1
+
 ## Campos salvos nos checkpoints. Contadores de tentativas ficam de fora de propósito.
 const SAVED_FIELDS := [
+	"supply_tokens", "next_supply_token", "objective", "science_completed", "nourishment", "hydration", "slept_days",
 	"difficulty", "cargo", "food_days", "water_days", "food_eaten", "water_drunk",
 	"power_capacity", "instruments_active", "spare_parts", "battery_used",
 	"sps_fuel", "lm_fuel", "lm_fuel_max", "integrity", "life_support",
@@ -153,6 +167,13 @@ func _load_catalog() -> void:
 func reset(new_difficulty: String) -> void:
 	difficulty = new_difficulty if DIFFICULTIES.has(new_difficulty) else "normal"
 	cargo = {"food_day": MISSION_DAYS, "water_day": MISSION_DAYS}
+	objective = ""
+	science_completed = false
+	nourishment = 1.0
+	hydration = 1.0
+	slept_days = {}
+	supply_tokens = {}
+	next_supply_token = 1
 	phase = "outbound"
 	intake = {}
 	sealed = {}
@@ -217,7 +238,11 @@ func qty(id: String) -> int:
 
 
 func set_qty(id: String, value: int) -> void:
+	if not items.has(id):
+		return
 	var item: Dictionary = items[id]
+	if item["category"] == "science" and id != objective:
+		return
 	cargo[id] = clampi(value, 0, int(item["max"]))
 	changed.emit()
 
@@ -225,6 +250,8 @@ func set_qty(id: String, value: int) -> void:
 func plan_cost() -> float:
 	var total := 0.0
 	for id in cargo:
+		if not items.has(id):
+			continue
 		total += float(items[id]["cost"]) * qty(id)
 	return total
 
@@ -232,6 +259,8 @@ func plan_cost() -> float:
 func plan_mass() -> float:
 	var total := 0.0
 	for id in cargo:
+		if not items.has(id):
+			continue
 		total += float(items[id]["mass"]) * qty(id)
 	return total
 
@@ -239,6 +268,8 @@ func plan_mass() -> float:
 func plan_power() -> float:
 	var total := 0.0
 	for id in cargo:
+		if not items.has(id):
+			continue
 		total += float(items[id]["power"]) * qty(id)
 	return total
 
@@ -250,6 +281,8 @@ func plan_power_capacity() -> float:
 func plan_science() -> float:
 	var total := 0.0
 	for id in cargo:
+		if not items.has(id):
+			continue
 		total += float(items[id]["science"]) * qty(id)
 	return total
 
@@ -270,6 +303,13 @@ func validate_plan() -> Dictionary:
 		errors.append("Comida insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos)." % [qty("food_day"), MISSION_DAYS])
 	if qty("water_day") < MISSION_DAYS:
 		errors.append("Água insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos)." % [qty("water_day"), MISSION_DAYS])
+	if not OBJECTIVES.has(objective):
+		errors.append("Escolha o objetivo científico antes de lançar.")
+	elif qty(objective) != 1:
+		errors.append("Inclua o instrumento do objetivo escolhido.")
+	for id in cargo:
+		if not items.has(id) or (items[id]["category"] == "science" and id != objective and qty(id) > 0):
+			errors.append("Carga incompatível. Revise o planejamento.")
 	if plan_science() <= 0:
 		errors.append("Leve ao menos um instrumento científico: é o objetivo da missão.")
 	if qty("food_day") == MISSION_DAYS:
@@ -277,13 +317,15 @@ func validate_plan() -> Dictionary:
 	if qty("water_day") == MISSION_DAYS:
 		warnings.append("Água exata: margem zero. Um vazamento impediria a volta.")
 	if plan_power() > plan_power_capacity():
-		warnings.append("Instrumentos consomem %.0f W, acima dos %.0f W disponíveis. Espere alertas de energia." % [plan_power(), plan_power_capacity()])
+		errors.append("Instrumentos consomem %.0f W, acima dos %.0f W disponíveis." % [plan_power(), plan_power_capacity()])
 	if qty("propellant_reserve") == 0:
 		warnings.append("Sem reserva de propelente do LM: o pouso terá menos margem.")
 	return {"ok": errors.is_empty(), "errors": errors, "warnings": warnings}
 
 
 func apply_plan() -> void:
+	if not validate_plan()["ok"]:
+		return
 	food_days = qty("food_day")
 	water_days = qty("water_day")
 	power_capacity = plan_power_capacity()
@@ -374,7 +416,7 @@ func resolve_minigame_attempt(task_id: String, attempt_id: int, played_well: boo
 func power_use() -> float:
 	var total := 0.0
 	for id in instruments_active:
-		if instruments_active[id]:
+		if items.has(id) and instruments_active[id]:
 			total += float(items[id]["power"])
 	return total
 
@@ -382,6 +424,8 @@ func power_use() -> float:
 func science_potential() -> float:
 	var total := 0.0
 	for id in instruments_active:
+		if not items.has(id):
+			continue
 		total += float(items[id]["science"])
 	return total * science_multiplier
 
@@ -408,7 +452,7 @@ func _set_stock(kind: String, value: float) -> void:
 
 
 func can_consume(kind: String) -> bool:
-	return stock(kind) >= 1.0 - 0.0001
+	return kind in SUPPLY_KINDS and ended.is_empty() and stock(kind) >= 1.0 - 0.0001
 
 
 func amount_text(value: float) -> String:
@@ -428,9 +472,13 @@ func intake_on(day_number: int, kind: String) -> int:
 
 
 func consume(kind: String) -> bool:
-	if not can_consume(kind):
+	if not can_consume(kind) or available_supply(kind) < 1.0 - 0.0001:
 		return false
 	_set_stock(kind, stock(kind) - 1.0)
+	if kind == "food":
+		nourishment = 1.0
+	else:
+		hydration = 1.0
 	var key := str(day)
 	var today: Dictionary = intake.get(key, {"food": 0, "water": 0})
 	today[kind] = int(today.get(kind, 0)) + 1
@@ -568,6 +616,10 @@ func day_issues() -> Array:
 
 func verdict() -> Dictionary:
 	var causes := day_issues()
+	if ended.get("stage", "") == "survival":
+		causes.append(ended["reason"])
+	if splashdown and not science_completed:
+		causes.append("Objetivo científico não concluído.")
 	for id: String in ["A", "B", "C"]:
 		if jumps.has(id) and not jumps[id]["ok"]:
 			causes.append("%s · %s" % [JUMPS[id]["title"], jump_text(id)])
@@ -647,3 +699,77 @@ func _copy(value: Variant) -> Variant:
 
 func set_failure(failure_stage: String, title: String, reasons: Array, tips: Array) -> void:
 	last_failure = {"stage": failure_stage, "title": title, "reasons": reasons, "tips": tips}
+
+
+func select_objective(id: String) -> void:
+	if not OBJECTIVES.has(id) or stage != "planning":
+		return
+	for old in cargo.keys():
+		if not items.has(old) or items[old]["category"] == "science":
+			cargo.erase(old)
+	objective = id
+	changed.emit()
+
+
+func complete_science() -> bool:
+	if science_completed or not landing_result.get("success", false):
+		return false
+	if not OBJECTIVES.has(objective) or qty(objective) != 1:
+		return false
+	science_completed = true
+	science_collected = science_potential()
+	add_event("science", OBJECTIVES[objective]["title"], OBJECTIVES[objective]["evidence"])
+	return true
+
+
+func advance_survival(seconds: float) -> void:
+	if stage != "cabin" or not ended.is_empty() or seconds <= 0.0:
+		return
+	var duration: float = {"easy": 1500.0, "normal": 1200.0, "hard": 1050.0}[difficulty]
+	nourishment = maxf(0.0, nourishment - seconds / duration)
+	hydration = maxf(0.0, hydration - seconds / (duration * 0.85))
+	var reasons: Array[String] = []
+	if nourishment <= 0.0:
+		reasons.append("Reserva de alimentação esgotada")
+	if hydration <= 0.0:
+		reasons.append("Reserva de hidratação esgotada")
+	if not reasons.is_empty():
+		end_mission("survival", "Dia %d · %s. Saldo: %s comida e %s água." % [day, " e ".join(reasons), amount_text(food_days), amount_text(water_days)])
+		ended["day"] = day
+		ended["nourishment"] = nourishment
+		ended["hydration"] = hydration
+
+
+func sleep_penalty(day_number: int) -> void:
+	if slept_days.has(day_number):
+		return
+	slept_days[day_number] = true
+	nourishment *= 0.5
+	hydration *= 0.5
+	changed.emit()
+
+
+func available_supply(kind: String) -> float:
+	var reserved := 0
+	for token in supply_tokens.values():
+		if token["kind"] == kind:
+			reserved += 1
+	return maxf(0.0, stock(kind) - reserved)
+
+func reserve_supply(kind: String) -> int:
+	if not can_consume(kind) or available_supply(kind) < 1.0 - 0.0001:
+		return 0
+	var token := next_supply_token
+	next_supply_token += 1
+	supply_tokens[token] = {"kind": kind, "state": "held", "position": Vector3.ZERO, "velocity": Vector3.ZERO}
+	return token
+
+func consume_supply_token(token: int) -> bool:
+	if not supply_tokens.has(token):
+		return false
+	var entry: Dictionary = supply_tokens[token]
+	supply_tokens.erase(token)
+	var success := consume(entry["kind"])
+	if not success:
+		supply_tokens[token] = entry
+	return success

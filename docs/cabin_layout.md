@@ -1,5 +1,7 @@
 # Cabine do APOLLO6
 
+Consulte [Cabine 3D](cabin_art.md) para os assets do Blender, o mapa de montagem e a reexportação.
+
 ## Uso
 
 A cena principal instancia `scenes/spacecraft_interior.tscn`. Abra essa cena para

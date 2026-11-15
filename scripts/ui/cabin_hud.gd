@@ -3,6 +3,8 @@ extends CanvasLayer
 
 signal modal_closed
 
+var _food_bar: ProgressBar
+var _water_bar: ProgressBar
 var _prompt: Label
 var _objective_title: Label
 var _objective_text: Label
@@ -71,7 +73,19 @@ func _ready() -> void:
 	_status.scroll_active = false
 	_status.custom_minimum_size = Vector2(260, 0)
 	_status.add_theme_font_size_override("normal_font_size", 15)
-	status_panel.add_child(_status)
+	var status_box := VBoxContainer.new()
+	status_panel.add_child(status_box)
+	status_box.add_child(_status)
+	status_box.add_child(Game.make_label("ALIMENTAÇÃO", 13))
+	_food_bar = ProgressBar.new()
+	_food_bar.max_value = 1.0
+	_food_bar.custom_minimum_size.y = 18
+	status_box.add_child(_food_bar)
+	status_box.add_child(Game.make_label("HIDRATAÇÃO", 13))
+	_water_bar = ProgressBar.new()
+	_water_bar.max_value = 1.0
+	_water_bar.custom_minimum_size.y = 18
+	status_box.add_child(_water_bar)
 
 	_checklist = PanelContainer.new()
 	_checklist.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
@@ -174,6 +188,8 @@ func set_tutorial(text: String) -> void:
 
 func refresh_status() -> void:
 	var ms := MissionState
+	_food_bar.value = ms.nourishment
+	_water_bar.value = ms.hydration
 	var lines := "[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
 	lines += _line("COMIDA", "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
 	lines += _line("ÁGUA", "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)

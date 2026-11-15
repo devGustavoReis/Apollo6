@@ -375,6 +375,7 @@ func _on_credits() -> void:
 	var box := _open_panel("CRÉDITOS")
 	var text := _text(
 		"APOLLO6 — Equipe Apollo 6\nCiência da Computação · UNIFAGOC · Ubá, MG\n\n" +
+		"Gustavo Raymundo Reis\nRamon Elias Fernandes Siqueira\nPedro da Silva Palma\nPedro Gonçalves de Freitas\nGuilherme Vieira\nIsaque Bahia\n\n" +
 		"Missão, personagens e diálogos fictícios, inspirados no programa Apollo da NASA.\n" +
 		"Thomas Walker não é um astronauta real.\n" +
 		"Dados de referência: NASA (ver docs/nasa_sources.md).\n" +

@@ -8,6 +8,10 @@ Abra o projeto no Godot 4.7.2 e pressione F5. O jogo começa no menu principal.
 Fluxo, controles, arquitetura, instalação de modelos e nomes dos vídeos: [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
 Fontes científicas e simplificações: [docs/nasa_sources.md](docs/nasa_sources.md).
 
+## Objetivo científico
+
+Escolha no planejamento entre coleta de amostras, medição da distância Terra–Lua e fotografia estéreo do regolito. Acrescente à carga o instrumento correspondente. Após o pouso, confirme a atividade científica antes de preparar a partida. O relatório apresenta o resultado científico e a situação da tripulação.
+
 ## Áudio
 
 Ajuste o volume em **Configurações** no menu. A trilha, os eventos sonoros e a integração com os minigames estão em [docs/audio.md](docs/audio.md).
@@ -39,7 +43,7 @@ As seis tarefas ficam distribuídas pelos cinco dias jogáveis:
 
 ## Missão completa e suprimentos
 
-A missão tem 5 dias jogáveis e 3 transições (A órbita lunar, B operações lunares, C aproximação da Terra). Cada dia pede 1 comida e 1 água, e cada transição cobra mais 1 de cada, então o plano mínimo é 8/8. Comer e beber são livres: pegue com E e consuma com E (Q devolve sem gastar). Para sair da Lua é preciso ter 3/3. O relatório mostra um veredito único e blocos por etapa. Detalhes em [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
+A missão tem 5 dias jogáveis e 3 transições (A órbita lunar, B operações lunares, C aproximação da Terra). Cada dia pede 1 comida e 1 água, e cada transição cobra mais 1 de cada, então o plano mínimo é 8/8. Comer e beber são livres: pegue com E e consuma com E (Q devolve sem gastar, G solta em microgravidade e E recolhe). Os medidores de alimentação e hidratação caem durante o tempo ativo da cabine. Dormir reduz ambos à metade. Consumir recupera o medidor correspondente. Para sair da Lua é preciso ter 3/3. O relatório mostra um veredito único e blocos por etapa. Detalhes em [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
 
 O relatório registra 100 pontos por tarefa concluída, inclusive com assistência, em um subtotal de 600 pontos das tarefas da tripulação. Avançar sem concluir uma delas a deixa pendente.
 

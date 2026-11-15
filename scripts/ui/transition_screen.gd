@@ -67,7 +67,10 @@ func _ready() -> void:
 	if not TEXTS.has(id):
 		_show_end("Etapa desconhecida.")
 		return
-	_show_offer()
+	if id == "B" and not MissionState.science_completed:
+		_show_science()
+	else:
+		_show_offer()
 
 
 func _process(delta: float) -> void:
@@ -123,7 +126,7 @@ func _show_offer() -> void:
 	_title.text = data["title"]
 	var body: String = data["body"]
 	if id == "B":
-		body = body % ("%.0f" % MissionState.science_potential())
+		body = body % ("%.0f" % MissionState.science_collected)
 	_body.text = body + "\n" + cost_text()
 	_clear_buttons()
 	if data["back"] != "":
@@ -185,3 +188,27 @@ func _show_end(text: String) -> void:
 		_busy = true
 		Game.finish_mission())
 	_lock(0.6)
+
+
+func _show_science() -> void:
+	var ms := MissionState
+	if not ms.OBJECTIVES.has(ms.objective):
+		_show_end("Objetivo ausente. Reveja o planejamento em uma nova missão.")
+		return
+	var objective: Dictionary = ms.OBJECTIVES[ms.objective]
+	_title.text = "Pouso confirmado · Atividade científica"
+	_body.text = objective["title"] + "\n\nInstrumento: " + ms.items[ms.objective]["name"] + "\n\nPrepare o instrumento e confirme a atividade. A viagem de volta ainda precisa ser concluída."
+	_clear_buttons()
+	_button(objective["action"], _confirm_science)
+	_lock(MIN_READ)
+
+
+func _confirm_science() -> void:
+	if not MissionState.complete_science():
+		return
+	Sound.play_cue("success", "Interface")
+	_title.text = "Atividade concluída"
+	_body.text = MissionState.OBJECTIVES[MissionState.objective]["evidence"]
+	_clear_buttons()
+	_button("CONTINUAR A MISSÃO", _show_offer)
+	_lock(MIN_READ)

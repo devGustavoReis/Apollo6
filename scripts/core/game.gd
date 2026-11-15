@@ -95,6 +95,8 @@ func start_new_mission(difficulty: String) -> void:
 
 
 func launch() -> void:
+	if MissionState.stage != "planning" or not MissionState.validate_plan()["ok"]:
+		return
 	MissionState.apply_plan()
 	MissionState.stage = "separation"
 	MissionState.save_checkpoint("separation")
@@ -136,6 +138,7 @@ func confirm_jump(id: String) -> Dictionary:
 		ms.seal_day(3)
 	elif id == "C":
 		ms.seal_day(5)
+	ms.supply_tokens.clear()
 	var paid := ms.pay_jump(id)
 	if not paid["ok"]:
 		ms.end_mission("jump_" + id, ms.jump_text(id))
@@ -219,7 +222,7 @@ func _setup_inputs() -> void:
 		"tilt_left": [KEY_A, KEY_LEFT], "tilt_right": [KEY_D, KEY_RIGHT],
 		"tilt_forward": [KEY_W, KEY_UP], "tilt_back": [KEY_S, KEY_DOWN],
 		"chute": [KEY_SPACE], "put_back": [KEY_Q],
-		"retry": [KEY_R],
+		"retry": [KEY_R], "drop_supply": [KEY_G],
 	}
 	for action in map:
 		if not InputMap.has_action(action):

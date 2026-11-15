@@ -41,19 +41,6 @@
       "source": "Inspirado nas caixas de amostras da Apollo 11 (cerca de 21,5 kg de material trazido). Custo/massa: simplificação."
     },
     {
-      "id": "seismometer",
-      "category": "science",
-      "name": "Sismômetro passivo",
-      "unit": "un.",
-      "cost": 4.0,
-      "mass": 48.0,
-      "power": 45,
-      "science": 30,
-      "max": 1,
-      "description": "Mede tremores lunares. Muitos dados científicos, mas pesado e consome energia.",
-      "source": "Inspirado no Passive Seismic Experiment (EASEP) da Apollo 11. Custo/massa/energia: simplificação."
-    },
-    {
       "id": "retroreflector",
       "category": "science",
       "name": "Retrorrefletor a laser",
@@ -67,19 +54,6 @@
       "source": "Inspirado no Laser Ranging Retroreflector da Apollo 11 (passivo, sem energia). Custo/massa: simplificação."
     },
     {
-      "id": "solar_wind",
-      "category": "science",
-      "name": "Coletor de vento solar",
-      "unit": "un.",
-      "cost": 1.0,
-      "mass": 5.0,
-      "power": 0,
-      "science": 12,
-      "max": 1,
-      "description": "Folha de alumínio exposta ao Sol para capturar partículas do vento solar.",
-      "source": "Inspirado no Solar Wind Composition experiment da Apollo 11. Custo/massa: simplificação."
-    },
-    {
       "id": "camera",
       "category": "science",
       "name": "Câmera estéreo de superfície",
@@ -91,19 +65,6 @@
       "max": 1,
       "description": "Fotografa o solo em detalhe. Leve e barata.",
       "source": "Inspirado na Apollo Lunar Surface Closeup Camera. Valores: simplificação."
-    },
-    {
-      "id": "magnetometer",
-      "category": "science",
-      "name": "Magnetômetro de superfície",
-      "unit": "un.",
-      "cost": 3.5,
-      "mass": 9.0,
-      "power": 35,
-      "science": 18,
-      "max": 1,
-      "description": "Mede o campo magnético local. Leve, mas consome bastante energia.",
-      "source": "Inspirado no Lunar Surface Magnetometer, que voou a partir da Apollo 12 (não na Apollo 11). Valores: simplificação."
     },
     {
       "id": "battery_pack",

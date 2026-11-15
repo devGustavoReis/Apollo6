@@ -80,60 +80,32 @@ func _build_world() -> void:
 	world.add_child(env)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-15, -35, 0)
-	sun.light_energy = 1.4
+	sun.light_energy = 1.5
 	sun.shadow_enabled = true
 	world.add_child(sun)
 	var ground := MeshInstance3D.new()
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(3000, 3000)
 	ground.mesh = plane
-	var mat := StandardMaterial3D.new()
-	var noise := NoiseTexture2D.new()
-	noise.width = 256
-	noise.height = 256
-	noise.seamless = true
-	var ground_noise := FastNoiseLite.new()
-	ground_noise.frequency = 0.03
-	ground_noise.fractal_octaves = 4
-	noise.noise = ground_noise
-	noise.color_ramp = Gradient.new()
-	noise.color_ramp.set_color(0, Color(0.38, 0.37, 0.35))
-	noise.color_ramp.set_color(1, Color(0.62, 0.61, 0.58))
-	mat.albedo_texture = noise
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	mat.uv1_scale = Vector3(50, 50, 1)
-	mat.roughness = 1.0
-	ground.material_override = mat
+	var regolith := ShaderMaterial.new()
+	regolith.shader = preload("res://assets/shaders/menu/moon_ground.gdshader")
+	regolith.set_shader_parameter("sun_dir", sun.global_basis.z)
+	regolith.set_shader_parameter("tint", Color(0.70, 0.68, 0.64))
+	ground.material_override = regolith
 	world.add_child(ground)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1107
-	for i in 40:
-		var crater := MeshInstance3D.new()
-		var torus := TorusMesh.new()
-		var r := rng.randf_range(3.0, 16.0)
-		torus.inner_radius = r
-		torus.outer_radius = r * 1.25
-		torus.rings = 10
-		torus.ring_segments = 4
-		crater.mesh = torus
-		crater.scale = Vector3(1, 0.12, 1)
-		crater.position = Vector3(rng.randf_range(-250, 250), 0, rng.randf_range(-250, 250))
-		if crater.position.length() < 30:
+	for i in range(135):
+		var spot := Vector3(rng.randf_range(-350, 350), 0, rng.randf_range(-350, 350))
+		if spot.length() < 28.0:
 			continue
-		crater.material_override = _flat(Color(0.5, 0.49, 0.46))
-		world.add_child(crater)
-	for i in 120:
-		var rock := MeshInstance3D.new()
-		var sphere := SphereMesh.new()
-		var s := rng.randf_range(0.2, 1.1)
-		sphere.radius = s
-		sphere.height = s * 1.4
-		sphere.radial_segments = 5
-		sphere.rings = 3
-		rock.mesh = sphere
-		rock.position = Vector3(rng.randf_range(-200, 200), s * 0.3, rng.randf_range(-200, 200))
-		rock.material_override = _flat(Color(0.45, 0.44, 0.42))
-		world.add_child(rock)
+		var size := rng.randf_range(0.13, 1.5)
+		_regolith_rock(spot, Vector3(size * 1.5, size * 0.6, size), rng)
+	for i in range(32):
+		var angle := TAU * float(i) / 32.0
+		var distance := rng.randf_range(450.0, 1400.0)
+		var spot := Vector3(cos(angle), 0, sin(angle)) * distance
+		_regolith_rock(spot, Vector3(rng.randf_range(26, 85), rng.randf_range(2, 9), rng.randf_range(25, 80)), rng)
 	var pad := MeshInstance3D.new()
 	var ring := TorusMesh.new()
 	ring.inner_radius = 6.0
@@ -275,7 +247,7 @@ func _build_lm() -> void:
 	lm = Node3D.new()
 	world.add_child(lm)
 	if ResourceLoader.exists(LM_MODEL):
-		lm.add_child(load(LM_MODEL).instantiate())
+		lm.add_child(preload("res://scripts/landing/lunar_module_visual.gd").create())
 	else:
 		_build_provisional_lm()
 	flame = MeshInstance3D.new()
@@ -531,7 +503,12 @@ func _update_readouts() -> void:
 		elif pos.y < 30.0 and horizontal_speed() > limits["land_vh"]:
 			_message.text = "DESLIZANDO · INCLINE PARA O LADO OPOSTO"
 		else:
-			_message.text = ""
+			if pos.y > 65.0:
+				_message.text = "APROXIMAÇÃO · Observe o vetor de deslizamento no radar"
+			elif pos.y > 18.0:
+				_message.text = "ALINHAMENTO · Centralize o alvo e reduza a velocidade lateral"
+			else:
+				_message.text = "TOQUE · Controle a descida e nivele o módulo"
 
 
 func _set_readout(key: String, text: String, ratio: float) -> void:
@@ -626,7 +603,7 @@ func _success(vy: float, vh: float, angle: float) -> void:
 		"success": true, "vy": vy, "vh": vh, "tilt": angle,
 		"fuel_left": MissionState.lm_fuel, "distance": Vector2(pos.x, pos.z).length(),
 	}
-	MissionState.science_collected = MissionState.science_potential()
+	MissionState.science_collected = 0.0
 	MissionState.add_event("landing", "Pouso lunar", "Sucesso na tentativa %d, com %.0f s de propelente sobrando." % [MissionState.landing_attempts, MissionState.lm_fuel])
 	_message.text = "CONTATO! POUSO CONFIRMADO"
 	Houston.clear()
@@ -650,3 +627,30 @@ func _fail(reasons: Array, tips: Array) -> void:
 	MissionState.last_failure["attempt"] = attempt
 	_message.text = "FALHA NO POUSO"
 	get_tree().create_timer(1.5).timeout.connect(Game.landing_failed)
+
+
+func _regolith_rock(at: Vector3, size: Vector3, rng: RandomNumberGenerator) -> void:
+	var rock := MeshInstance3D.new()
+	var seed_mesh := SphereMesh.new()
+	seed_mesh.radial_segments = 6
+	seed_mesh.rings = 3
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	surface.set_smooth_group(-1)
+	var arrays := seed_mesh.surface_get_arrays(0)
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var shape := FastNoiseLite.new()
+	shape.seed = rng.randi()
+	shape.frequency = 3.2
+	for index in indices:
+		var point := points[index]
+		surface.add_vertex(point * (1.0 + 0.52 * shape.get_noise_3dv(point * 3.0)))
+	surface.generate_normals()
+	rock.mesh = surface.commit()
+	var value := rng.randf_range(0.33, 0.52)
+	rock.material_override = _flat(Color(value, value * 0.98, value * 0.94))
+	world.add_child(rock)
+	rock.position = at + Vector3(0, size.y * 0.2, 0)
+	rock.scale = size
+	rock.rotate_y(rng.randf_range(0, TAU))

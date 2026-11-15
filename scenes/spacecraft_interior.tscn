@@ -12,6 +12,13 @@
 [ext_resource type="PackedScene" path="res://assets/models/cabin/power_panel.glb" id="10_power"]
 [ext_resource type="PackedScene" path="res://assets/models/cabin/lm_hatch.glb" id="11_hatch"]
 
+[ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_wall_panels.glb" id="cab_wall_panels"]
+
+[ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_deck_panels.glb" id="cab_deck_panels"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_roof_trim.glb" id="cab_roof_trim"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_hatch_trim.glb" id="cab_hatch_trim"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_markings.glb" id="cab_markings"]
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8v58"]
 cull_mode = 2
 albedo_color = Color(0.6666667, 0.63529414, 0.5529412, 1)
@@ -990,6 +997,16 @@ mesh = SubResource("BoxMesh_yr6tr")
 transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, -1.675, 1.65, -1.575)
 material_override = SubResource("StandardMaterial3D_xp5eg")
 mesh = SubResource("BoxMesh_g1img")
+
+[node name="WallLiners" parent="CabinStructure/Walls" instance=ExtResource("cab_wall_panels")]
+
+[node name="DeckLiners" parent="CabinStructure/Floor" instance=ExtResource("cab_deck_panels")]
+
+[node name="RoofLiners" parent="CabinStructure/Ceiling" instance=ExtResource("cab_roof_trim")]
+
+[node name="HatchTrim" parent="CabinStructure/HatchOpening" instance=ExtResource("cab_hatch_trim")]
+
+[node name="MissionMarkings" parent="CabinStructure" instance=ExtResource("cab_markings")]
 
 [node name="CollisionStructure" type="Node3D" parent="." unique_id=2102399647]
 

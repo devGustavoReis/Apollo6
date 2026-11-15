@@ -9,6 +9,9 @@ const SEPARATION_TIME := 2.5
 const ENTRY_TIME := 5.0
 
 var phase := "intro"
+var attitude := 0.65
+var stable_time := 0.0
+var stabilization := 0.0
 var altitude := 120000.0
 var phase_time := 0.0
 var window_time := 0.0
@@ -94,11 +97,11 @@ func _show_panel(title: String, text: String, buttons: Array) -> void:
 		row.add_child(b)
 		if first == null:
 			first = b
-		get_tree().create_timer(0.5).timeout.connect(func():
-			if is_instance_valid(b):
-				b.disabled = false
-				if b == first:
-					b.grab_focus())
+		var unlock := Timer.new()
+		unlock.one_shot = true
+		b.add_child(unlock)
+		unlock.timeout.connect(_unlock_button.bind(b, b == first))
+		unlock.start(0.5)
 	_panel.visible = true
 
 
@@ -106,6 +109,7 @@ func _show_intro() -> void:
 	var text := "O módulo de serviço vai se separar e o Columbia entra sozinho na atmosfera, com os três astronautas.\n\n"
 	text += "Os paraquedas de estabilização abrem sozinhos perto de 7.300 m (24.000 pés).\n"
 	text += "Os três paraquedas principais da Apollo abriam perto de 3.050 m (10.000 pés). No jogo, você faz o acionamento manual de contingência:\n\n"
+	text += "• Após os estabilizadores, use ←/→ ou A/D para manter a marca no centro. Essa preparação melhora a amerissagem.\n"
 	text += "• Quando a cápsula cruzar 3.050 m, aparece ESPAÇO · ABRIR PARAQUEDAS.\n"
 	text += "• Você tem 2 segundos para apertar ESPAÇO.\n"
 	text += "• Apertar antes da hora não gasta a tentativa.\n\n"
@@ -118,6 +122,9 @@ func start() -> void:
 		return
 	_panel.visible = false
 	phase = "separation"
+	attitude = 0.65
+	stable_time = 0.0
+	stabilization = 0.0
 	phase_time = 0.0
 	altitude = 120000.0
 	Sound.play_cue("cutoff")
@@ -179,6 +186,12 @@ func step(delta: float) -> void:
 				phase_time = 0.0
 				Sound.play_cue("dock")
 		"drogue":
+			var available := clampf((altitude - TARGET) / DROGUE_RATE, 0.0, delta)
+			var correction := Input.get_axis("tilt_left", "tilt_right")
+			attitude = clampf(attitude + (correction * 1.1 + sin(phase_time * 2.5) * 0.18) * available, -1.0, 1.0)
+			if absf(attitude) <= 0.22:
+				stable_time += available
+			stabilization = clampf(stable_time / 3.0, 0.0, 1.0)
 			var before := altitude
 			altitude -= DROGUE_RATE * delta
 			if before > TARGET and altitude <= TARGET:
@@ -190,7 +203,7 @@ func step(delta: float) -> void:
 			if window_time >= WINDOW:
 				_miss()
 		"mains":
-			altitude = maxf(altitude - result["altitude"] / MAIN_TIME * delta, 0.0)
+			altitude = maxf(altitude - result["altitude"] / lerpf(MAIN_TIME - 0.8, MAIN_TIME + 0.8, stabilization) * delta, 0.0)
 			if altitude <= 0.0:
 				_splash()
 	Sound.set_motor(_rumble())
@@ -221,6 +234,7 @@ func _open_mains() -> void:
 	phase = "mains"
 	phase_time = 0.0
 	result = {"attempt": attempt, "target": TARGET, "altitude": altitude, "time": window_time, "success": true, "code": "ok"}
+	result["stabilization"] = stabilization
 	MissionState.reentry_result = result
 	MissionState.reentry_history.append(result)
 	Sound.play_cue("success", "Interface")
@@ -260,6 +274,7 @@ func _splash() -> void:
 	if phase != "mains":
 		return
 	phase = "splash"
+	phase_time = 0.0
 	altitude = 0.0
 	MissionState.splashdown = true
 	MissionState.add_event("splashdown", "Amerissagem", "Paraquedas abertos a %.0f m, %.2f s depois da abertura da janela. Contato com a água no Pacífico." % [result["altitude"], result["time"]])
@@ -287,7 +302,9 @@ func _update_hud() -> void:
 		_hint.modulate = Game.WARN
 	elif early_note > 0.0:
 		_hint.text = "Aguarde a altitude de abertura: 3.050 m"
-	elif phase in ["separation", "entry", "drogue"]:
+	elif phase == "drogue":
+		_hint.text = "←/→ ou A/D · Centralize a cápsula · Estabilidade %d%%" % roundi(stabilization * 100.0)
+	elif phase in ["separation", "entry"]:
 		_hint.text = "Aperte ESPAÇO quando a cápsula atingir 3.050 m"
 	else:
 		_hint.text = ""
@@ -338,6 +355,17 @@ func _draw_view() -> void:
 			_view.draw_line(capsule + Vector2(s * 10, -40), top + Vector2(0, 30), Color(0.9, 0.9, 0.85), 1)
 			_view.draw_arc(top + Vector2(0, 30), 55 * opened, PI, TAU, 20, Color(0.95, 0.45, 0.3), 14)
 			_view.draw_arc(top + Vector2(0, 30), 40 * opened, PI, TAU, 20, Color(0.97, 0.97, 0.95), 8)
+	if phase == "drogue":
+		var gauge := Rect2(280, 387, 400, 16)
+		_view.draw_rect(gauge, Color(0.06, 0.08, 0.12, 0.9))
+		_view.draw_rect(Rect2(436, 387, 88, 16), Game.GOOD.darkened(0.3))
+		var cursor := Vector2(480 + 194 * attitude, 395)
+		_view.draw_circle(cursor, 8, Game.CREAM)
+	if phase == "splash":
+		var spread := minf(phase_time * 145.0 + 12.0, 200.0)
+		for ring in range(3):
+			var foam := spread + ring * 14.0
+			_view.draw_arc(Vector2(capsule.x, sea_y), foam, 0.05, PI - 0.05, 24, Color(0.75, 0.90, 0.96, 0.48), 2.0)
 	var bar := Rect2(880, 90, 30, 360)
 	_view.draw_rect(bar, Color(0.05, 0.06, 0.06, 0.85))
 	var top_alt := 9000.0
@@ -352,3 +380,11 @@ func _draw_view() -> void:
 		_view.draw_rect(Rect2(230, 380, 500, 22), Color(0.05, 0.06, 0.06, 0.9))
 		_view.draw_rect(Rect2(230, 380, 500 * left, 22), Game.WARN)
 		_view.draw_rect(Rect2(230, 380, 500, 22), Game.CREAM, false, 2)
+
+
+func _unlock_button(button: Button, focus: bool) -> void:
+	if not is_instance_valid(button):
+		return
+	button.disabled = false
+	if focus:
+		button.grab_focus()

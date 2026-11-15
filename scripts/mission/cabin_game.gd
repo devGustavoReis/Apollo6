@@ -49,10 +49,16 @@ var hud: CanvasLayer
 var target_id := ""
 var tutorial_step := -1
 var _labels := {}
+var _markers := {}
+var _alarm_time := 0.0
+var _alarm_light: OmniLight3D
+var _alarm_voice: AudioStreamPlayer
 var _moon: MeshInstance3D
 var _earth: MeshInstance3D
 var _interacted := false
 var held := ""
+var _held_token := 0
+var _loose_objects: Dictionary = {}
 var _held_node: Node3D
 var _held_time := 0.0
 var eating := false
@@ -106,6 +112,8 @@ func _ready() -> void:
 	else:
 		_start_day_briefing()
 	_refresh_objective()
+	_build_science_cargo()
+	_restore_supplies()
 
 
 # ---------- Construção ----------
@@ -189,6 +197,16 @@ func _add_zone(marker: Node3D, id: String, text: String, size: Vector3) -> void:
 		label.position = Vector3(0, 0.56, 0)
 	marker.add_child(label)
 	_labels[id] = label
+	var mark := Label3D.new()
+	mark.text = "!"
+	mark.font_size = 80
+	mark.pixel_size = 0.002
+	mark.outline_size = 14
+	mark.modulate = Color("#ffd77b")
+	mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	mark.position = label.position + Vector3(0, 0.20, 0)
+	marker.add_child(mark)
+	_markers[id] = mark
 
 
 func _add_station_prop(parent: Node3D, size: Vector3, offset: Vector3, color: Color) -> void:
@@ -233,15 +251,18 @@ func _build_backdrop() -> void:
 
 func _update_supplies() -> void:
 	var ms := MissionState
-	var reserved := held != "" and not _eat_done
-	_show_supplies("FoodStorage/FoodRack/Packs", floorf(ms.food_days + 0.0001) - (1.0 if reserved and held == "food" else 0.0))
-	_show_supplies("WaterStorage/WaterRack/Pouches", floorf(ms.water_days + 0.0001) - (1.0 if reserved and held == "water" else 0.0))
+	_show_supplies("FoodStorage/FoodRack/Packs", floorf(ms.available_supply("food") + 0.0001))
+	_show_supplies("WaterStorage/WaterRack/Pouches", floorf(ms.available_supply("water") + 0.0001))
 	if _labels.has("food"):
 		_labels["food"].text = "FOOD · %s" % ms.amount_text(ms.food_days)
 		_labels["water"].text = "WATER · %s" % ms.amount_text(ms.water_days)
 
 
-func _hold(id: String) -> void:
+func _hold(id: String, existing := 0) -> void:
+	_held_token = existing if existing > 0 else MissionState.reserve_supply(id)
+	if _held_token == 0:
+		hud.show_note("Recolha a cota solta antes de retirar outra.")
+		return
 	held = id
 	_eat_done = false
 	eating = false
@@ -279,6 +300,8 @@ func _put_back() -> void:
 
 
 func _drop_item() -> void:
+	MissionState.supply_tokens.erase(_held_token)
+	_held_token = 0
 	held = ""
 	eating = false
 	_eat_done = false
@@ -292,7 +315,7 @@ func _eat_marker() -> void:
 	var ms := MissionState
 	var id := held
 	_eat_done = true
-	if not ms.consume(id):
+	if not ms.consume_supply_token(_held_token):
 		_drop_item()
 		hud.show_note("Não há uma cota inteira de %s. Saldo: %s." % ["comida" if id == "food" else "água", ms.amount_text(ms.stock(id))], 4.0)
 		return
@@ -482,6 +505,17 @@ func _start_day_briefing() -> void:
 # ---------- Interação ----------
 
 func _process(delta: float) -> void:
+	if not hud.modal_open() and not player.frozen and tutorial_step < 0:
+		MissionState.advance_survival(delta)
+		hud.refresh_status()
+		if MissionState.ended.get("stage", "") == "survival":
+			player.frozen = true
+			_drop_item()
+			_modal("GAME OVER · MISSÃO FALHOU", MissionState.ended["reason"], ["VER RELATÓRIO"], func(_i): Game.finish_mission())
+			return
+	_update_alarm(delta)
+	_update_markers()
+	_save_loose_supplies()
 	_check_tutorial()
 	if _held_node != null and not eating:
 		_held_time += delta
@@ -497,6 +531,7 @@ func _process(delta: float) -> void:
 	if _held_node != null:
 		player.right_hand.position = _held_node.position + Vector3(0.03, -0.05, 0.06)
 		player.right_hand.rotation = Vector3(_held_node.rotation.x * 0.6, 0, 0)
+	if eating:
 		if not _eat_done and _eat_time >= EAT_MARK:
 			_eat_marker()
 		elif _eat_done and _eat_time >= EAT_TIME:
@@ -538,10 +573,12 @@ func _physics_process(_delta: float) -> void:
 	elif eating:
 		hud.set_prompt("Comendo..." if held == "food" else "Bebendo...")
 	elif held != "":
-		hud.set_prompt(("[E] Comer a ração" if held == "food" else "[E] Beber a água") + " · [Q] Devolver")
+		hud.set_prompt(("[E] Comer a ração" if held == "food" else "[E] Beber a água") + " · [Q] Devolver · [G] Soltar")
 	elif target_id != "":
 		var task_id := _station_minigame(target_id)
-		var prompt := "[E] " + str(LABELS[target_id])
+		var prompt := "[E] " + str(LABELS.get(target_id, "RECOLHER"))
+		if target_id == "water" and _has_task("water") and not _done("water"):
+			prompt += " · [F] Resolver vazamento"
 		if not task_id.is_empty():
 			var title: String = MissionState.CABIN_MINIGAMES[task_id]["title"]
 			var status := " · Concluída" if MissionState.minigame_completions.has(task_id) else ""
@@ -565,6 +602,11 @@ func _resolve_id(node: Node) -> String:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.echo:
+		return
+	if event.is_action_pressed("drop_supply") and not hud.modal_open() and not eating and held != "":
+		_release_supply()
+		return
 	if hud.modal_open() or hud.paused():
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -580,6 +622,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("advance") and tutorial_step >= 0 and not Houston.is_busy():
 		_set_tutorial(tutorial_step + 1)
 	elif event.is_action_pressed("cabin_task") and not event.is_echo() and not player.seated and held.is_empty():
+		if target_id == "water" and _has_task("water") and not _done("water"):
+			_decision("water_leak", "water")
+			get_viewport().set_input_as_handled()
+			return
 		var task_id := _station_minigame(target_id)
 		if not task_id.is_empty():
 			_interact_minigame(task_id)
@@ -600,8 +646,8 @@ func _decision(id: String, task_id: String, after := Callable()) -> void:
 	var d := MissionDecisions.get_decision(id)
 	Sound.play_cue("radio" if id in ["midcourse", "return_course"] else "warning", "Voice", true)
 	_modal(d["title"], d["body"], d["options"], func(choice):
-		if id == "return_course" and choice == 0:
-			_open_trajectory(d, task_id, after)
+		if id in ["midcourse", "return_course"] and choice == 0:
+			_open_trajectory(d, task_id, after, id)
 		elif id == "comm_dropout" and choice == 0 and not MissionState.minigame_completions.has("M03"):
 			_open_cabin_minigame("M03", func(recovered: bool):
 				_decision_result(id, task_id, d, choice, 0 if recovered else 1, after))
@@ -684,30 +730,32 @@ func _finish_cabin_minigame(id: String, attempt: int, played_well: bool, after: 
 				after.call(false))
 
 
-func _open_trajectory(d: Dictionary, task_id: String, after: Callable) -> void:
+func _open_trajectory(d: Dictionary, task_id: String, after: Callable, decision_id := "return_course") -> void:
 	player.frozen = true
 	var minigame: Control = TRAJECTORY_SCENE.instantiate()
 	minigame.tolerancia = MissionState.settings()["traj_tol"]
-	minigame.destino = "terra"
+	minigame.destino = "terra" if decision_id == "return_course" else "lua"
 	minigame.terminou.connect(func(errors):
 		if hud.minigame != minigame:
 			return
 		hud.close_minigame()
 		player.frozen = false
-		_decision_result("return_course", task_id, d, 0, errors, after), CONNECT_ONE_SHOT)
-	hud.open_minigame(minigame)
+		_decision_result(decision_id, task_id, d, 0, errors, after), CONNECT_ONE_SHOT)
+	hud.open_minigame(minigame, func(): player.frozen = false)
 	Houston.say_recorded("trajectory_correction", "Apollo, Houston. Fly the correction by hand. Keep her on the line.",
 		"Apollo, aqui é Houston. Façam a correção manualmente. Mantenham a nave na linha.")
 
 
 func _decision_result(id: String, task_id: String, d: Dictionary, choice: int, errors: int, after: Callable) -> void:
 	var result := MissionDecisions.apply(id, choice, errors)
+	if not result["correct"]:
+		_start_alarm()
 	var verdict := "[color=#77ee77]BOA ESCOLHA[/color]" if result["correct"] else "[color=#ff8866]ESCOLHA ARRISCADA[/color]"
 	if result["correct"] and not result["favorable"]:
 		verdict += " · [color=#ffcc44]COMPLICAÇÃO[/color]"
 	elif not result["correct"] and result["favorable"]:
 		verdict += " · [color=#ffcc44]DEU SORTE[/color]"
-	if id == "return_course" and choice == 0:
+	if id in ["midcourse", "return_course"] and choice == 0:
 		verdict += " · " + ("[color=#77ee77]PILOTAGEM PRECISA[/color]" if errors <= 1 else "[color=#ff8866]PILOTAGEM IMPRECISA[/color]")
 	MissionState.add_event(id, d["title"], d["options"][choice])
 	_complete(task_id)
@@ -717,6 +765,9 @@ func _decision_result(id: String, task_id: String, d: Dictionary, choice: int, e
 
 
 func interact(id: String) -> void:
+	if id.begins_with("supply_") and held == "":
+		_collect_supply(int(id.trim_prefix("supply_")))
+		return
 	var ms := MissionState
 	_interacted = true
 	if held != "":
@@ -724,9 +775,6 @@ func interact(id: String) -> void:
 		return
 	match id:
 		"food", "water":
-			if id == "water" and _has_task("water") and not _done("water"):
-				_decision("water_leak", "water")
-				return
 			if not ms.can_consume(id):
 				hud.show_note("Compartimento vazio: não há uma cota inteira de %s (saldo %s)." % ["comida" if id == "food" else "água", ms.amount_text(ms.stock(id))], 4.0)
 				return
@@ -734,10 +782,7 @@ func interact(id: String) -> void:
 		"lifesupport":
 			var info := "Oxigênio da cabine: [b]%.0f%%[/b] do nominal\nPressão da cabine: cerca de 5 psi de oxigênio puro, como no módulo de comando Apollo\nRemoção de CO₂: cartuchos de hidróxido de lítio (LiOH)" % ms.life_support
 			if _has_task("lifesupport") and not _done("lifesupport"):
-				_modal("LIFE SUPPORT", info + "\n\nO cartucho de LiOH está saturado de CO₂. Trocar agora?", ["TROCAR CARTUCHO"], func(_i):
-					Sound.play_cue("switch")
-					_complete("lifesupport")
-					Houston.say_recorded("canister_changed", "Copy canister change. CO2 levels coming down.", "Entendido, troca do cartucho. O nível de CO₂ está caindo."))
+				_open_cartridge()
 			else:
 				_modal("LIFE SUPPORT", info)
 		"nav":
@@ -881,6 +926,7 @@ func _next_day() -> void:
 	var ms := MissionState
 	if not ms.sealed.has(str(ms.day)):
 		return
+	ms.sleep_penalty(ms.day)
 	ms.day += 1
 	ms.changed.emit()
 	_update_backdrop()
@@ -888,3 +934,143 @@ func _next_day() -> void:
 	if hud.checklist_visible():
 		hud.show_checklist(day_tasks())
 	_start_day_briefing()
+
+
+func _update_markers() -> void:
+	for id: String in _markers:
+		var task := _station_minigame(id)
+		var optional: bool = task != "" and not MissionState.minigame_completions.has(task)
+		var required: bool = _has_task(id) and not _done(id)
+		_markers[id].visible = (required or optional) and not hud.modal_open()
+		_markers[id].text = "!" if required else "! +"
+
+
+func _build_science_cargo() -> void:
+	var slot := Node3D.new()
+	slot.name = "ScienceCargo"
+	cabin.add_child(slot)
+	slot.position = Vector3(1.05, 0.75, 1.4)
+	if MissionState.objective == "sample_kit" and MissionState.science_completed and MissionState.day >= 4:
+		slot.add_child(load("res://assets/models/equipment/sample_case.glb").instantiate())
+	elif MissionState.objective == "retroreflector" and MissionState.qty("retroreflector") > 0 and MissionState.day <= 3:
+		_add_station_prop(slot, Vector3(0.45, 0.25, 0.32), Vector3(0, 0.125, 0), Color("#8a8c83"))
+
+
+func _open_cartridge() -> void:
+	player.frozen = true
+	var game := Control.new()
+	game.set_script(preload("res://scripts/minigames/cartridge_minigame.gd"))
+	game.completed.connect(_finish_cartridge, CONNECT_ONE_SHOT)
+	hud.open_minigame(game, func(): player.frozen = false)
+
+func _finish_cartridge() -> void:
+	hud.close_minigame()
+	player.frozen = false
+	_complete("lifesupport")
+	Houston.say_recorded("canister_changed", "Copy canister change. CO2 levels coming down.", "Cartucho substituído. Nível de CO₂ diminuindo.")
+
+
+func _start_alarm() -> void:
+	_alarm_time = 5.0
+	if _alarm_light == null:
+		_alarm_light = OmniLight3D.new()
+		_alarm_light.light_color = Color(1, 0.05, 0.02)
+		_alarm_light.omni_range = 5.0
+		cabin.add_child(_alarm_light)
+		_alarm_light.position = Vector3(0, 1.9, 0.5)
+	if _alarm_voice == null:
+		_alarm_voice = AudioStreamPlayer.new()
+		_alarm_voice.bus = "SFX"
+		_alarm_voice.volume_db = -18.0
+		add_child(_alarm_voice)
+		var wave := AudioStreamWAV.new()
+		wave.format = AudioStreamWAV.FORMAT_16_BITS
+		wave.mix_rate = 22050
+		var bytes := PackedByteArray()
+		bytes.resize(22050 * 5 * 2)
+		for i in 22050 * 5:
+			var t := float(i) / 22050.0
+			var gate := 0.5 - 0.5 * cos(TAU * t)
+			var sample := int(sin(TAU * 660.0 * t) * gate * 6000.0)
+			bytes.encode_s16(i * 2, sample)
+		wave.data = bytes
+		_alarm_voice.stream = wave
+	_alarm_voice.play()
+
+func _update_alarm(delta: float) -> void:
+	if _alarm_time <= 0.0:
+		return
+	_alarm_time = maxf(0.0, _alarm_time - delta)
+	_alarm_light.light_energy = 0.8 * (0.5 - 0.5 * cos(TAU * _alarm_time)) if _alarm_time > 0 else 0.0
+	if _alarm_time == 0.0:
+		_alarm_voice.stop()
+
+
+func _release_supply() -> void:
+	if _held_token == 0 or _held_node == null:
+		return
+	var token := _held_token
+	var entry: Dictionary = MissionState.supply_tokens[token]
+	entry["state"] = "loose"
+	entry["position"] = player.camera.global_position - player.camera.global_basis.z * 0.45
+	entry["velocity"] = player.velocity - player.camera.global_basis.z * 0.2
+	_held_token = 0
+	_drop_item()
+	_spawn_loose_supply(token)
+	hud.show_note("Objeto solto em microgravidade. Mire nele e use E para recolher.")
+
+func _spawn_loose_supply(token: int) -> void:
+	var entry: Dictionary = MissionState.supply_tokens[token]
+	var body := RigidBody3D.new()
+	body.gravity_scale = 0
+	body.linear_damp = 0
+	body.angular_damp = 0.04
+	body.collision_layer = INTERACT_LAYER
+	body.collision_mask = 1 | INTERACT_LAYER | PLAYER_SCRIPT.BARRIER_LAYER
+	body.continuous_cd = true
+	body.set_meta("interact_id", "supply_%d" % token)
+	var material := PhysicsMaterial.new()
+	material.bounce = 0.2
+	material.friction = 0.4
+	body.physics_material_override = material
+	var shape := CollisionShape3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = 0.1
+	shape.shape = sphere
+	body.add_child(shape)
+	var key: String = "water" if entry["kind"] == "water" else "food_odd"
+	body.add_child(load(HELD_MODELS[key]).instantiate())
+	cabin.add_child(body)
+	body.global_position = entry["position"]
+	body.linear_velocity = entry["velocity"]
+	body.angular_velocity = Vector3(0.1, 0.2, 0.1)
+	_loose_objects[token] = body
+
+func _collect_supply(token: int) -> void:
+	if not _loose_objects.has(token) or not MissionState.supply_tokens.has(token):
+		return
+	_loose_objects[token].queue_free()
+	_loose_objects.erase(token)
+	MissionState.supply_tokens[token]["state"] = "held"
+	_hold(MissionState.supply_tokens[token]["kind"], token)
+
+func _restore_supplies() -> void:
+	for token: int in MissionState.supply_tokens.keys():
+		var entry: Dictionary = MissionState.supply_tokens[token]
+		if entry["state"] == "held" and held == "":
+			_hold(entry["kind"], token)
+		elif entry["state"] == "loose":
+			_spawn_loose_supply(token)
+
+func _save_loose_supplies() -> void:
+	for token: int in _loose_objects.keys():
+		var node: RigidBody3D = _loose_objects[token]
+		if not MissionState.supply_tokens.has(token) or node.global_position.length() > 8.0:
+			MissionState.supply_tokens.erase(token)
+			node.queue_free()
+			_loose_objects.erase(token)
+			hud.show_note("Cota recuperada no compartimento.")
+			_update_supplies()
+		else:
+			MissionState.supply_tokens[token]["position"] = node.global_position
+			MissionState.supply_tokens[token]["velocity"] = node.linear_velocity

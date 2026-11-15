@@ -6,7 +6,7 @@ extends Node3D
 const LM_MODEL := "res://assets/models/landing/lunar_module.glb"
 const GROUND_SHADER := preload("res://assets/shaders/menu/moon_ground.gdshader")
 const EARTH_SHADER := preload("res://assets/shaders/menu/earth.gdshader")
-const FLAG_SHADER := preload("res://assets/shaders/menu/flag.gdshader")
+const LUNAR_FLAG := preload("res://assets/models/landing/lunar_flag.glb")
 const FOIL_SHADER := preload("res://assets/shaders/menu/gold_foil.gdshader")
 
 const SUN_DIR := Vector3(0.74, 0.42, 0.52)  ## aponta para o Sol
@@ -186,40 +186,9 @@ func _build_ground() -> void:
 
 
 func _build_lunar_module() -> void:
-	if not ResourceLoader.exists(LM_MODEL):
-		return
-	var lm: Node3D = load(LM_MODEL).instantiate()
+	var lm: Node3D = preload("res://scripts/landing/lunar_module_visual.gd").create()
 	lm.rotation_degrees.y = LM_YAW
 	add_child(lm)
-	# Só nesta cena: a manta térmica ganha facetas amassadas, sem alterar o modelo.
-	var foils := {
-		"Gold": _foil(Color(0.86, 0.62, 0.20), 5.0),
-		"DarkFoil": _foil(Color(0.55, 0.37, 0.12), 5.0),
-		"Strut": _foil(Color(0.80, 0.57, 0.19), 9.0),
-	}
-	# O Sol do menu é forte: o casco claro é escurecido para não estourar em branco.
-	var dimmed := {"Hull": 0.66, "Silver": 0.66, "White": 0.8}
-	for node in lm.find_children("*", "MeshInstance3D", true, false):
-		var mi: MeshInstance3D = node
-		for surface in mi.mesh.get_surface_count():
-			var mat := mi.mesh.surface_get_material(surface)
-			if mat == null:
-				continue
-			if foils.has(mat.resource_name):
-				mi.set_surface_override_material(surface, foils[mat.resource_name])
-			elif dimmed.has(mat.resource_name) and mat is BaseMaterial3D:
-				var copy: BaseMaterial3D = mat.duplicate()
-				copy.albedo_color = mat.albedo_color * dimmed[mat.resource_name]
-				copy.albedo_color.a = 1.0
-				mi.set_surface_override_material(surface, copy)
-
-
-func _foil(color: Color, cells: float) -> ShaderMaterial:
-	var mat := ShaderMaterial.new()
-	mat.shader = FOIL_SHADER
-	mat.set_shader_parameter("base", color)
-	mat.set_shader_parameter("cells", cells)
-	return mat
 
 
 func _build_rocks() -> void:
@@ -306,45 +275,11 @@ func _build_flag() -> void:
 		else:
 			high = mid
 	var height := (low + high) * 0.5
-	var flag := Node3D.new()
+	var flag := LUNAR_FLAG.instantiate() as Node3D
 	flag.position = base
+	flag.scale = Vector3.ONE * height
 	flag.rotation_degrees.y = -8.0
 	add_child(flag)
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color(0.74, 0.58, 0.30)
-	metal.metallic = 0.3
-	metal.roughness = 0.5
-	var pole := MeshInstance3D.new()
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = height * 0.011
-	cylinder.bottom_radius = height * 0.011
-	cylinder.height = height
-	cylinder.radial_segments = 6
-	pole.mesh = cylinder
-	pole.material_override = metal
-	pole.position = Vector3(0, height * 0.5, 0)
-	flag.add_child(pole)
-	var width := height * 0.72
-	var cloth_height := height * 0.40
-	var rod := MeshInstance3D.new()
-	var rod_mesh := BoxMesh.new()
-	rod_mesh.size = Vector3(width, height * 0.012, height * 0.012)
-	rod.mesh = rod_mesh
-	rod.material_override = metal
-	rod.position = Vector3(width * 0.5, height * 0.985, 0)
-	flag.add_child(rod)
-	var cloth := MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(width, cloth_height)
-	plane.subdivide_width = 28
-	plane.subdivide_depth = 10
-	plane.orientation = PlaneMesh.FACE_Z
-	cloth.mesh = plane
-	var mat := ShaderMaterial.new()
-	mat.shader = FLAG_SHADER
-	cloth.material_override = mat
-	cloth.position = Vector3(width * 0.5 + height * 0.011, height * 0.98 - cloth_height * 0.5, 0)
-	flag.add_child(cloth)
 
 
 func _build_earth() -> void:

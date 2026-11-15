@@ -84,6 +84,11 @@ func do_tasks(cabin: Node, day: int, skip: Array) -> void:
 							antenna.passo(0.1, Vector2.ZERO)
 						antenna.espera = 0.0
 						await process_frame
+					elif hud.minigame.has_signal("completed"):
+						var cartridge: Control = hud.minigame
+						while hud.minigame == cartridge:
+							cartridge.angle = 0.0
+							cartridge._advance()
 					else:
 						await fly_trajectory(hud.minigame, 0)
 				elif hud._night != null:
@@ -117,6 +122,7 @@ func run() -> void:
 	for diff in ["easy", "normal", "hard"]:
 		ms().reset(diff)
 		check(not ms().validate_plan()["ok"], "%s: plano sem ciência deve ser bloqueado" % diff)
+		ms().select_objective("sample_kit")
 		ms().set_qty("sample_kit", 1)
 		check(ms().validate_plan()["ok"], "%s: plano mínimo deve ser viável" % diff)
 		ms().set_qty("food_day", 7)
@@ -124,13 +130,17 @@ func run() -> void:
 		ms().set_qty("food_day", 8)
 		for id in ms().items:
 			ms().set_qty(id, 99)
-		check(not ms().validate_plan()["ok"], "%s: levar tudo deve estourar orçamento/massa" % diff)
+		var limits: Dictionary = ms().settings()
+		var within_limits: bool = ms().plan_cost() <= limits["budget"] + 0.001 and ms().plan_mass() <= limits["mass_limit"] + 0.001
+		check(ms().validate_plan()["ok"] == within_limits, "%s: carga máxima respeita os limites de orçamento e massa" % diff)
+		ms().set_qty("retroreflector", 1)
+		check(ms().qty("retroreflector") == 0, "Objetivo de amostras bloqueia outro instrumento")
 
 	# 3. Missão completa na cabine (normal), com cada evento aleatório, nos cinco dias.
 	for event_id in ["comm_dropout", "water_leak", "ptc"]:
 		ms().reset("normal")
+		ms().select_objective("sample_kit")
 		ms().set_qty("sample_kit", 1)
-		ms().set_qty("seismometer", 1)
 		ms().apply_plan()
 		ms().random_event = event_id
 		ms().trajectory_error = 0.3
@@ -147,7 +157,7 @@ func run() -> void:
 		for day in [1, 2, 3]:
 			check(ms().day == day, "Dia %d" % day)
 			if cabin._has_task("water") and not cabin._done("water"):
-				cabin.interact("water")
+				cabin._decision("water_leak", "water")
 				while cabin.hud.modal_open():
 					cabin.hud._on_modal_button(0)
 				check(cabin._done("water") and ms().lost_water > 0.0, "Vazamento tratado antes de beber")
@@ -176,6 +186,7 @@ func run() -> void:
 		cabin.queue_free()
 		await process_frame
 		ms().landing_result = {"success": true, "vy": 1.0, "vh": 0.3, "tilt": 2.0, "fuel_left": 20.0, "distance": 12.0}
+		check(ms().complete_science(), "Atividade científica concluída após o pouso")
 		var b: Dictionary = root.get_node("Game").confirm_jump("B")
 		var leak: bool = event_id == "water_leak"
 		check(b["ok"] and is_equal_approx(ms().food_days, 3.0), "Salto B cobra 1 de cada (%s)" % event_id)
@@ -211,6 +222,7 @@ func run() -> void:
 
 	# 4. Checkpoint do pouso restaura combustível e estado.
 	ms().reset("normal")
+	ms().select_objective("sample_kit")
 	ms().set_qty("sample_kit", 1)
 	ms().apply_plan()
 	ms().day = 3
@@ -225,6 +237,7 @@ func run() -> void:
 	# 5. Pouso possível com piloto automático simples, sem reserva de propelente.
 	for diff in ["easy", "normal", "hard"]:
 		ms().reset(diff)
+		ms().select_objective("sample_kit")
 		ms().set_qty("sample_kit", 1)
 		ms().apply_plan()
 		ms().last_failure = {}

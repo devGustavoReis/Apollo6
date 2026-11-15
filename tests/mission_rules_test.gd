@@ -59,6 +59,7 @@ func supplies() -> void:
 		play_day(d, 1, 1)
 	ms().pay_jump("C")
 	ms().landing_result = {"success": true}
+	ms().science_completed = true
 	ms().splashdown = true
 	check(is_zero_approx(ms().food_days) and is_zero_approx(ms().water_days), "8/8 termina em 0/0")
 	check(ms().verdict()["success"], "8/8 exato é sucesso")
@@ -96,6 +97,7 @@ func supplies() -> void:
 	check(is_equal_approx(lost, 3.0) and is_zero_approx(ms().water_days) and is_equal_approx(ms().losses[0]["asked"], 5.0), "Perda nunca deixa o estoque negativo")
 	fresh(8, 8)
 	ms().landing_result = {"success": true}
+	ms().science_completed = true
 	ms().splashdown = true
 	var partial: Dictionary = ms().verdict()
 	check(not partial["success"] and not partial["causes"].is_empty() and partial["summary"].contains("incompleta"), "Missão sem os dias e saltos não vira sucesso nem quebra o veredito")

@@ -33,12 +33,16 @@ static func evaluate() -> Dictionary:
 	if issues > 0:
 		tips.append("Coma e beba uma cota por dia, não consuma além do necessário e leve margem acima das 8 cotas para perdas.")
 	parts.append(["Suprimentos", supplies, 15.0, "%d de 8 etapas de consumo cumpridas, %d falha(s)." % [reached, issues]])
-	var science := minf(20.0, ms.science_collected / 70.0 * 20.0)
-	var sci_text := "%.0f pontos de dados científicos." % ms.science_collected
+	var science := 20.0 * ms.science_multiplier if ms.science_completed else 0.0
+	var sci_text := "Objetivo pendente."
+	if ms.OBJECTIVES.has(ms.objective):
+		sci_text = ms.OBJECTIVES[ms.objective]["title"] + " · " + (ms.OBJECTIVES[ms.objective]["evidence"] if ms.science_completed else "Atividade não realizada.")
+		if ms.science_completed and ms.objective != "retroreflector":
+			sci_text += " Retorno confirmado." if ms.splashdown else "Evidência ainda não recuperada na Terra."
 	if ms.science_multiplier < 1.0:
 		sci_text += " Parte dos dados foi perdida em eventos (%.0f%% aproveitado)." % (ms.science_multiplier * 100.0)
-	if landed and ms.science_collected < 50.0:
-		tips.append("Pouca ciência: instrumentos passivos e leves (retrorrefletor, coletor de vento solar, kit de amostras) rendem dados sem gastar energia.")
+	if landed and not ms.science_completed:
+		tips.append("Conclua a atividade do instrumento escolhido depois do pouso para obter os resultados científicos.")
 	parts.append(["Resultados científicos", science, 20.0, sci_text])
 	var correct := 0
 	for d in ms.decisions:
