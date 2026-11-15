@@ -7,6 +7,7 @@ extends Node
 const PLAYER_SCRIPT := preload("res://scripts/player/zero_g_player.gd")
 const HUD_SCRIPT := preload("res://scripts/ui/cabin_hud.gd")
 const TRAJECTORY_SCENE := preload("res://scenes/minigames/trajectory_minigame.tscn")
+const BRIEFINGS := preload("res://scripts/mission/cabin_briefings.gd")
 const HELD_MODELS := {
 	"food_odd": "res://assets/models/equipment/sugar_cookie_cubes.glb",
 	"food_even": "res://assets/models/equipment/bacon_bars.glb",
@@ -561,10 +562,23 @@ func _open_cabin_minigame(id: String, after := Callable()) -> void:
 	if not complete.is_empty():
 		_modal(complete["title"], complete["message"])
 		return
+	var texto: Dictionary = BRIEFINGS.TEXTOS[id]
+	var titulo := "%s · %s" % [LABELS[task["station"]], task["title"].to_upper()]
+	_modal(titulo, texto["instrucoes"], ["COMEÇAR", "AGORA NÃO"], func(choice):
+		if choice == 0:
+			_start_cabin_minigame(id, after)
+		elif after.is_valid():
+			after.call(false))
+	Houston.say(texto["fala_en"], texto["fala_pt"])
+
+
+func _start_cabin_minigame(id: String, after := Callable()) -> void:
+	var task: Dictionary = MissionState.CABIN_MINIGAMES[id]
 	var scene := load(task["scene"]) as PackedScene
 	var minigame: Control = scene.instantiate()
 	var attempt := MissionState.next_minigame_attempt(id)
 	minigame.nivel = ["easy", "normal", "hard"].find(MissionState.difficulty)
+	minigame.folga = attempt - 1
 	player.frozen = true
 	minigame.terminou.connect(func(played_well: bool):
 		if hud.minigame != minigame:
@@ -586,14 +600,14 @@ func _finish_cabin_minigame(id: String, attempt: int, played_well: bool, after: 
 		cue = "assist" if result["assisted"] else "success"
 	Sound.play_cue(cue, "Interface")
 	if completed:
-		_modal(result["title"], result["message"], ["CONTINUAR"], func(_i):
+		_modal(result["title"], BRIEFINGS.com_licao(id, result["message"]), ["CONTINUAR"], func(_i):
 			if after.is_valid():
 				after.call(true))
 	else:
 		var exit_label := "CONTINUAR SEM RESTABELECER O SINAL" if after.is_valid() else "VOLTAR À CABINE"
 		_modal(result["title"], result["message"], ["TENTAR DE NOVO", exit_label], func(choice):
 			if choice == 0:
-				_open_cabin_minigame(id, after)
+				_start_cabin_minigame(id, after)
 			elif after.is_valid():
 				after.call(false))
 

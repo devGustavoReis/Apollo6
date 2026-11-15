@@ -17,6 +17,7 @@ var perdido = 0.0
 var bico = 480.0
 var valvula = 480.0
 var botao = false
+var tecla_livre = false
 var parado = 0.0
 var relogio = 0.0
 var gotas = []
@@ -68,6 +69,12 @@ func _notification(what):
 		botao = false
 
 
+func aberto():
+	if not Input.is_action_pressed("move_up"):
+		tecla_livre = true
+	return botao or (tecla_livre and Input.is_action_pressed("move_up"))
+
+
 func encaixado():
 	return abs(bico - valvula) < encaixes[nivel] + folga * 4
 
@@ -115,7 +122,7 @@ func _process(delta):
 		relogio += delta
 		valvula = 480 + sin(relogio * ritmos[nivel]) * amplitudes[nivel]
 		bico = clamp(bico + Input.get_axis("ui_left", "ui_right") * 280 * delta, 200, 760)
-		passo(delta, botao or Input.is_action_pressed("move_up"))
+		passo(delta, aberto())
 	atualizar_textos()
 	queue_redraw()
 
@@ -165,8 +172,7 @@ func _draw():
 	draw_rect(Rect2(bico - 22, 140, 44, 60), Color(0.62, 0.63, 0.6))
 	draw_rect(Rect2(bico - 22, 140, 44, 60), Color(0.25, 0.26, 0.25), false, 2)
 	draw_rect(Rect2(bico - 7, 200, 14, 30), Color(0.8, 0.8, 0.76))
-	var aberto = botao or Input.is_action_pressed("move_up")
-	if aberto and not acabou:
+	if aberto() and not acabou:
 		draw_rect(Rect2(bico - 3, 230, 6, 16), Color("7fc4f0"))
 	for gota in gotas:
 		draw_circle(gota, 4, Color("7fc4f0"))

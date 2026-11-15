@@ -56,6 +56,17 @@ func aim_at_station(cabin: Node, station: String) -> void:
 	cabin.player.frozen = false
 
 
+func start_minigame(cabin: Node, station: String, id := "") -> void:
+	station_key(cabin, station)
+	if cabin.hud.modal_open() and cabin.hud.minigame == null:
+		if id != "":
+			var briefing: String = cabin.BRIEFINGS.TEXTOS[id]["instrucoes"]
+			check(cabin.hud._modal_body.text == briefing, id + " mostra as instruções antes de começar")
+			var buttons: Array = cabin.hud._modal_buttons.get_children().filter(func(b): return not b.is_queued_for_deletion())
+			check(buttons.size() == 2, id + " oferece começar ou adiar")
+		cabin.hud._on_modal_button(0)
+
+
 func finish(cabin: Node, success: bool) -> void:
 	if cabin.hud.minigame != null:
 		cabin.hud.minigame.terminou.emit(success)
@@ -84,7 +95,7 @@ func run() -> void:
 				check(cabin._station_minigame(data["station"]) == id, id + " na estação e dia corretos")
 				if difficulty == "normal":
 					await aim_at_station(cabin, data["station"])
-				station_key(cabin, data["station"])
+				start_minigame(cabin, data["station"], id)
 				check(cabin.hud.minigame != null and cabin.player.frozen, id + " abre com F e congela o jogador")
 				if cabin.hud.minigame == null:
 					continue
@@ -94,12 +105,14 @@ func run() -> void:
 				escape.pressed = true
 				cabin.hud._unhandled_input(escape)
 				check(not cabin.hud.modal_open() and not cabin.player.frozen and not ms.minigame_attempts.has(id), id + " Esc abandona sem sorteio")
-				station_key(cabin, data["station"])
+				start_minigame(cabin, data["station"])
 				finish(cabin, false)
 				check(not ms.minigame_completions.has(id) and ms.next_minigame_attempt(id) == 2, id + " falha sem ferramenta dá 0 ponto")
 				cabin.hud._on_modal_button(0)
+				check(cabin.hud.minigame != null and cabin.hud.minigame.folga == 1, id + " nova tentativa ganha folga sem repetir instruções")
 				finish(cabin, true)
 				check(ms.minigame_completions.has(id), id + " retry pode concluir sem ferramenta")
+				check(cabin.hud._modal_body.text.contains(cabin.BRIEFINGS.TEXTOS[id]["licao"]), id + " explica a atividade real depois de concluir")
 				cabin.hud._on_modal_button(0)
 				station_key(cabin, data["station"])
 				check(cabin.hud.minigame == null and ms.next_minigame_attempt(id) == 3, id + " revisão da conclusão não inicia nova tentativa")
@@ -117,7 +130,7 @@ func run() -> void:
 	root.add_child(cabin)
 	await process_frame
 	cabin.player.seated = false
-	station_key(cabin, "storage")
+	start_minigame(cabin, "storage")
 	seed_for_assistance(false)
 	finish(cabin, false)
 	check(not ms.minigame_completions.has("M01"), "20% adverso mantém tarefa pendente mesmo com kit")
@@ -127,8 +140,9 @@ func run() -> void:
 	check(ms.minigame_completions.get("M01", {}).get("assisted", false), "Erro recuperado com ajuda explícita")
 	check(ms.cabin_minigame_report()["rows"][0]["status"].contains("Kit de fixação"), "Relatório identifica a ferramenta")
 	check(cabin.hud._modal_body.text.contains("Kit de fixação"), "A tela de resultado identifica a ferramenta")
+	check(cabin.hud._modal_body.text.contains(cabin.BRIEFINGS.TEXTOS["M01"]["licao"]), "Conclusão com ajuda também explica a atividade real")
 	cabin.hud._on_modal_button(0)
-	station_key(cabin, "water")
+	start_minigame(cabin, "water")
 	seed_for_assistance(true)
 	finish(cabin, false)
 	check(not ms.minigame_completions.has("M02"), "Ferramenta incompatível não recupera")
@@ -136,6 +150,8 @@ func run() -> void:
 
 	ms.day = 2
 	station_key(cabin, "radio")
+	cabin.hud._on_modal_button(0)
+	check(cabin.hud.minigame == null and cabin.hud._modal_body.text == cabin.BRIEFINGS.TEXTOS["M03"]["instrucoes"], "Decisão leva às instruções do M03")
 	cabin.hud._on_modal_button(0)
 	check(cabin.hud.minigame != null, "Realinhamento escolhido na decisão abre M03")
 	seed_for_assistance(false)
@@ -145,7 +161,7 @@ func run() -> void:
 	check(cabin._done("radio") and not ms.minigame_completions.has("M03"), "É possível continuar a operação sem recuperar M03")
 	check(ms.sps_fuel == fuel - 3.0 and not ms.decisions.back()["correct"], "Falha operacional aplica consequência uma vez")
 	cabin.hud._on_modal_button(0)
-	station_key(cabin, "radio")
+	start_minigame(cabin, "radio")
 	seed_for_assistance(true)
 	finish(cabin, false)
 	check(ms.minigame_completions.get("M03", {}).get("assisted", false) and ms.decisions.size() == 1, "Recuperação posterior pontua sem reexecutar a decisão")

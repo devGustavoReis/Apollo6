@@ -36,6 +36,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | `scripts/mission/mission_decisions.gd` | Decisões e eventos, com efeitos e explicações |
 | `scripts/mission/cabin_game.gd` | Tutorial, tarefas por dia, interação e checklist de aproximação |
 | `scripts/minigames/trajectory_minigame.gd` | Minigame de correção de rota, aberto pelo painel NAVIGATION no dia 1 |
+| `scripts/mission/cabin_briefings.gd` | Textos dos minigames M01 a M06: instruções mostradas antes de começar (objetivo, controles e cuidado), fala de Houston e explicação educativa mostrada depois da conclusão |
 | `scripts/player/zero_g_player.gd` | Thomas em microgravidade |
 | `scripts/landing/landing_game.gd` | Física e HUD do pouso |
 | `scripts/ui/landing_radar.gd` | Radar do pouso: alvo visto de cima e deslizamento do módulo |
