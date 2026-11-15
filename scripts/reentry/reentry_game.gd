@@ -28,6 +28,8 @@ var _panel: PanelContainer
 var _panel_box: VBoxContainer
 var _pause_label: Label
 var _ended := false
+## Apresentação 3D (cápsula, Terra, calor, paraquedas e oceano). Só lê o estado desta cena.
+var visual: Node
 
 
 func _ready() -> void:
@@ -35,6 +37,10 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	attempt = MissionState.reentry_attempts + 1
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	visual = preload("res://scripts/reentry/reentry_visual.gd").new()
+	visual.name = "ReentryVisual"
+	add_child(visual)
+	visual.setup(self)
 	_view = Control.new()
 	_view.size = Vector2(960, 540)
 	_view.draw.connect(_draw_view)
@@ -52,6 +58,10 @@ func _ready() -> void:
 	_hint.size = Vector2(912, 40)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_view.add_child(_hint)
+	# contorno escuro: o texto continua legível sobre o céu claro e o calor da cena 3D
+	for label in [_alt_label, _status, _hint]:
+		label.add_theme_color_override("font_outline_color", Color(0.02, 0.03, 0.06, 0.9))
+		label.add_theme_constant_override("outline_size", 6)
 	_pause_label = Game.make_label("PAUSADO · ESC para continuar", 26, Game.AMBER)
 	_pause_label.position = Vector2(270, 240)
 	_pause_label.visible = false
@@ -319,53 +329,14 @@ func _thousands(value: float) -> String:
 
 
 func _draw_view() -> void:
-	var low := clampf(1.0 - altitude / 9000.0, 0.0, 1.0)
-	var sky := Color(0.02, 0.03, 0.08).lerp(Color(0.38, 0.6, 0.85), low)
-	_view.draw_rect(Rect2(0, 0, 960, 540), sky)
-	var sea_y := lerpf(560.0, 380.0, clampf(1.0 - altitude / 3000.0, 0.0, 1.0))
-	_view.draw_rect(Rect2(0, sea_y, 960, 540 - sea_y), Color(0.08, 0.24, 0.42))
-	for i in range(12):
-		var x := float(i) * 90.0 + fmod(phase_time * 20.0, 90.0)
-		_view.draw_line(Vector2(x, sea_y + 18), Vector2(x + 36, sea_y + 18), Color(1, 1, 1, 0.25), 2)
-	var capsule := Vector2(380, 290)
-	if phase == "splash":
-		capsule.y = sea_y - 18
-	var shake := Vector2.ZERO
-	if phase == "entry" and not paused:
-		shake = Vector2(randf_range(-3, 3), randf_range(-3, 3))
-		for r in range(5):
-			_view.draw_circle(capsule + Vector2(0, 40 + r * 12) + shake, 60 - r * 8, Color(1.0, 0.45 + r * 0.1, 0.15, 0.25))
-	if phase == "separation":
-		var gap := phase_time / SEPARATION_TIME * 90.0
-		_view.draw_rect(Rect2(capsule + Vector2(-34, 30 + gap), Vector2(68, 80)), Color(0.75, 0.75, 0.72))
-		_view.draw_string(get_theme_default_font(), capsule + Vector2(46, 80 + gap), "MÓDULO DE SERVIÇO", HORIZONTAL_ALIGNMENT_LEFT, 220, 14, Game.CREAM)
-	var body := PackedVector2Array([capsule + Vector2(-46, 30) + shake, capsule + Vector2(46, 30) + shake, capsule + Vector2(12, -40) + shake, capsule + Vector2(-12, -40) + shake])
-	_view.draw_colored_polygon(body, Color(0.82, 0.82, 0.78))
-	_view.draw_rect(Rect2(capsule + Vector2(-48, 26) + shake, Vector2(96, 10)), Color(0.42, 0.3, 0.2))
-	_view.draw_string(get_theme_default_font(), capsule + Vector2(56, -10), "COLUMBIA", HORIZONTAL_ALIGNMENT_LEFT, 160, 14, Game.CREAM)
-	if phase in ["drogue", "window", "failed"]:
-		for s in [-1.0, 1.0]:
-			var top := capsule + Vector2(s * 26, -110)
-			_view.draw_line(capsule + Vector2(s * 8, -40), top, Color(0.9, 0.9, 0.85), 1)
-			_view.draw_arc(top, 16, PI, TAU, 12, Color(0.95, 0.95, 0.95), 6)
-	if phase in ["mains", "splash"]:
-		var opened := clampf(phase_time / 0.8, 0.2, 1.0) if phase == "mains" else 1.0
-		for s in [-1.0, 0.0, 1.0]:
-			var top := capsule + Vector2(s * 70, -170)
-			_view.draw_line(capsule + Vector2(s * 10, -40), top + Vector2(0, 30), Color(0.9, 0.9, 0.85), 1)
-			_view.draw_arc(top + Vector2(0, 30), 55 * opened, PI, TAU, 20, Color(0.95, 0.45, 0.3), 14)
-			_view.draw_arc(top + Vector2(0, 30), 40 * opened, PI, TAU, 20, Color(0.97, 0.97, 0.95), 8)
+	# Céu, mar, cápsula, calor e paraquedas são desenhados em 3D por reentry_visual.gd.
+	# Aqui ficam só os indicadores do HUD.
 	if phase == "drogue":
 		var gauge := Rect2(280, 387, 400, 16)
 		_view.draw_rect(gauge, Color(0.06, 0.08, 0.12, 0.9))
 		_view.draw_rect(Rect2(436, 387, 88, 16), Game.GOOD.darkened(0.3))
 		var cursor := Vector2(480 + 194 * attitude, 395)
 		_view.draw_circle(cursor, 8, Game.CREAM)
-	if phase == "splash":
-		var spread := minf(phase_time * 145.0 + 12.0, 200.0)
-		for ring in range(3):
-			var foam := spread + ring * 14.0
-			_view.draw_arc(Vector2(capsule.x, sea_y), foam, 0.05, PI - 0.05, 24, Color(0.75, 0.90, 0.96, 0.48), 2.0)
 	var bar := Rect2(880, 90, 30, 360)
 	_view.draw_rect(bar, Color(0.05, 0.06, 0.06, 0.85))
 	var top_alt := 9000.0
