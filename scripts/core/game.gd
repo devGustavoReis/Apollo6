@@ -165,14 +165,16 @@ func confirm_jump(id: String) -> Dictionary:
 	if not paid["ok"]:
 		ms.end_mission("jump_" + id, ms.jump_text(id))
 		return paid
-	if id == "B" and not ms.tasks_done.has("tei"):
-		ms.tasks_done["tei"] = true
-		ms.sps_fuel = maxf(ms.sps_fuel - 20.0, 0.0)
-		ms.add_event("tei", str(TranslationServer.translate("Queima de partida rumo à Terra")), str(TranslationServer.translate("O motor do módulo de serviço gastou 20%% do propelente. Restam %.0f%%.")) % ms.sps_fuel)
 	if id == "B":
+		# A reserva é conferida antes da queima: sem ela, a volta não começa e nenhuma
+		# queima de partida é registrada nem gasta propelente.
 		var reserve := ms.check_departure()
 		if not reserve["ok"]:
 			ms.end_mission("departure", ms.departure_text())
+		elif not ms.tasks_done.has("tei"):
+			ms.tasks_done["tei"] = true
+			ms.sps_fuel = maxf(ms.sps_fuel - 20.0, 0.0)
+			ms.add_event("tei", str(TranslationServer.translate("Queima de partida rumo à Terra")), str(TranslationServer.translate("O motor do módulo de serviço gastou 20%% do propelente. Restam %.0f%%.")) % ms.sps_fuel)
 	return paid
 
 

@@ -401,6 +401,27 @@ func _start() -> void:
 
 # ---------- Simulação ----------
 
+var _focus_paused := false
+
+
+## Sem foco, a descida congela (física, propelente e timers) e volta quando o foco retorna.
+func _notification(what: int) -> void:
+	if not is_inside_tree():
+		return
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and state == "flying" and not get_tree().paused:
+		_focus_paused = true
+		get_tree().paused = true
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN and _focus_paused:
+		_focus_paused = false
+		get_tree().paused = false
+		_engine_armed = false
+
+
+func _exit_tree() -> void:
+	if _focus_paused:
+		get_tree().paused = false
+
+
 func _physics_process(delta: float) -> void:
 	if state != "flying":
 		return
@@ -433,13 +454,40 @@ func step(delta: float, throttle_input: float, tilt_input: Vector2) -> void:
 	if MissionState.lm_fuel <= 0.0 and fuel_out_alt < 0.0 and pos.y > 0.5:
 		fuel_out_alt = pos.y
 	var accel := thrust_direction() * power * MAX_ACCEL + Vector3.DOWN * MOON_G
+	var prev_pos := pos
+	var prev_vel := vel
 	vel += accel * delta
 	pos += vel * delta
 	if pos.y <= 0.0:
+		# Avalia no instante do contato, não no fim do quadro: um quadro longo não pode
+		# aumentar a velocidade medida e reprovar um pouso que seria aceito em quadros curtos.
+		var t_contact := _contact_time(prev_pos.y, prev_vel.y, accel.y, delta)
+		vel = prev_vel + accel * t_contact
+		pos = prev_pos + prev_vel * t_contact + accel * (0.5 * t_contact * t_contact)
 		pos.y = 0.0
 		_touchdown()
 	elif Vector2(pos.x, pos.z).length() > AREA_LIMIT:
 		_evaluate(["area"])
+
+
+## Instante (0..delta) em que y0 + v0·t + a·t²/2 chega a zero, com aceleração constante no quadro.
+static func _contact_time(y0: float, v0: float, a: float, delta: float) -> float:
+	if y0 <= 0.0:
+		return 0.0
+	var t := delta
+	if absf(a) < 0.000001:
+		if v0 < 0.0:
+			t = -y0 / v0
+	else:
+		var disc := v0 * v0 - 2.0 * a * y0
+		if disc >= 0.0:
+			var root := sqrt(disc)
+			var candidates := [(-v0 - root) / a, (-v0 + root) / a]
+			t = delta
+			for c: float in candidates:
+				if c >= 0.0 and c < t:
+					t = c
+	return clampf(t, 0.0, delta)
 
 
 func thrust_direction() -> Vector3:
@@ -613,8 +661,7 @@ func _success(vy: float, vh: float, angle: float) -> void:
 		str(TranslationServer.translate("Houston, aqui é Eagle. Contato. Motor desligado.")), "EAGLE")
 	Houston.say_recorded("landing_confirmed", "We copy you down. You've got a lot of people smiling down here.",
 		str(TranslationServer.translate("Confirmamos o pouso. Tem muita gente sorrindo aqui embaixo.")))
-	get_tree().create_timer(maxf(4.0, Houston.radio_time_remaining()), false).timeout.connect(
-		func(): Game.landing_success())
+	_later(maxf(4.0, Houston.radio_time_remaining()), Game.landing_success)
 
 
 func _fail(reasons: Array, tips: Array) -> void:
@@ -628,7 +675,17 @@ func _fail(reasons: Array, tips: Array) -> void:
 	MissionState.set_failure("landing", str(TranslationServer.translate("POUSO MALSUCEDIDO")), reasons, tips)
 	MissionState.last_failure["attempt"] = attempt
 	_message.text = str(TranslationServer.translate("FALHA NO POUSO"))
-	get_tree().create_timer(1.5).timeout.connect(Game.landing_failed)
+	_later(1.5, Game.landing_failed)
+
+
+## Timer filho desta cena: se o jogador sair antes do fim, a transição antiga não dispara.
+func _later(seconds: float, callback: Callable) -> void:
+	var timer := Timer.new()
+	timer.one_shot = true
+	timer.wait_time = seconds
+	add_child(timer)
+	timer.timeout.connect(callback)
+	timer.start()
 
 
 func _regolith_rock(at: Vector3, size: Vector3, rng: RandomNumberGenerator) -> void:

@@ -530,6 +530,13 @@ func _start_day_briefing() -> void:
 
 # ---------- Interação ----------
 
+## Fora de foco não é tempo ativo: abre a pausa para as barras e a física não correrem.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and hud != null and is_inside_tree() \
+			and not hud.paused() and not hud._modal.visible and hud._night == null and MissionState.ended.is_empty():
+		hud.toggle_pause()
+
+
 func _process(delta: float) -> void:
 	if not hud.modal_open() and not player.frozen and tutorial_step < 0:
 		MissionState.advance_survival(delta)

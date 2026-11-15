@@ -70,6 +70,8 @@ const MEAL_GAIN := 50.0
 const NEED_LOW := 25.0
 const CRITICAL_WAKE := 5.0
 const CRITICAL_SECONDS := {"easy": 20.0, "normal": 15.0, "hard": 10.0}
+## Duas barras que zeram com até este intervalo entre si encerram como "juntas".
+const SIMULTANEOUS_SECONDS := 1.0
 ## Pontos perdidos por dia jogável acordado e a duração típica desse dia, em segundos de
 ## jogo ativo, por dificuldade. Ajuste aqui o balanceamento.
 const HUNGER_PER_DAY := 20.0
@@ -513,10 +515,16 @@ func can_consume(kind: String) -> bool:
 	return kind in SUPPLY_KINDS and ended.is_empty() and stock(kind) >= 1.0 - 0.0001
 
 
-func amount_text(value: float) -> String:
-	if absf(value - roundf(value)) < 0.01:
+## Texto de uma quantidade de cotas. Saldos são arredondados para baixo (0,99 aparece 0,9),
+## para o HUD nunca prometer uma cota inteira que can_consume() recusaria. Faltas
+## (round_up = true) são arredondadas para cima, para nunca aparecer "faltou 0".
+func amount_text(value: float, round_up := false) -> String:
+	if absf(value - roundf(value)) < 0.0001:
 		return "%d" % int(roundf(value))
-	return ("%.1f" % value).replace(".", ",")
+	var tenths := ceilf(value * 10.0 - 0.0001) if round_up else floorf(value * 10.0 + 0.0001)
+	if int(tenths) % 10 == 0:
+		return "%d" % int(tenths / 10.0)
+	return ("%.1f" % (tenths / 10.0)).replace(".", ",")
 
 
 func kind_name(kind: String, value: float) -> String:
@@ -592,8 +600,8 @@ func jump_preview(id: String) -> Dictionary:
 		if not can_consume(kind):
 			result["deficits"][kind] = 1.0 - stock(kind)
 			result["ok"] = false
-	result["food_after"] = food_days - 1.0 if result["ok"] else food_days
-	result["water_after"] = water_days - 1.0 if result["ok"] else water_days
+	result["food_after"] = maxf(food_days - 1.0, 0.0) if result["ok"] else food_days
+	result["water_after"] = maxf(water_days - 1.0, 0.0) if result["ok"] else water_days
 	return result
 
 
@@ -602,8 +610,9 @@ func pay_jump(id: String) -> Dictionary:
 		return jumps[id]
 	var result := jump_preview(id)
 	if result["ok"]:
-		food_days -= 1.0
-		water_days -= 1.0
+		# can_consume aceita saldo até 0,0001 abaixo de 1: o estoque nunca fica negativo.
+		_set_stock("food", food_days - 1.0)
+		_set_stock("water", water_days - 1.0)
 		jump_food += 1.0
 		jump_water += 1.0
 	jumps[id] = result
@@ -618,7 +627,7 @@ func jump_text(id: String) -> String:
 	var parts := []
 	for kind: String in j["deficits"]:
 		var missing: float = j["deficits"][kind]
-		parts.append("%s cota de %s" % [amount_text(missing), str(TranslationServer.translate("comida")) if kind == "food" else str(TranslationServer.translate("água"))])
+		parts.append("%s cota de %s" % [amount_text(missing, true), str(TranslationServer.translate("comida")) if kind == "food" else str(TranslationServer.translate("água"))])
 	return str(TranslationServer.translate("Faltou %s para avançar.")) % " e ".join(PackedStringArray(parts))
 
 
@@ -642,7 +651,7 @@ func departure_text() -> String:
 	var parts := []
 	for kind: String in d["deficits"]:
 		var missing: float = d["deficits"][kind]
-		parts.append("%s %s" % [amount_text(missing), kind_name(kind, missing)])
+		parts.append("%s %s" % [amount_text(missing, true), kind_name(kind, missing)])
 	if not parts.is_empty():
 		text += " Faltou %s." % " e ".join(PackedStringArray(parts))
 	return text
@@ -821,15 +830,36 @@ func critical_seconds() -> float:
 func advance_survival(seconds: float) -> void:
 	if stage != "cabin" or not ended.is_empty() or seconds <= 0.0:
 		return
+	# Um quadro longo para no instante em que a primeira barra zera: a causa registrada é a
+	# que zerou primeiro, como aconteceria em quadros curtos. Barras que zeram até
+	# SIMULTANEOUS_SECONDS depois da primeira contam como "juntas" (regra da equipe).
+	var step := seconds
 	for kind: String in NEED_KINDS:
+		step = minf(step, _time_to_empty(kind))
+	step = maxf(step, 0.0)
+	var first_zero := step < seconds or step == seconds and NEED_KINDS.any(func(k): return _time_to_empty(k) <= seconds)
+	for kind: String in NEED_KINDS:
+		var reaches_zero := first_zero and _time_to_empty(kind) <= minf(step + SIMULTANEOUS_SECONDS, seconds) + 1e-9
 		if need_critical.has(kind):
 			# Queda crítica linear: do valor inicial até zero no tempo crítico da dificuldade.
 			var entry: Dictionary = need_critical[kind]
-			entry["elapsed"] = minf(float(entry["elapsed"]) + seconds, critical_seconds())
+			entry["elapsed"] = minf(float(entry["elapsed"]) + step, critical_seconds())
 			_set_need(kind, float(entry["start"]) * (1.0 - float(entry["elapsed"]) / critical_seconds()))
 		else:
-			_set_need(kind, need(kind) - need_rate(kind) * seconds)
+			_set_need(kind, need(kind) - need_rate(kind) * step)
+		if reaches_zero:
+			_set_need(kind, 0.0)
 	_check_needs()
+
+
+## Segundos de jogo ativo até a barra zerar no ritmo atual.
+func _time_to_empty(kind: String) -> float:
+	if need(kind) <= 0.0:
+		return 0.0
+	if need_critical.has(kind):
+		return maxf(0.0, critical_seconds() - float(need_critical[kind]["elapsed"]))
+	var rate := need_rate(kind)
+	return need(kind) / rate if rate > 0.0 else INF
 
 
 ## Avisos de voz (fome antes de sede) e derrota quando alguma barra chega a zero.

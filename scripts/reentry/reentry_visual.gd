@@ -210,6 +210,22 @@ func _build() -> void:
 	camera.far = 20000.0
 	world.add_child(camera)
 	camera.make_current()
+	world.size_changed.connect(_fit_camera)
+	_fit_camera()
+
+
+## O HUD ocupa uma faixa 16:9 centralizada. Em telas mais estreitas (4:3), a câmera mantém
+## a largura de 16:9, para paraquedas e cápsula continuarem dentro dessa faixa.
+func _fit_camera() -> void:
+	var size := Vector2(world.size)
+	if size.y <= 0.0:
+		return
+	if size.x / size.y < 16.0 / 9.0 - 0.01:
+		camera.keep_aspect = Camera3D.KEEP_WIDTH
+		camera.fov = rad_to_deg(2.0 * atan(tan(deg_to_rad(62.0) * 0.5) * 16.0 / 9.0))
+	else:
+		camera.keep_aspect = Camera3D.KEEP_HEIGHT
+		camera.fov = 62.0
 
 
 func _double_sided(color: Color) -> StandardMaterial3D:

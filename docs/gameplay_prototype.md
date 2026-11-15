@@ -24,7 +24,7 @@ Menu (dificuldade) → Planejamento (armazenamento, massa, energia)
 ### Fome e sede
 
 - Duas barras independentes, de 0 a 100, começam cheias e persistem entre cenas, dias e checkpoints (`MissionState.nourishment` e `hydration`).
-- Drenagem normal no tempo ativo da cabine: 20 pontos de fome e 30 de sede por dia jogável. O dia de referência dura 360 s no fácil, 300 s no normal e 240 s no difícil (`NEEDS_DAY_SECONDS`). No normal isso dá cerca de 0,067/s de fome e 0,1/s de sede. Pausa, janelas modais, tutorial e jogador congelado param a contagem.
+- Drenagem normal no tempo ativo da cabine: 20 pontos de fome e 30 de sede por dia jogável. O dia de referência dura 360 s no fácil, 300 s no normal e 240 s no difícil (`NEEDS_DAY_SECONDS`). No normal isso dá cerca de 0,067/s de fome e 0,1/s de sede. Pausa, janelas modais, tutorial e jogador congelado param a contagem. Perder o foco da janela abre a pausa na cabine; no pouso e na manobra da TLI, a simulação congela até o foco voltar. Num quadro longo, a missão termina no instante em que a primeira barra zera, e só ela entra na causa.
 - Cada consumo confirmado soma 50 à barra correspondente, até 100, e encerra só a queda crítica dela. Depois do Game Over nenhum consumo é aplicado.
 - Qualquer barra em 0 encerra a missão na hora. Se as duas zeram juntas, o encerramento roda uma vez e o motivo cita as duas.
 - Dormir depois de um dia sem nenhuma comida, mesmo tendo bebido, causa o despertar crítico. As duas barras ficam em no máximo 5% e caem linearmente até 0 em 10 s de jogo ativo, contados quando o controle volta. Comer e beber a tempo encerra cada queda.
@@ -266,3 +266,7 @@ O Blender editável e o gerador estão em `assets/source/lunar_surface/`. O gera
 o terreno e as luvas em `assets/models/lunar_surface/`. Use
 `blender --background --python assets/source/lunar_surface/build_lunar_surface.py`
 para regenerar os GLBs.
+
+## Regressões da bateria de QA (15/11)
+
+`tests/qa_regression_test.gd` cobre: saldo exibido sem arredondar para cima (0,99 aparece 0,9; faltas arredondam para cima), estoque nunca negativo após salto, causa da derrota em quadro longo, partida para a Terra conferida antes da queima de saída, contato do pouso avaliado no instante do toque (independente do passo), timers do resultado do pouso presos à cena e pausa por perda de foco.

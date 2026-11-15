@@ -854,6 +854,32 @@ func _press_switch(position_index: int) -> void:
 	_body.text = str(TranslationServer.translate("Procedimento %s: siga as teclas grandes à direita.")) % SWITCHES[index][0]
 
 
+## Perder o foco no meio de um "segurar" não pode completar o passo sozinho: zera a barra.
+var _focus_paused := false
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and qte_holding:
+		qte_holding = false
+		qte_hold = 0.0
+		if is_instance_valid(_body):
+			_body.text = "Janela fora de foco: segure a tecla de novo até a barra encher."
+	# Fora de foco, a queima, a deriva e as janelas do QTE congelam até o foco voltar.
+	if not is_inside_tree():
+		return
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and phase in ["countdown", "tli", "sep"] and not get_tree().paused:
+		_focus_paused = true
+		get_tree().paused = true
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN and _focus_paused:
+		_focus_paused = false
+		get_tree().paused = false
+
+
+func _exit_tree() -> void:
+	if _focus_paused:
+		get_tree().paused = false
+
+
 ## Tecla durante um procedimento. `pressed` falso é a soltura, usada nos passos de segurar.
 func qte_key(keycode: int, pressed: bool) -> void:
 	if phase != "sep" or qte_index < 0:
