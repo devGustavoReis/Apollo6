@@ -20,6 +20,7 @@ var pos := Vector3.ZERO
 var vel := Vector3.ZERO
 var tilt := Vector2.ZERO  ## x = lateral (direita +), y = frente (+)
 var throttle := 0.4
+var _low_fuel_announced := false
 var limits := {}
 var lm: Node3D
 var flame: MeshInstance3D
@@ -36,6 +37,7 @@ var _message: Label
 
 
 func _ready() -> void:
+	Sound.enter_scene("landing")
 	limits = MissionState.settings()
 	_build_world()
 	_build_hud()
@@ -52,6 +54,7 @@ func _reset_physics() -> void:
 	vel = Vector3(drift, -8.0, drift * 0.5)
 	tilt = Vector2.ZERO
 	throttle = 0.4
+	_low_fuel_announced = false
 	MissionState.lm_fuel = MissionState.lm_fuel_max
 	_apply_visuals()
 
@@ -407,7 +410,9 @@ func _show_failure() -> void:
 func _start() -> void:
 	_panel.visible = false
 	state = "flying"
-	Houston.say("Eagle, Houston. You are go for powered descent.", "Módulo lunar, aqui é Houston. Autorizados para a descida motorizada.")
+	Sound.start_descent()
+	Sound.play_cue("ignition")
+	Houston.say_recorded("go_for_descent", "Eagle, Houston. You are go for powered descent.", "Módulo lunar, aqui é Houston. Autorizados para a descida motorizada.")
 
 
 # ---------- Simulação ----------
@@ -429,6 +434,14 @@ func step(delta: float, throttle_input: float, tilt_input: Vector2) -> void:
 	tilt.y = move_toward(tilt.y, target.y, TILT_RATE * delta)
 	var power := throttle if MissionState.lm_fuel > 0.0 else 0.0
 	MissionState.lm_fuel = maxf(0.0, MissionState.lm_fuel - power * delta)
+	Sound.set_motor(power)
+	var fuel_ratio := MissionState.lm_fuel / maxf(MissionState.lm_fuel_max, 0.001)
+	Sound.set_landing_margin(fuel_ratio)
+	if state == "flying" and fuel_ratio < 0.20 and not _low_fuel_announced:
+		_low_fuel_announced = true
+		Houston.clear()
+		Houston.say_recorded("low_fuel", "Eagle, Houston. Low fuel. Watch your descent rate.",
+			"Eagle, aqui é Houston. Propelente baixo. Atenção à velocidade de descida.")
 	var accel := thrust_direction() * power * MAX_ACCEL + Vector3.DOWN * MOON_G
 	vel += accel * delta
 	pos += vel * delta
@@ -535,6 +548,9 @@ func _touchdown() -> void:
 
 func _success(vy: float, vh: float, angle: float) -> void:
 	state = "landed"
+	Sound.end_maneuver()
+	Sound.play_cue("dock")
+	Sound.play_cue("success", "Interface")
 	MissionState.landing_attempts += 1
 	MissionState.landing_result = {
 		"success": true, "vy": vy, "vh": vh, "tilt": angle,
@@ -543,15 +559,22 @@ func _success(vy: float, vh: float, angle: float) -> void:
 	MissionState.science_collected = MissionState.science_potential()
 	MissionState.add_event("landing", "Pouso lunar", "Sucesso na tentativa %d, com %.0f s de propelente sobrando." % [MissionState.landing_attempts, MissionState.lm_fuel])
 	_message.text = "CONTATO! POUSO CONFIRMADO"
-	Houston.say("We copy you down. You've got a lot of people smiling down here.",
+	Houston.clear()
+	Houston.say_recorded("crew_touchdown", "Houston, Eagle. Contact. Engine stop.",
+		"Houston, aqui é Eagle. Contato. Motor desligado.", "EAGLE")
+	Houston.say_recorded("landing_confirmed", "We copy you down. You've got a lot of people smiling down here.",
 		"Confirmamos o pouso. Tem muita gente sorrindo aqui embaixo.")
-	get_tree().create_timer(4.0).timeout.connect(Game.landing_success)
+	get_tree().create_timer(maxf(4.0, Houston.radio_time_remaining()), false).timeout.connect(
+		func(): Game.landing_success())
 
 
 func _fail(reasons: Array, tips: Array) -> void:
 	if state != "flying":
 		return
 	state = "crashed"
+	Houston.clear()
+	Sound.end_maneuver()
+	Sound.play_cue("impact", "Voice", true)
 	MissionState.landing_attempts += 1
 	MissionState.set_failure("landing", "POUSO MALSUCEDIDO", reasons, tips)
 	_message.text = "FALHA NO POUSO"

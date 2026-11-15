@@ -21,12 +21,16 @@ func abrir(cena: String, nivel: int, folga := 0) -> Node:
 	respostas = []
 	minigame.terminou.connect(func(acertou): respostas.append(acertou))
 	root.add_child(minigame)
+	# A prova da condição inicial do M03 precede o primeiro avanço de deriva.
+	if cena == "antenna_minigame":
+		minigame.set_process(false)
 	await process_frame
 	return minigame
 
 
 func fechar(minigame: Node) -> void:
 	minigame.espera = 0.0
+	minigame.set_process(true)
 	for i in 5:
 		await process_frame
 	minigame.queue_free()
@@ -145,14 +149,24 @@ func antena() -> void:
 	var antes: Vector2 = m.mira
 	m.passo(0.5, Vector2(1, 0))
 	check(is_equal_approx(m.mira.x, antes.x + 85.0), "M03: a antena anda na direção pedida")
+	m.terra = Vector2(m.area.end.x - 31.0, m.area.get_center().y)
+	m.rumo = Vector2.RIGHT
 	m.passo(10.0, Vector2(1, 1))
 	check(m.area.grow(0.01).has_point(m.mira), "M03: a mira não sai do visor")
+	check(m.area.grow(-29.99).has_point(m.terra) and m.rumo.x < 0.0,
+		"M03: deriva longa rebate mantendo o alvo alcançável")
+	var eixo: Vector2 = m.refletir_eixo(99.0, 1.0, 0.0, 100.0, 302.0)
+	check(eixo.is_equal_approx(Vector2(1.0, 1.0)), "M03: reflete várias bordas com direção correta")
+	m.rumo = Vector2.ZERO
 	m.mira = m.terra
 	m.passo(0.5, Vector2.ZERO)
 	var travado: float = m.trava
 	m.mira = m.terra + Vector2(200, 0) if m.terra.x < 250.0 else m.terra - Vector2(200, 0)
 	m.passo(0.1, Vector2.ZERO)
-	check(travado > 0.0 and m.trava < travado, "M03: sair do sinal desfaz a trava")
+	check(travado > 0.0 and is_zero_approx(m.trava), "M03: sair do sinal desfaz a trava")
+	m.mira = m.terra
+	m.passo(1.9, Vector2.ZERO)
+	check(not m.acabou and m.trava < 2.0, "M03: reentrada exige dois segundos contínuos")
 	m.tempo = 0.01
 	m.passo(0.05, Vector2.ZERO)
 	check(m.acabou and not m.acertou, "M03: tempo esgotado encerra com erro")

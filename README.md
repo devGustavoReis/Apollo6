@@ -8,9 +8,13 @@ Abra o projeto no Godot 4.7.2 e pressione F5. O jogo começa no menu principal.
 Fluxo, controles, arquitetura, instalação de modelos e nomes dos vídeos: [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
 Fontes científicas e simplificações: [docs/nasa_sources.md](docs/nasa_sources.md).
 
+## Áudio
+
+Ajuste o volume em **Configurações** no menu. A trilha, os eventos sonoros e a integração com os minigames estão em [docs/audio.md](docs/audio.md).
+
 ## Ferramentas para os minigames de cabine
 
-A aba **Ferramentas** do planejamento oferece quatro itens opcionais. Eles entram no orçamento e na massa da carga e ficam disponíveis para os minigames quando as seis atividades forem implementadas.
+A aba **Ferramentas** do planejamento oferece quatro itens opcionais. Eles entram no orçamento e na massa da carga e ajudam nas tarefas opcionais da cabine. Mire na estação e pressione **F**. **Esc** abandona a tentativa em andamento.
 
 | Ferramenta | Minigames previstos |
 | --- | --- |
@@ -21,7 +25,17 @@ A aba **Ferramentas** do planejamento oferece quatro itens opcionais. Eles entra
 
 Cada minigame pode ser concluído sem equipamento. Após um erro, a ferramenta correspondente, se embarcada, dá **80% de chance** de recuperar a tentativa. Em caso de recuperação, o jogo deve mostrar **Tarefa concluída com ajuda** e informar que o jogador errou e qual ferramenta concluiu a tarefa. Se a recuperação falhar, a tarefa fica pendente e pode ser tentada novamente. Bateria auxiliar, reserva de propelente e kit de reparos continuam disponíveis na aba **Reservas** para seus efeitos na missão.
 
-Ao integrar as cenas, chame `MissionState.resolve_minigame_attempt(task_id, attempt_id, played_well)` ao finalizar uma tentativa, com um ID positivo e único por tarefa. Use `title` e `message` para informar o desfecho de uma `new_attempt`. Use `new_completion` para registrar a conclusão uma vez e `assisted`/`played_well` para preservar a diferença entre assistência e acerto direto. A mesma tentativa reutiliza o resultado anterior, inclusive ao retomar um checkpoint que a contenha.
+Ao adicionar ou alterar uma tarefa, chame `MissionState.resolve_minigame_attempt(task_id, attempt_id, played_well)` ao finalizar uma tentativa, com um ID positivo e único por tarefa. Use `title` e `message` para informar o desfecho de uma `new_attempt`. Use `new_completion` para registrar a conclusão uma vez e `assisted`/`played_well` para preservar a diferença entre assistência e acerto direto. A mesma tentativa reutiliza o resultado anterior, inclusive ao retomar um checkpoint que a contenha.
+
+Durante a viagem aparecem duas tarefas por dia no checklist:
+
+| Dia | Estações e tarefas |
+| --- | --- |
+| 1 | Armário para prender objetos. Dispensador para abastecer a bolsa, separado do consumo de água. |
+| 2 | Rádio para recuperar o sinal. Estação de repouso para preparar as coberturas antes de dormir. |
+| 3 | Descarte para guardar embalagens. Bancada de ferramentas para encaixar o conector do traje. |
+
+O relatório registra 100 pontos por tarefa concluída, inclusive com assistência, em um subtotal de 600 pontos das tarefas da tripulação. Avançar sem concluir uma delas a deixa pendente.
 
 ## Primeiro acesso
 

@@ -20,7 +20,7 @@ const CATEGORIES := {
 	"science": ["Instrumentos", "Leve pelo menos um instrumento científico."],
 	"supply": ["Suprimentos", "Garanta comida e água para os %d dias da missão."],
 	"reserve": ["Reservas", "Leve reservas para lidar com imprevistos na viagem e no pouso."],
-	"assist": ["Ferramentas", "Minigames futuros: ferramentas opcionais dão %d%% de chance de concluir após um erro."],
+	"assist": ["Ferramentas", "Ferramentas opcionais: %d%% de chance de recuperar um erro na tarefa correspondente."],
 }
 const INK := Color("#091520")
 const PANEL := Color("#10202e")
@@ -49,6 +49,7 @@ var _info_dialog: AcceptDialog
 
 
 func _ready() -> void:
+	Sound.enter_scene("planning")
 	theme = _planning_theme()
 	var background := Control.new()
 	background.set_script(STARFIELD)
@@ -255,12 +256,19 @@ func _step_button(text: String, hint: String, id: String, delta: int) -> Button:
 	button.text = text
 	button.tooltip_text = hint
 	button.custom_minimum_size = Vector2(34, 32)
-	button.pressed.connect(func(): MissionState.set_qty(id, MissionState.qty(id) + delta))
+	button.pressed.connect(func(): _change_quantity(id, delta))
 	return button
 
 
 func _toggle_item(id: String) -> void:
-	MissionState.set_qty(id, 0 if MissionState.qty(id) > 0 else 1)
+	_change_quantity(id, -1 if MissionState.qty(id) > 0 else 1)
+
+
+func _change_quantity(id: String, delta: int) -> void:
+	var previous := MissionState.qty(id)
+	MissionState.set_qty(id, previous + delta)
+	if MissionState.qty(id) != previous:
+		Sound.play_cue("add" if delta > 0 else "remove", "Interface")
 
 
 func _build_summary(parent: HBoxContainer) -> void:
@@ -336,7 +344,9 @@ func _build_footer(parent: VBoxContainer) -> void:
 	panel.add_child(row)
 	var back := Button.new()
 	back.text = "Voltar ao menu"
-	back.pressed.connect(func(): Game.go("menu"))
+	back.pressed.connect(func():
+		Sound.play_cue("back", "Interface")
+		Game.go("menu"))
 	row.add_child(back)
 	var help := Button.new()
 	help.text = "Ajuda"
@@ -351,7 +361,12 @@ func _build_footer(parent: VBoxContainer) -> void:
 	_launch.text = "Aprovar e lançar  ›"
 	_launch.theme_type_variation = &"LaunchButton"
 	_launch.custom_minimum_size = Vector2(190, 42)
-	_launch.pressed.connect(func(): Game.launch())
+	_launch.pressed.connect(func():
+		Sound.play_cue("confirm", "Interface")
+		Game.launch())
+	_launch.gui_input.connect(func(event: InputEvent):
+		if _launch.disabled and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			Sound.play_cue("warning", "Interface"))
 	row.add_child(_launch)
 
 
@@ -377,6 +392,7 @@ func _refresh() -> void:
 	var validation := ms.validate_plan()
 	_update_issues(validation["errors"], validation["warnings"])
 	_launch.disabled = not validation["ok"]
+	_launch.tooltip_text = "\n".join(validation["errors"]) if _launch.disabled else ""
 	var missing: int = validation["errors"].size()
 	_status.text = "Plano pronto para lançar" if missing == 0 else (
 		"1 requisito pendente" if missing == 1 else "%d requisitos pendentes" % missing
@@ -436,7 +452,7 @@ func _update_issues(errors: Array, warnings: Array) -> void:
 func _show_item_info(item: Dictionary) -> void:
 	var description: String = item["description"]
 	if item["category"] == "assist":
-		description += "\n\nQuando essas tarefas estiverem disponíveis, a ferramenta terá %d%% de chance de concluir a tarefa após um erro. Ela é opcional." % int(MissionState.MINIGAME_ASSIST_CHANCE * 100.0)
+		description += "\n\nA ferramenta tem %d%% de chance de concluir a tarefa após um erro. Ela é opcional." % int(MissionState.MINIGAME_ASSIST_CHANCE * 100.0)
 	_open_info(item["name"], "%s\n\nOrigem dos números\n%s" % [description, item["source"]])
 
 
@@ -446,7 +462,7 @@ func _show_help() -> void:
 		+ "2. Confira se há comida e água para %d dias e se a carga está dentro do orçamento e da massa permitida.\n\n"
 		+ "3. Se quiser, leve bateria, propelente ou ferramentas para lidar com imprevistos. "
 		+ "Use o resumo para comparar os limites e os alertas antes de lançar.\n\n"
-		+ "A aba Ferramentas mostra equipamentos para atividades futuras."
+		+ "A aba Ferramentas mostra a assistência disponível para as tarefas da cabine."
 	) % MissionState.MISSION_DAYS)
 
 

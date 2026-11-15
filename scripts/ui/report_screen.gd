@@ -64,6 +64,7 @@ static func evaluate() -> Dictionary:
 
 
 func _ready() -> void:
+	Sound.enter_scene("report")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := Control.new()
 	bg.set_script(STARFIELD)
@@ -127,6 +128,10 @@ func _report_text(result: Dictionary) -> String:
 	if ms.landing_result.get("success", false):
 		var r: Dictionary = ms.landing_result
 		t += "Pouso: V.vert %.1f m/s · V.horiz %.1f m/s · inclinação %.0f° · %.0f s de propelente sobrando · %.0f m do alvo\n" % [r["vy"], r["vh"], r["tilt"], r["fuel_left"], r["distance"]]
+	var tasks := ms.cabin_minigame_report()
+	t += "\n[color=#f5bd5c]TAREFAS DA TRIPULAÇÃO · %d/%d pontos[/color]\n" % [tasks["points"], tasks["possible"]]
+	for row: Dictionary in tasks["rows"]:
+		t += "• %s — %s (%d pontos)\n" % [row["title"], row["status"], row["points"]]
 	t += "\n[color=#f5bd5c]DECISÕES[/color]\n"
 	for d in ms.decisions:
 		t += "%s [b]%s[/b]: %s\n   [color=#bbbbbb]%s[/color]\n" % ["[color=#77ee77]✔[/color]" if d["correct"] else "[color=#ff6655]✖[/color]", d["title"], d["choice"], d["explanation"]]

@@ -125,7 +125,10 @@ static func apply(id: String, option: int, errors := 0) -> Dictionary:
 				ms.integrity -= 10.0
 				explanation = "Errado. Sem remoção de CO₂ e controle de pressão, a tripulação corre risco. Suporte à vida nunca é o primeiro sistema a ser cortado."
 		"comm_dropout":
-			if option == 0:
+			if option == 0 and errors > 0:
+				ms.sps_fuel -= 3.0
+				explanation = "A troca para a antena omnidirecional manteve um canal de emergência, mas o sinal principal não foi recuperado. A correção atrasada gastou mais propelente."
+			elif option == 0:
 				correct = true
 				if not ms.spare_parts:
 					ms.sps_fuel -= 1.0

@@ -48,6 +48,7 @@ const CUTSCENES := {
 
 var cutscene_entries: Array = []
 var cutscene_next := "menu"
+var cutscene_id := ""
 var ui_theme: Theme
 
 
@@ -73,6 +74,7 @@ func go(scene_key: String) -> void:
 
 
 func play_cutscene(id: String, next_scene: String) -> void:
+	cutscene_id = id
 	cutscene_entries = CUTSCENES[id]
 	cutscene_next = next_scene
 	go("cutscene")
@@ -97,6 +99,7 @@ func launch() -> void:
 
 
 func separation_failed() -> void:
+	Sound.end_maneuver()
 	MissionState.separation_attempts += 1
 	play_cutscene("separation_fail", "separation")
 
@@ -137,7 +140,7 @@ func _setup_inputs() -> void:
 		"move_forward": [KEY_W], "move_back": [KEY_S],
 		"move_left": [KEY_A], "move_right": [KEY_D],
 		"move_up": [KEY_SPACE], "move_down": [KEY_CTRL, KEY_C],
-		"interact": [KEY_E], "checklist": [KEY_TAB],
+		"interact": [KEY_E], "cabin_task": [KEY_F], "checklist": [KEY_TAB],
 		"advance": [KEY_ENTER, KEY_KP_ENTER], "pause": [KEY_ESCAPE],
 		"throttle_up": [KEY_W, KEY_SHIFT], "throttle_down": [KEY_S],
 		"tilt_left": [KEY_A, KEY_LEFT], "tilt_right": [KEY_D, KEY_RIGHT],

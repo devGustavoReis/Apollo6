@@ -1,7 +1,9 @@
 extends CanvasLayer
 ## Comunicações de rádio (autoload "Houston").
 ## Fala em inglês com legenda em português. Os diálogos são fictícios.
-## Para usar vozes gravadas, passe o caminho do áudio em say(..., voice_path).
+## As falas gravadas são WAVs locais; mensagens novas podem usar só legenda.
+
+const RADIO_AUDIO := "res://assets/audio/voice/"
 
 signal line_finished
 signal queue_empty
@@ -76,8 +78,18 @@ func _make_quindar_tone() -> AudioStreamWAV:
 	return wav
 
 
+func say_recorded(id: String, english: String, portuguese: String, speaker := "HOUSTON") -> void:
+	say(english, portuguese, speaker, RADIO_AUDIO + id + ".wav")
+
+
 func say(english: String, portuguese: String, speaker := "HOUSTON", voice_path := "") -> void:
-	_queue.append({"en": english, "pt": portuguese, "speaker": speaker, "voice": voice_path})
+	var stream: AudioStream
+	if not voice_path.is_empty() and ResourceLoader.exists(voice_path, "AudioStream"):
+		stream = load(voice_path) as AudioStream
+	var duration := 2.5 + (english.length() + portuguese.length()) * 0.035
+	if stream != null:
+		duration = maxf(2.0, maxf(portuguese.length() * 0.038, stream.get_length() + 0.35))
+	_queue.append({"en": english, "pt": portuguese, "speaker": speaker, "stream": stream, "duration": duration})
 	if _current.is_empty():
 		_next()
 
@@ -86,11 +98,19 @@ func is_busy() -> bool:
 	return not _current.is_empty()
 
 
+func radio_time_remaining() -> float:
+	var remaining := maxf(_time_left, 0.0) if is_busy() else 0.0
+	for entry: Dictionary in _queue:
+		remaining += entry["duration"]
+	return remaining
+
+
 func clear() -> void:
 	_queue.clear()
 	_current = {}
 	_panel.visible = false
 	_voice.stop()
+	_tone.stop()
 
 
 func skip_line() -> void:
@@ -99,6 +119,8 @@ func skip_line() -> void:
 
 
 func _next() -> void:
+	_voice.stop()
+	_tone.stop()
 	if _queue.is_empty():
 		_current = {}
 		_panel.visible = false
@@ -109,16 +131,21 @@ func _next() -> void:
 	_english.text = _current["en"]
 	_subtitle.text = _current["pt"]
 	_panel.visible = true
-	_time_left = 2.5 + (_current["en"].length() + _current["pt"].length()) * 0.035
-	if _current["voice"] != "" and ResourceLoader.exists(_current["voice"]):
-		_voice.stream = load(_current["voice"])
+	_time_left = _current["duration"]
+	_voice.stream = _current["stream"]
+	# A duração e as legendas seguem disponíveis nos testes sem dispositivo de áudio.
+	if _voice.stream != null and DisplayServer.get_name() != "headless":
 		_voice.play()
-		_time_left = maxf(_time_left, _voice.stream.get_length() + 0.5)
-	if _current["speaker"] == "HOUSTON":
+	if _current["speaker"] == "HOUSTON" and DisplayServer.get_name() != "headless":
 		_tone.play()
 
 
 func _process(delta: float) -> void:
+	var paused := get_tree().paused
+	_voice.stream_paused = paused
+	_tone.stream_paused = paused
+	if paused:
+		return
 	if _current.is_empty():
 		return
 	_time_left -= delta
@@ -128,5 +155,5 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _current.is_empty() and event.is_action_pressed("advance"):
+	if not get_tree().paused and not _current.is_empty() and event.is_action_pressed("advance"):
 		skip_line()

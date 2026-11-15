@@ -93,14 +93,25 @@ func run() -> void:
 		for day in [1, 2, 3]:
 			check(ms().day == day, "Dia %d" % day)
 			for task in cabin.day_tasks():
-				if task["id"] == "hatch":
+				if task["id"] == "hatch" or task.get("optional", false):
 					continue
 				var guard := 0
 				while not (cabin._done(task["id"]) or ms().day > day) and guard < 4:
 					cabin.interact(task["id"])
 					while hud.modal_open():
 						if hud.minigame != null:
-							await fly_trajectory(hud.minigame, 0)
+							if hud.minigame.scene_file_path.ends_with("/antenna_minigame.tscn"):
+								var antenna: Node = hud.minigame
+								for step in range(23):
+									antenna.mira = antenna.terra
+									antenna.passo(0.1, Vector2.ZERO)
+								antenna.espera = 0.0
+								await process_frame
+							else:
+								await fly_trajectory(hud.minigame, 0)
+						elif hud._night != null:
+							hud._night_tween.custom_step(3.0)
+							await process_frame
 						else:
 							hud._on_modal_button(0)
 					guard += 1

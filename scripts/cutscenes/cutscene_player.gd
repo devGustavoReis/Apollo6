@@ -13,6 +13,7 @@ var _done := false
 
 
 func _ready() -> void:
+	Sound.enter_scene("cutscene")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Color.BLACK
@@ -21,7 +22,7 @@ func _ready() -> void:
 	_video = VideoStreamPlayer.new()
 	_video.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_video.expand = true
-	_video.bus = "Music"
+	_video.bus = "SFX"
 	_video.finished.connect(_next)
 	add_child(_video)
 	_card = VBoxContainer.new()
@@ -56,7 +57,9 @@ func _next() -> void:
 		return
 	var entry: Dictionary = Game.cutscene_entries[_index]
 	var path: String = entry.get("video", "")
-	if path != "" and ResourceLoader.exists(path):
+	var has_video := path != "" and ResourceLoader.exists(path)
+	Sound.cutscene_segment(Game.cutscene_id, _index, has_video)
+	if has_video:
 		_card.visible = false
 		_video.visible = true
 		_video.stream = load(path)
@@ -92,4 +95,5 @@ func _finish() -> void:
 		return
 	_done = true
 	_video.stop()
+	Sound.end_maneuver()
 	Game.finish_cutscene()

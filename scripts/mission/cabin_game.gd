@@ -34,7 +34,7 @@ const LABELS := {
 	"console": "COMMAND CONSOLE", "nav": "NAVIGATION", "radio": "RADIO", "food": "FOOD",
 	"water": "WATER", "storage": "STORAGE", "lifesupport": "LIFE SUPPORT", "power": "POWER",
 	"tools": "TOOLS", "medkit": "MEDKIT", "checklist": "CHECKLIST", "rest": "REST",
-	"hatch": "LUNAR MODULE HATCH",
+	"hatch": "LUNAR MODULE HATCH", "disposal": "DESCARTE",
 }
 
 @onready var cabin: Node3D = $ViewportContainer/SubViewport/SpacecraftInterior
@@ -54,23 +54,24 @@ var _held_time := 0.0
 var TUTORIAL := [
 	["Mova o MOUSE para olhar ao redor.",
 		"Apollo, Houston. Docking confirmed, welcome to translunar coast. Take a look around.",
-		"Apollo, aqui é Houston. Acoplamento confirmado, bem-vindos à viagem translunar. Deem uma olhada ao redor."],
+		"Apollo, aqui é Houston. Acoplamento confirmado, bem-vindos à viagem translunar. Deem uma olhada ao redor.", "tutorial_look"],
 	["Pressione ESPAÇO para soltar o cinto e flutuar.",
 		"You are clear to unstrap. Watch your step, there is no floor up there.",
-		"Podem soltar os cintos. Cuidado: aí em cima não existe chão."],
+		"Podem soltar os cintos. Cuidado: aí em cima não existe chão.", "tutorial_unstrap"],
 	["WASD movem na direção do olhar. ESPAÇO sobe, CTRL desce. Solte as teclas para parar.",
 		"Move slowly. In zero g, everything keeps drifting until you stop it.",
-		"Movam-se devagar. Sem gravidade, tudo continua flutuando até ser parado."],
+		"Movam-se devagar. Sem gravidade, tudo continua flutuando até ser parado.", "tutorial_drift"],
 	["Pressione TAB para abrir o checklist da missão.",
 		"Your checklist has today's tasks. Check it any time.",
-		"O checklist tem as tarefas do dia. Consultem quando quiserem."],
+		"O checklist tem as tarefas do dia. Consultem quando quiserem.", "tutorial_checklist"],
 	["Mire no painel LIFE SUPPORT (direita, embaixo) e pressione E.",
 		"First item: swap the lithium hydroxide canister at LIFE SUPPORT.",
-		"Primeiro item: trocar o cartucho de hidróxido de lítio no LIFE SUPPORT."],
+		"Primeiro item: trocar o cartucho de hidróxido de lítio no LIFE SUPPORT.", "tutorial_life_support"],
 ]
 
 
 func _ready() -> void:
+	Sound.enter_scene("cabin")
 	var preview := cabin.get_node_or_null("PreviewPlayer")
 	if preview:
 		cabin.remove_child(preview)
@@ -106,6 +107,21 @@ func _build_interaction_zones() -> void:
 			continue
 		var size: Vector3 = marker.get_meta("max_size_m", Vector3(0.5, 0.5, 0.4))
 		_add_zone(marker, STATIONS[slot_name][0], STATIONS[slot_name][1], size)
+	var disposal := Marker3D.new()
+	disposal.name = "MealDisposal"
+	cabin.add_child(disposal)
+	disposal.position = Vector3(-1.17, 0.88, 1.66)
+	_add_zone(disposal, "disposal", LABELS["disposal"], Vector3(0.36, 0.28, 0.30))
+	_add_station_prop(disposal, Vector3(0.30, 0.20, 0.22), Vector3(0, 0.10, 0.05), Color("#405b65"))
+	_add_station_prop(disposal, Vector3(0.32, 0.04, 0.23), Vector3(0, 0.22, 0.05), Color("#869da0"))
+	var bench: Node3D = slots.get_node_or_null("ToolsStorage")
+	if bench != null:
+		_add_station_prop(bench, Vector3(0.36, 0.055, 0.24), Vector3(0, 0.38, 0), Color("#718489"))
+	var restraint: Node3D = slots.get_node_or_null("RestArea")
+	if restraint != null:
+		_add_station_prop(restraint, Vector3(1.55, 0.16, 0.34), Vector3(0, 0.12, 0.04), Color("#38525a"))
+		for x in [-0.5, 0.48]:
+			_add_station_prop(restraint, Vector3(0.068, 0.025, 0.34), Vector3(x, 0.21, 0.04), Color("#9c8b69"))
 	var hatch := Marker3D.new()
 	hatch.name = "HatchInteraction"
 	cabin.add_child(hatch)
@@ -164,6 +180,18 @@ func _add_zone(marker: Node3D, id: String, text: String, size: Vector3) -> void:
 	_labels[id] = label
 
 
+func _add_station_prop(parent: Node3D, size: Vector3, offset: Vector3, color: Color) -> void:
+	var model := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	box.material = material
+	model.mesh = box
+	model.position = offset
+	parent.add_child(model)
+
+
 func _build_backdrop() -> void:
 	var backdrop: Node3D = cabin.get_node("ExteriorBackdrop")
 	_moon = _sphere(Color(0.72, 0.71, 0.68), 1.0)
@@ -199,6 +227,10 @@ func _update_supplies() -> void:
 
 func _hold(id: String) -> void:
 	held = id
+	var slot := "FoodStorage" if id == "food" else "WaterStorage"
+	var marker: Node3D = cabin.get_node_or_null("EquipmentSlots/" + slot)
+	if marker != null:
+		Sound.play_at(id, marker)
 	var key := id
 	if id == "food":
 		key = "food_odd" if MissionState.day % 2 == 1 else "food_even"
@@ -214,6 +246,7 @@ func _hold(id: String) -> void:
 func _consume() -> void:
 	var ms := MissionState
 	var id := held
+	Sound.play_cue(id)
 	held = ""
 	if _held_node != null:
 		_held_node.queue_free()
@@ -292,6 +325,11 @@ func day_tasks() -> Array:
 	var result := []
 	for entry in list:
 		result.append({"id": entry[0], "station": LABELS[entry[0]], "text": entry[1], "done": _done(entry[0])})
+	for id: String in MissionState.CABIN_MINIGAMES:
+		var task: Dictionary = MissionState.CABIN_MINIGAMES[id]
+		if task["day"] == ms.day:
+			result.append({"id": id, "station": LABELS[task["station"]], "text": task["title"],
+				"done": ms.minigame_completions.has(id), "optional": true})
 	return result
 
 
@@ -321,7 +359,7 @@ func _has_task(id: String) -> bool:
 func _pending(except_id := "") -> Array:
 	var missing := []
 	for task in day_tasks():
-		if not task["done"] and task["id"] != except_id:
+		if not task["done"] and task["id"] != except_id and not task.get("optional", false):
 			missing.append(task)
 	return missing
 
@@ -347,7 +385,7 @@ func _set_tutorial(step: int) -> void:
 		hud.set_tutorial("")
 		return
 	hud.set_tutorial("TUTORIAL %d/%d · %s\n(ENTER pula a dica)" % [step + 1, TUTORIAL.size(), TUTORIAL[step][0]])
-	Houston.say(TUTORIAL[step][1], TUTORIAL[step][2])
+	Houston.say_recorded(TUTORIAL[step][3], TUTORIAL[step][1], TUTORIAL[step][2])
 
 
 func _check_tutorial() -> void:
@@ -363,29 +401,29 @@ func _check_tutorial() -> void:
 	if passed:
 		_set_tutorial(tutorial_step + 1)
 		if tutorial_step == -1:
-			Houston.say("Nice work. Follow the checklist and keep an eye on your supplies.",
+			Houston.say_recorded("tutorial_complete", "Nice work. Follow the checklist and keep an eye on your supplies.",
 				"Bom trabalho. Sigam o checklist e fiquem de olho nos suprimentos.")
 
 
 func _start_day_briefing() -> void:
 	match MissionState.day:
 		1:
-			Houston.say("Apollo, Houston. Follow today's checklist.", "Apollo, aqui é Houston. Sigam o checklist de hoje.")
+			Houston.say_recorded("day_one_checklist", "Apollo, Houston. Follow today's checklist.", "Apollo, aqui é Houston. Sigam o checklist de hoje.")
 		2:
-			Houston.say("Good morning, Apollo. We see a power problem on your main bus. Check the POWER panel.",
+			Houston.say_recorded("day_two_power", "Good morning, Apollo. We see a power problem on your main bus. Check the POWER panel.",
 				"Bom dia, Apollo. Vemos um problema de energia no barramento principal. Verifiquem o painel POWER.")
 			match MissionState.random_event:
 				"comm_dropout":
-					Houston.say("Your signal is breaking up... high gain antenna... check RADIO...",
+					Houston.say_recorded("day_two_radio", "Your signal is breaking up... high gain antenna... check RADIO...",
 						"Seu sinal está falhando... antena de alto ganho... verifiquem o RADIO...")
 				"water_leak":
-					Houston.say("We also show a pressure drop in the water system. Take a look at WATER.",
+					Houston.say_recorded("day_two_water", "We also show a pressure drop in the water system. Take a look at WATER.",
 						"Também vemos queda de pressão no sistema de água. Verifiquem o WATER.")
 				"ptc":
-					Houston.say("Thermal readings are uneven. Check the COMMAND CONSOLE.",
+					Houston.say_recorded("day_two_thermal", "Thermal readings are uneven. Check the COMMAND CONSOLE.",
 						"As leituras térmicas estão desiguais. Verifiquem o COMMAND CONSOLE.")
 		3:
-			Houston.say("Apollo, the Moon is close. Run the approach checklist on the COMMAND CONSOLE.",
+			Houston.say_recorded("day_three_approach", "Apollo, the Moon is close. Run the approach checklist on the COMMAND CONSOLE.",
 				"Apollo, a Lua está próxima. Executem o checklist de aproximação no COMMAND CONSOLE.")
 
 
@@ -433,7 +471,14 @@ func _physics_process(_delta: float) -> void:
 	elif held != "":
 		hud.set_prompt("[E] Comer a refeição" if held == "food" else "[E] Beber a água")
 	elif target_id != "":
-		hud.set_prompt("[E] " + LABELS[target_id])
+		var task_id := _station_minigame(target_id)
+		var prompt := "[E] " + str(LABELS[target_id])
+		if not task_id.is_empty():
+			var title: String = MissionState.CABIN_MINIGAMES[task_id]["title"]
+			var status := " · Concluída" if MissionState.minigame_completions.has(task_id) else ""
+			var station := "" if target_id == "disposal" else prompt + "\n"
+			prompt = station + "[F] " + title + status
+		hud.set_prompt(prompt)
 	else:
 		hud.set_prompt("")
 
@@ -461,6 +506,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_checklist(day_tasks())
 	elif event.is_action_pressed("advance") and tutorial_step >= 0 and not Houston.is_busy():
 		_set_tutorial(tutorial_step + 1)
+	elif event.is_action_pressed("cabin_task") and not event.is_echo() and not player.seated and held.is_empty():
+		var task_id := _station_minigame(target_id)
+		if not task_id.is_empty():
+			_interact_minigame(task_id)
+			get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact") and (target_id != "" or held != ""):
 		interact(target_id)
 
@@ -475,11 +525,77 @@ func _modal(title: String, body: String, buttons := ["OK"], callback := Callable
 
 func _decision(id: String, task_id: String, after := Callable()) -> void:
 	var d := MissionDecisions.get_decision(id)
+	Sound.play_cue("radio" if id == "midcourse" else "warning", "Voice", true)
 	_modal(d["title"], d["body"], d["options"], func(choice):
 		if id == "midcourse" and choice == 0:
 			_open_trajectory(d, task_id, after)
+		elif id == "comm_dropout" and choice == 0 and not MissionState.minigame_completions.has("M03"):
+			_open_cabin_minigame("M03", func(recovered: bool):
+				_decision_result(id, task_id, d, choice, 0 if recovered else 1, after))
 		else:
 			_decision_result(id, task_id, d, choice, 0, after))
+
+
+func _station_minigame(station: String) -> String:
+	for id: String in MissionState.CABIN_MINIGAMES:
+		var task: Dictionary = MissionState.CABIN_MINIGAMES[id]
+		if task["day"] == MissionState.day and task["station"] == station:
+			return id
+	return ""
+
+
+func _interact_minigame(id: String) -> void:
+	if id == "M03" and MissionState.random_event == "comm_dropout" and not _done("radio"):
+		_decision("comm_dropout", "radio")
+	else:
+		_open_cabin_minigame(id)
+
+
+func _open_cabin_minigame(id: String, after := Callable()) -> void:
+	if hud.modal_open() or hud.paused() or not MissionState.CABIN_MINIGAMES.has(id):
+		return
+	var task: Dictionary = MissionState.CABIN_MINIGAMES[id]
+	if task["day"] != MissionState.day:
+		return
+	var complete: Dictionary = MissionState.minigame_completions.get(id, {})
+	if not complete.is_empty():
+		_modal(complete["title"], complete["message"])
+		return
+	var scene := load(task["scene"]) as PackedScene
+	var minigame: Control = scene.instantiate()
+	var attempt := MissionState.next_minigame_attempt(id)
+	minigame.nivel = ["easy", "normal", "hard"].find(MissionState.difficulty)
+	player.frozen = true
+	minigame.terminou.connect(func(played_well: bool):
+		if hud.minigame != minigame:
+			return
+		hud.close_minigame()
+		_finish_cabin_minigame(id, attempt, played_well, after), CONNECT_ONE_SHOT)
+	hud.open_minigame(minigame, func(): player.frozen = false)
+	Sound.play_cue("switch")
+
+
+func _finish_cabin_minigame(id: String, attempt: int, played_well: bool, after: Callable) -> void:
+	var result := MissionState.resolve_minigame_attempt(id, attempt, played_well)
+	if hud.checklist_visible():
+		hud.show_checklist(day_tasks())
+	_refresh_objective()
+	var completed: bool = result["completed"]
+	var cue := "warning"
+	if completed:
+		cue = "assist" if result["assisted"] else "success"
+	Sound.play_cue(cue, "Interface")
+	if completed:
+		_modal(result["title"], result["message"], ["CONTINUAR"], func(_i):
+			if after.is_valid():
+				after.call(true))
+	else:
+		var exit_label := "CONTINUAR SEM RESTABELECER O SINAL" if after.is_valid() else "VOLTAR À CABINE"
+		_modal(result["title"], result["message"], ["TENTAR DE NOVO", exit_label], func(choice):
+			if choice == 0:
+				_open_cabin_minigame(id, after)
+			elif after.is_valid():
+				after.call(false))
 
 
 func _open_trajectory(d: Dictionary, task_id: String, after: Callable) -> void:
@@ -491,7 +607,7 @@ func _open_trajectory(d: Dictionary, task_id: String, after: Callable) -> void:
 		player.frozen = false
 		_decision_result("midcourse", task_id, d, 0, errors, after))
 	hud.open_minigame(minigame)
-	Houston.say("Apollo, Houston. Fly the correction by hand. Keep her on the line.",
+	Houston.say_recorded("trajectory_correction", "Apollo, Houston. Fly the correction by hand. Keep her on the line.",
 		"Apollo, aqui é Houston. Façam a correção manualmente. Mantenham a nave na linha.")
 
 
@@ -531,8 +647,9 @@ func interact(id: String) -> void:
 			var info := "Oxigênio da cabine: [b]%.0f%%[/b] do nominal\nPressão da cabine: cerca de 5 psi de oxigênio puro, como no módulo de comando Apollo\nRemoção de CO₂: cartuchos de hidróxido de lítio (LiOH)" % ms.life_support
 			if _has_task("lifesupport") and not _done("lifesupport"):
 				_modal("LIFE SUPPORT", info + "\n\nO cartucho de LiOH está saturado de CO₂. Trocar agora?", ["TROCAR CARTUCHO"], func(_i):
+					Sound.play_cue("switch")
 					_complete("lifesupport")
-					Houston.say("Copy canister change. CO2 levels coming down.", "Entendido, troca do cartucho. O nível de CO₂ está caindo."))
+					Houston.say_recorded("canister_changed", "Copy canister change. CO2 levels coming down.", "Entendido, troca do cartucho. O nível de CO₂ está caindo."))
 			else:
 				_modal("LIFE SUPPORT", info)
 		"nav":
@@ -554,7 +671,7 @@ func interact(id: String) -> void:
 					_decision("comm_dropout", "radio")
 				else:
 					_complete("radio")
-					Houston.say("Thanks for the update, Apollo. Everything looks good from here.",
+					Houston.say_recorded("status_received", "Thanks for the update, Apollo. Everything looks good from here.",
 						"Obrigado pela atualização, Apollo. Tudo certo por aqui.")
 					_modal("RADIO", "Relatório enviado: suprimentos, energia e estado da tripulação.\nHouston acompanha a missão em tempo real e ajuda a planejar cada manobra.")
 			else:
@@ -576,6 +693,7 @@ func interact(id: String) -> void:
 				var warn := "" if missing.is_empty() else "\n\n[color=#ffcc44]Tarefas pendentes serão ignoradas: %s.[/color]" % ", ".join(PackedStringArray(missing.map(func(t): return t["station"])))
 				_modal("LUNAR MODULE HATCH", "Entrar no módulo lunar e iniciar a descida?\nUm checkpoint será salvo: se o pouso falhar, você recomeça daqui." + warn, ["ENTRAR NO MÓDULO LUNAR", "AINDA NÃO"], func(i):
 					if i == 0:
+						Sound.play_cue("hatch", "Interface")
 						_complete("hatch")
 						Game.enter_lunar_module())
 		"rest":
@@ -589,9 +707,17 @@ func interact(id: String) -> void:
 					text += "• %s — %s\n" % [t["station"], t["text"]]
 				_modal("REST", text)
 				return
-			_modal("REST", "Encerrar o dia %d e descansar?" % ms.day, ["DESCANSAR", "AINDA NÃO"], func(i):
+			var rest_note := ""
+			if ms.day == 2 and not ms.minigame_completions.has("M05"):
+				rest_note = "\n\nA preparação das coberturas ficará pendente. Use F na estação para fazê-la antes de descansar."
+			_modal("REST", "Encerrar o dia %d e descansar?" % ms.day + rest_note, ["DESCANSAR", "AINDA NÃO"], func(i):
 				if i == 0:
-					_next_day())
+					_begin_rest())
+		"disposal":
+			var text := "Bolsa para guardar as embalagens antes de sair da cabine."
+			if ms.day == 3:
+				text += "\nUse F aqui para iniciar a tarefa."
+			_modal("DESCARTE", text)
 		"checklist":
 			if not hud.checklist_visible():
 				hud.toggle_checklist(day_tasks())
@@ -625,9 +751,15 @@ func _approach_checklist() -> void:
 		ms.clamp_resources()
 		ms.add_event("loi", "Inserção em órbita lunar", "Propelente do CSM restante: %.0f%%" % ms.sps_fuel)
 		_complete("console")
-		Houston.say("Burn complete. Welcome to lunar orbit. You are go to enter the lunar module.",
+		Houston.say_recorded("lunar_orbit", "Burn complete. Welcome to lunar orbit. You are go to enter the lunar module.",
 			"Queima concluída. Bem-vindos à órbita lunar. Podem entrar no módulo lunar.")
 		_modal("ÓRBITA LUNAR", "A nave está em órbita da Lua.\nFlutue até a escotilha no teto (LUNAR MODULE HATCH) e pressione E."))
+
+
+func _begin_rest() -> void:
+	Houston.clear()
+	player.frozen = true
+	hud.show_night(MissionState.day + 1, player.camera, _next_day, func(): player.frozen = false)
 
 
 func _next_day() -> void:

@@ -20,6 +20,7 @@ var aviso
 
 
 func _ready():
+	Sound.play_cue("switch")
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	size = Vector2(960, 540)
 	nave = pontos[0]
@@ -92,6 +93,7 @@ func mover(pos):
 	var perto = Geometry2D.get_closest_point_to_segment(pos, a, b)
 	if pos.distance_to(perto) > tolerancia:
 		erros += 1
+		Sound.play_cue("warning", "Voice", true)
 		arrastando = false
 		nave = a
 		mira = a
@@ -104,6 +106,7 @@ func mover(pos):
 			if indice == pontos.size() - 1:
 				arrastando = false
 				acabou = true
+				Sound.play_cue("success", "Interface")
 			else:
 				angulo = (pontos[indice + 1] - pontos[indice]).angle()
 

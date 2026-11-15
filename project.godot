@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 MissionState="*res://scripts/core/mission_state.gd"
 Game="*res://scripts/core/game.gd"
+Sound="*res://scripts/core/mission_audio.gd"
 Houston="*res://scripts/core/houston.gd"
 
 [display]

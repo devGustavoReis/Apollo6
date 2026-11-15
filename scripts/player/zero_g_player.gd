@@ -55,10 +55,14 @@ func look(relative: Vector2) -> void:
 	camera.rotation.x = pitch
 
 
+var _touching_surface := false
+
+
 func unbuckle() -> void:
 	if not seated:
 		return
 	seated = false
+	Sound.play_cue("belt")
 	frozen = true
 	var tween := create_tween()
 	tween.tween_property(self, "global_position", FLOAT_START, 0.9).set_trans(Tween.TRANS_SINE)
@@ -84,3 +88,7 @@ func _physics_process(delta: float) -> void:
 	var before := global_position
 	move_and_slide()
 	moved_distance += before.distance_to(global_position)
+	var touching := get_slide_collision_count() > 0
+	if touching and not _touching_surface and before.distance_squared_to(global_position) > 0.000003:
+		Sound.play_at("contact", self)
+	_touching_surface = touching

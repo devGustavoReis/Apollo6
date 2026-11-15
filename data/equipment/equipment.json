@@ -161,7 +161,7 @@
         "M06"
       ],
       "description": "Cintas e fechos extras para prender objetos soltos e fechar a bolsa de embalagens.",
-      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
     },
     {
       "id": "sealing_kit",
@@ -178,7 +178,7 @@
         "M04"
       ],
       "description": "Adaptador e anéis de vedação para o abastecimento de água e o conector do traje.",
-      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
     },
     {
       "id": "signal_meter",
@@ -194,7 +194,7 @@
         "M03"
       ],
       "description": "Mede a intensidade do sinal e ajuda a recuperar o alinhamento da antena.",
-      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
     },
     {
       "id": "blackout_kit",
@@ -210,7 +210,7 @@
         "M05"
       ],
       "description": "Coberturas opacas sobressalentes para vedar as entradas de luz na hora do descanso.",
-      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
     }
   ]
 }

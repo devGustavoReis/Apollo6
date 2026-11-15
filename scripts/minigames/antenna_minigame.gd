@@ -82,15 +82,32 @@ func encerrar(resultado):
 	acertou = resultado
 
 
+# Espelha a posição dentro do visor, inclusive se um único tick cruzar várias bordas.
+func refletir_eixo(pos: float, velocidade: float, minimo: float, maximo: float, delta: float) -> Vector2:
+	var largura := maximo - minimo
+	var fase := fposmod(pos - minimo + velocidade * delta, largura * 2.0)
+	if is_zero_approx(fase):
+		return Vector2(minimo, absf(velocidade))
+	if is_equal_approx(fase, largura):
+		return Vector2(maximo, -absf(velocidade))
+	if fase < largura:
+		return Vector2(minimo + fase, velocidade)
+	return Vector2(minimo + 2.0 * largura - fase, -velocidade)
+
+
 func passo(delta, direcao):
+	if acabou or delta <= 0.0:
+		return
+	delta = minf(delta, maxf(tempo, 0.0))
 	tempo -= delta
 	mira += direcao * 170 * delta
 	mira = Vector2(clamp(mira.x, area.position.x, area.end.x), clamp(mira.y, area.position.y, area.end.y))
-	terra += rumo * derivas[nivel] * delta
-	if terra.x < area.position.x + 30 or terra.x > area.end.x - 30:
-		rumo.x = -rumo.x
-	if terra.y < area.position.y + 30 or terra.y > area.end.y - 30:
-		rumo.y = -rumo.y
+	var minimo: Vector2 = area.position + Vector2(30, 30)
+	var maximo: Vector2 = area.end - Vector2(30, 30)
+	var eixo_x := refletir_eixo(terra.x, rumo.x, minimo.x, maximo.x, derivas[nivel] * delta)
+	var eixo_y := refletir_eixo(terra.y, rumo.y, minimo.y, maximo.y, derivas[nivel] * delta)
+	terra = Vector2(eixo_x.x, eixo_y.x)
+	rumo = Vector2(eixo_x.y, eixo_y.y)
 	anterior = sinal
 	medir()
 	if sinal > anterior + 0.0005:
@@ -100,7 +117,7 @@ func passo(delta, direcao):
 	if mira.distance_to(terra) < raio():
 		trava += delta
 	else:
-		trava = max(trava - delta * 2, 0.0)
+		trava = 0.0
 	if trava >= 2.0:
 		encerrar(true)
 	elif tempo <= 0:

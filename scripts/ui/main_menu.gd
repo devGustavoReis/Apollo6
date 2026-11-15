@@ -39,6 +39,7 @@ var _quiet := true  ## evita o som de navegação enquanto o menu é montado
 
 
 func _ready() -> void:
+	Sound.enter_scene("menu")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	theme = _build_theme()
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -306,6 +307,7 @@ func _open_panel(title: String) -> VBoxContainer:
 func _close_panel() -> void:
 	if _sub_panel == null:
 		return
+	Sound.play_cue("back", "Interface")
 	_sub_panel.queue_free()
 	_sub_panel = null
 	for item in _items:
@@ -355,10 +357,10 @@ func _on_settings() -> void:
 		slider.min_value = 0.0
 		slider.max_value = 1.0
 		slider.step = 0.05
-		slider.value = db_to_linear(AudioServer.get_bus_volume_db(bus))
+		slider.value = Sound.volume(bus_name)
 		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		slider.value_changed.connect(func(v): AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(v, 0.001))))
+		slider.value_changed.connect(func(value): Sound.set_volume(bus_name, value))
 		row.add_child(slider)
 		box.add_child(row)
 	_toggle(box, "TELA CHEIA", DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN,
@@ -476,6 +478,6 @@ func _tone_player(notes: Array, volume_db: float) -> AudioStreamPlayer:
 	player.stream = wav
 	player.volume_db = volume_db
 	if AudioServer.get_bus_index("SFX") >= 0:
-		player.bus = "SFX"
+		player.bus = "Interface"
 	add_child(player)
 	return player

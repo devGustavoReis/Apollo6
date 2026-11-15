@@ -18,6 +18,9 @@ var _modal_callback: Callable
 var _pause: PanelContainer
 var _dim: ColorRect
 var minigame: Control
+var _minigame_cancel: Callable
+var _night: ColorRect
+var _night_tween: Tween
 
 
 func _ready() -> void:
@@ -52,7 +55,7 @@ func _ready() -> void:
 	obox.add_child(_objective_title)
 	obox.add_child(_objective_text)
 	obox.add_child(_tutorial)
-	var keys := Game.make_label("TAB checklist · E interagir · ESC pausa", 13, Color(0.6, 0.6, 0.55))
+	var keys := Game.make_label("TAB checklist · E interagir · F tarefa · ESC pausa", 13, Color(0.6, 0.6, 0.55))
 	obox.add_child(keys)
 
 	var status_panel := PanelContainer.new()
@@ -166,8 +169,9 @@ func show_checklist(tasks: Array) -> void:
 	for task in tasks:
 		var done: bool = task["done"]
 		var mark := "[color=#77ee77][x][/color]" if done else "[ ]"
-		text += "%s [b]%s[/b] — %s\n" % [mark, task["station"], task["text"]]
-	text += "\n[color=#999]TAB fecha[/color]"
+		var optional := " (opcional)" if task.get("optional", false) else ""
+		text += "%s [b]%s[/b] — %s%s\n" % [mark, task["station"], task["text"], optional]
+	text += "\n[color=#999]TAB fecha · F inicia tarefas na estação[/color]"
 	_checklist_text.text = text
 
 
@@ -212,11 +216,12 @@ func _on_modal_button(index: int) -> void:
 
 
 func modal_open() -> bool:
-	return _modal.visible or minigame != null
+	return _modal.visible or minigame != null or _night != null
 
 
-func open_minigame(node: Control) -> void:
+func open_minigame(node: Control, cancel := Callable()) -> void:
 	minigame = node
+	_minigame_cancel = cancel
 	_dim.visible = true
 	add_child(node)
 	move_child(node, _modal.get_index())
@@ -224,10 +229,56 @@ func open_minigame(node: Control) -> void:
 
 
 func close_minigame() -> void:
+	if minigame == null:
+		return
+	minigame.set_process(false)
+	minigame.hide()
 	minigame.queue_free()
 	minigame = null
+	_minigame_cancel = Callable()
 	_dim.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func cancel_minigame() -> void:
+	if minigame == null or not _minigame_cancel.is_valid():
+		return
+	var cancel := _minigame_cancel
+	close_minigame()
+	cancel.call()
+
+
+func show_night(next_day: int, camera: Camera3D, on_next_day: Callable, on_finish: Callable) -> void:
+	if _night != null:
+		return
+	_night = ColorRect.new()
+	_night.color = Color(0.0, 0.0, 0.0, 0.0)
+	_night.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_night)
+	var title := Game.make_label("Dia %d" % next_day, 36, Game.CREAM)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	title.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title.modulate.a = 0.0
+	_night.add_child(title)
+	var original_rotation := camera.rotation
+	var original_position := camera.position
+	_night_tween = create_tween()
+	_night_tween.tween_property(_night, "color:a", 1.0, 0.55)
+	_night_tween.parallel().tween_property(camera, "rotation", original_rotation + Vector3(-0.14, 0.0, 0.09), 0.5)
+	_night_tween.parallel().tween_property(camera, "position", original_position + Vector3(0.0, -0.06, 0.0), 0.5)
+	_night_tween.tween_property(title, "modulate:a", 1.0, 0.25)
+	_night_tween.tween_interval(1.0)
+	_night_tween.tween_property(title, "modulate:a", 0.0, 0.2)
+	_night_tween.tween_callback(func():
+		camera.rotation = original_rotation
+		camera.position = original_position
+		on_next_day.call())
+	_night_tween.tween_property(_night, "color:a", 0.0, 0.45)
+	_night_tween.tween_callback(func():
+		_night.queue_free()
+		_night = null
+		on_finish.call())
 
 
 func paused() -> bool:
@@ -235,7 +286,10 @@ func paused() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause") and not _modal.visible:
+	if event.is_action_pressed("pause") and minigame != null and _minigame_cancel.is_valid():
+		cancel_minigame()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("pause") and not _modal.visible and _night == null:
 		toggle_pause()
 		get_viewport().set_input_as_handled()
 

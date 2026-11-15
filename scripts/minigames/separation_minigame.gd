@@ -31,6 +31,7 @@ var _panel_box: VBoxContainer
 
 
 func _ready() -> void:
+	Sound.enter_scene("separation")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var s := MissionState.settings()
 	tol = s["tli_tol"]
@@ -138,8 +139,10 @@ func _start_tli() -> void:
 	_panel.queue_free()
 	_panel = null
 	phase = "tli"
+	Sound.play_cue("ignition")
+	Sound.set_motor(0.85)
 	_body.text = "Motor do S-IVB aceso. Tempo acelerado para o jogo (a queima real durou cerca de 6 minutos)."
-	Houston.say("Apollo, Houston. You are go for TLI. Watch for cutoff.",
+	Houston.say_recorded("go_for_tli", "Apollo, Houston. You are go for TLI. Watch for cutoff.",
 		"Apollo, aqui é Houston. Autorizados para a TLI. Atenção ao corte do motor.")
 
 
@@ -177,14 +180,16 @@ func _cutoff() -> void:
 	var rating := "PRECISO" if absf(delta_v) <= tol else "ACEITÁVEL"
 	_status.text = "CORTE: %.2f km/s · %s (desvio de trajetória: %.0f%%)" % [velocity_kms, rating, error * 100.0]
 	if rating == "PRECISO":
-		Houston.say("Good cutoff. You are on your way.", "Corte perfeito. Vocês estão a caminho.")
+		Houston.say_recorded("cutoff_precise", "Good cutoff. You are on your way.", "Corte perfeito. Vocês estão a caminho.")
 	else:
-		Houston.say("Cutoff confirmed. We'll need a small course correction later.",
+		Houston.say_recorded("cutoff_correction", "Cutoff confirmed. We'll need a small course correction later.",
 			"Corte confirmado. Vamos precisar de uma pequena correção de rota depois.")
 	_start_sep()
 
 
 func _start_sep() -> void:
+	Sound.end_maneuver()
+	Sound.play_cue("cutoff")
 	phase = "sep"
 	sep_step = 0
 	_title.text = "PAINEL DE MANOBRA · SEPARAÇÃO DO CSM"
@@ -205,19 +210,24 @@ func _on_switch(index: int) -> void:
 	if phase != "sep":
 		return
 	if index != sep_step:
+		Sound.play_cue("warning", "Voice", true)
 		MissionState.separation_mistakes += 1
 		_body.text = "Fora de ordem! %s não pode vir agora. Siga o checklist." % SWITCHES[index][0]
 		return
+	Sound.play_cue("switch")
 	sep_step += 1
 	_update_checklist()
 	if sep_step >= SWITCHES.size():
 		phase = "done"
+		Sound.play_cue("dock")
 		_status.text = "SEPARAÇÃO CONFIRMADA"
 		MissionState.add_event("separation", "Injeção translunar e separação",
 			"Concluída com desvio de trajetória de %.0f%% e %d erro(s) de ordem." % [MissionState.trajectory_error * 100.0, MissionState.separation_mistakes])
-		Houston.say("We confirm separation. Proceed with transposition and docking.",
+		Houston.clear()
+		Houston.say_recorded("separation_confirmed", "We confirm separation. Proceed with transposition and docking.",
 			"Separação confirmada. Prossigam com a transposição e o acoplamento.")
-		get_tree().create_timer(3.0).timeout.connect(Game.separation_success)
+		get_tree().create_timer(maxf(3.0, Houston.radio_time_remaining()), false).timeout.connect(
+			func(): Game.separation_success())
 
 
 func _fail_tli(too_fast: bool) -> void:

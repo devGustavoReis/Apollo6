@@ -10,6 +10,15 @@ const MISSION_DAYS := 8
 ## Dias jogáveis da viagem até a Lua (a Apollo 11 levou cerca de 3 dias).
 const TRAVEL_DAYS := 3
 const MINIGAME_ASSIST_CHANCE := 0.8
+const CABIN_MINIGAME_POINTS := 100
+const CABIN_MINIGAMES := {
+	"M01": {"day": 1, "station": "storage", "title": "Prender objetos soltos", "scene": "res://scenes/minigames/loose_objects_minigame.tscn"},
+	"M02": {"day": 1, "station": "water", "title": "Abastecer a bolsa de água", "scene": "res://scenes/minigames/water_fill_minigame.tscn"},
+	"M03": {"day": 2, "station": "radio", "title": "Recuperar o sinal da antena", "scene": "res://scenes/minigames/antenna_minigame.tscn"},
+	"M05": {"day": 2, "station": "rest", "title": "Preparar a cabine para descanso", "scene": "res://scenes/minigames/rest_prep_minigame.tscn"},
+	"M06": {"day": 3, "station": "disposal", "title": "Guardar embalagens da refeição", "scene": "res://scenes/minigames/meal_stowage_minigame.tscn"},
+	"M04": {"day": 3, "station": "tools", "title": "Encaixar o conector do traje", "scene": "res://scenes/minigames/suit_connector_minigame.tscn"},
+}
 ## Velocidade aproximada da Apollo 11 ao fim da injeção translunar: 35.545,6 ft/s (NASA SP-4029).
 const TLI_TARGET_KMS := 10.83
 
@@ -239,6 +248,31 @@ func apply_plan() -> void:
 
 
 # ---------- Minigames de cabine ----------
+
+func next_minigame_attempt(task_id: String) -> int:
+	var attempts: Dictionary = minigame_attempts.get(task_id, {})
+	var attempt_id := 1
+	for existing: int in attempts:
+		attempt_id = maxi(attempt_id, existing + 1)
+	return attempt_id
+
+
+func cabin_minigame_report() -> Dictionary:
+	var rows: Array[Dictionary] = []
+	var total := 0
+	for id: String in CABIN_MINIGAMES:
+		var result: Dictionary = minigame_completions.get(id, {})
+		var status := "Pendente"
+		var points := 0
+		if not result.is_empty():
+			points = CABIN_MINIGAME_POINTS
+			status = "Concluída"
+			if result["assisted"]:
+				status = "Concluída com ajuda — %s" % items[result["tool_id"]]["name"]
+		rows.append({"title": CABIN_MINIGAMES[id]["title"], "status": status, "points": points})
+		total += points
+	return {"rows": rows, "points": total, "possible": rows.size() * CABIN_MINIGAME_POINTS}
+
 
 ## Chame ao finalizar uma tentativa. Cada tarefa usa um ID de tentativa novo e positivo
 ## a cada repetição legítima. O mesmo ID sempre devolve o resultado já resolvido.
