@@ -174,7 +174,17 @@ func separation_second_space() -> void:
 	for i in 3:
 		var button: Button = sep._switch_buttons[i]
 		check(button.focus_mode == Control.FOCUS_NONE, "Interruptor %d sem foco de teclado" % (i + 1))
-	var before: int = sep.sep_step + ms.separation_mistakes
+	# A tecla 1 escolhe a alavanca da posição 1: abre o procedimento se ela for a próxima do
+	# checklist, ou conta um erro de ordem. Depois, as teclas do procedimento chegam pelo teclado.
 	await key(KEY_1)
 	await key(KEY_1, false)
-	check(sep.sep_step + ms.separation_mistakes == before + 1, "Tecla 1 continua acionando o interruptor")
+	var opened: bool = sep.qte_index == 0
+	check(opened or ms.separation_mistakes == 1, "Tecla 1 escolhe a alavanca (procedimento %d, erros %d)" % [sep.qte_index, ms.separation_mistakes])
+	if not opened:
+		await key(KEY_1 + sep._order.find(0))
+		await key(KEY_1 + sep._order.find(0), false)
+	check(sep.qte_index == 0, "A alavanca SECS LOGIC abre seu procedimento")
+	for step in sep.PROCEDURES[0]:
+		await key(step[1])
+		await key(step[1], false)
+	check(sep.sep_step == 1 and sep.qte_index == -1, "As teclas do procedimento, pelo teclado, acionam SECS LOGIC")

@@ -53,6 +53,8 @@ var cutscene_entries: Array = []
 var cutscene_next := "menu"
 var cutscene_id := ""
 var ui_theme: Theme
+## Tremor de tela nas manobras. Pode ser desligado em CONFIGURAÇÕES e vale para a sessão.
+var screen_shake := true
 
 
 func _ready() -> void:

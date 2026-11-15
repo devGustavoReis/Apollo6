@@ -50,7 +50,7 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | Transições | Botões liberam depois do tempo de leitura · VOLTAR À CABINE na transição A |
 | Reentrada | ESPAÇO dentro da janela de 2 s abre os paraquedas principais · ESC pausa |
 | Correção de rota | Clique na nave e arraste pela linha tracejada até a Lua · setas também movem · ESC pausa |
-| Separação | ESPAÇO desliga o motor · 1, 2, 3 ou clique nos interruptores |
+| Painel de manobra | WASD ou SETAS mantêm o nariz no anel · ESPAÇO desliga o motor · R silencia o alarme · 1, 2, 3 ou clique escolhem a alavanca · teclas do procedimento mostradas no painel (algumas devem ser seguradas) |
 | Pouso | ESPAÇO segurado acelera o motor · W/S/A/D e setas inclinam · sem teclas o módulo se nivela |
 | Cutscenes | ESPAÇO, ENTER, ESC ou clique pulam |
 
@@ -96,6 +96,64 @@ o solo e a bandeira saem de shaders. Para ajustar:
 
 O 3D da cabine e do pouso é renderizado em um `SubViewport` com metade da resolução
 (640×360) e filtro *nearest*, para o visual pixelado. A interface fica em resolução cheia.
+
+## Painel de manobra (TLI e separação)
+
+`scripts/minigames/separation_minigame.gd` conduz a injeção translunar e desenha os
+instrumentos. `scripts/minigames/tli_view.gd` é a cena 3D low poly, em meia resolução como a
+cabine e o pouso: a Terra, o S-IVB com o LM guardado no adaptador (SLA) e o CSM na frente.
+
+1. **Contagem.** ARMAR IGNIÇÃO inicia 5 s de contagem, com as luzes do painel acendendo e o
+   anel de orientação aparecendo à frente da nave.
+2. **Queima guiada.** A chama do J-2 acende e cresce, a câmera treme e a Terra corre embaixo.
+   O jogador mantém o nariz da nave (a linha tracejada) dentro do anel verde com WASD ou
+   SETAS. A deriva vem de `DRIFT` (2,6, 4,0 e 5,6 °/s por dificuldade) e o comando gira a
+   nave a 9 °/s; passar de 15° aborta. No mapa TRAJETÓRIA PREVISTA, a órbita se estica da
+   órbita de espera até a Lua conforme a velocidade sobe (apogeu calculado por
+   `q / (2 - q)`, com `q = (v / 7,8)²`) e gira com a guinada da nave.
+3. **Imprevisto.** Um por queima, sorteado na ignição: MASTER ALARM (R ou clique na luz
+   silencia; enquanto toca, a deriva aumenta 50% e a tela pisca em vermelho), oscilação do
+   motor (3,5 s de chama pulsando e tremor) ou ruído na telemetria (4 s com o mapa e o
+   mostrador digital falhando).
+4. **Corte.** Um alerta central acompanha a janela de corte: QUASE LÁ antes da faixa verde,
+   ALINHAMENTO CONFIRMADO — PRESSIONE ESPAÇO! (verde, pulsando, com bipes) quando a
+   velocidade está na faixa verde e o nariz no anel, VOLTE O NARIZ AO ANEL se a velocidade
+   está certa mas a atitude não, e PASSOU DO PONTO — CORTE JÁ! depois dela. Fora da janela o
+   alerta some. ESPAÇO desliga o motor; a tela pisca, soa o sinal de confirmação e o alerta
+   vira CORTE CONFIRMADO (verde) ou CORTE ACEITO (âmbar). O desvio de trajetória soma o erro
+   do corte com o erro de atitude: o desvio médio do nariz acima de `ATT_FREE` (3,0°, 2,2° e
+   1,6° por dificuldade) até 8°. Seguem 2,5 s de silêncio antes de a janela de separação correr.
+5. **Separação por procedimentos (QTE).** O jogador escolhe a alavanca do próximo item do
+   checklist com 1, 2, 3 ou clique (fora de ordem conta um erro). Cada alavanca tem seu
+   procedimento em `PROCEDURES`. Um painel grande acima das alavancas mostra uma frase só
+   ("PRESSIONE A TECLA Q AGORA!", "SEGURE A TECLA R!"), a tecla desenhada em tamanho grande,
+   um anel de tempo em volta dela e blocos de progresso. Antes de cada alavanca, ele mostra
+   "PRESSIONE A TECLA 2 AGORA!" com o número da posição dela; erros aparecem como
+   "TECLA ERRADA! TENTE DE NOVO". O mapa e os mostradores saem da tela nessa fase. Procedimentos:
+   SECS LOGIC (Q, W, A, S), PYRO ARM (E, D, F e segurar R) e CSM/LV SEP (G, H, J e segurar K).
+   Cada passo tem `QTE_TIME` (2,6, 2,0 e 1,5 s por dificuldade) e uma barra de tempo; nos
+   passos de segurar, a tecla se enche em 0,9 s e soltar cedo só zera a barra. Tecla errada
+   ou tempo esgotado contam um erro, piscam a alavanca em vermelho e recomeçam aquele
+   procedimento. A alavanca sobe a cada passo e trava no fim do curso. Na cena, a lógica
+   acende luzes verdes, os pirotécnicos piscam em âmbar e a separação dispara um clarão: os
+   quatro painéis do adaptador abrem como pétalas, mostrando o LM, e o CSM se afasta.
+6. **Saída da Terra.** Depois do corte a Terra vai ficando para trás. Em seguida, a câmera
+   vai para um mapa 3D com a Terra, a órbita de espera e a Lua marcada como destino. A nave
+   deixa a órbita e percorre só as primeiras horas da travessia (`FLIGHT_REACH`, 17% da
+   rota), terminando logo depois da Terra; a rota tracejada mostra o resto até a Lua. A
+   legenda conta T+ 0 a 3 h, a distância e a linha do tempo TERRA → LUA, e lembra que a
+   chegada à órbita lunar leva cerca de 3 dias, vividos na cabine. Com desvio pequeno a rota
+   é verde e chega à Lua; com desvio maior, fica âmbar e passa ao lado. ESPAÇO, ENTER ou
+   clique pulam. No fim, a telemetria mostra o corte, a atitude, os erros da separação e o
+   custo previsto da correção de rota, e o jogo segue sozinho depois de 4 s.
+
+Em uma falha, a nave sai girando por 1,4 s antes do vídeo de aborto. `step(delta, comando)`
+avança a queima sem depender de quadros e `rng` aceita semente, para os testes;
+`skip_flight()` pula o voo. O tremor pode ser desligado em CONFIGURAÇÕES (TREMOR DE TELA).
+Os sons usam os cues `ignition`, `cutoff`, `switch`, `warning`, `radio`, `abort` e `dock` de
+`mission_audio.gd`. A aceleração de 0,7 a 1,5 g, o propelente do estágio, a geometria da
+rota e os nomes dos interruptores (SECS LOGIC, PYRO ARM, CSM/LV SEP) são simplificações
+inspiradas no painel do módulo de comando.
 
 ## Correção de rota
 
@@ -160,7 +218,10 @@ godot --headless --path . --script tests/cabin_controls_test.gd
 godot --headless --path . --script tests/cabin_minigames_integration_test.gd
 godot --headless --path . --script tests/minigames_test.gd
 godot --headless --path . --script tests/mission_rules_test.gd
+godot --headless --path . --script tests/separation_test.gd
 ```
+
+`separation_test` cobre o painel de manobra: um piloto simples chega ao corte com desvio pequeno nas três dificuldades, a atitude solta aborta ou custa trajetória, a queima não depende da taxa de quadros, os três imprevistos começam e terminam, a janela de separação espera o silêncio do corte e as alavancas por QTE (fora de ordem, tecla errada, tempo esgotado, soltar cedo e procedimento completo) e pular o voo até a Lua mostra a telemetria.
 
 `mission_rules_test` cobre os exemplos de suprimentos, saltos, reserva de partida, os quatro quadrantes das decisões com amostras controladas, a janela da reentrada (0; 1; 1,999; 2,000; 2,001 s, toque antecipado e cruzamento dentro de um quadro), as causas do pouso nos limites e a projeção do radar.
 

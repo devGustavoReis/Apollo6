@@ -310,7 +310,7 @@ func _build_earth() -> void:
 
 
 ## Máscara terra/mar de 2° por pixel, em projeção equirretangular.
-func _land_mask() -> ImageTexture:
+static func _land_mask() -> ImageTexture:
 	var image := Image.create(180, 90, false, Image.FORMAT_L8)
 	for outline in CONTINENTS:
 		var polygon := PackedVector2Array()

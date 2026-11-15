@@ -11,6 +11,7 @@
 | Ordem TLI → separação do CSM → acoplamento ao LM | Sequência da separação | [NASA SP-4029 — Apollo 11 Timeline](https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11i_Timeline.htm) |
 | Velocidade alvo da TLI | 10,83 km/s (35.545,6 ft/s) | [NASA SP-4029 — Apollo 11 Summary](https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11a_Summary.htm) |
 | Duração real da queima da TLI | cerca de 6 min (o jogo acelera o tempo) | NASA — Apollo 11 Mission Overview |
+| Atitude, aceleração, imprevistos e rota da queima; interruptores SECS LOGIC, PYRO ARM e CSM/LV SEP com tampa | Painel de manobra | Simplificação de gameplay inspirada no sistema de eventos sequenciais (SECS) do módulo de comando. Valores, nomes e ordem não reproduzem o procedimento real. |
 | Gravidade lunar no pouso | 1,62 m/s² | Valor físico padrão |
 | Limites do pouso (velocidades e inclinação) | Inspirados nos fatores de projeto do trem de pouso | [NASA TN D-6850 — LM Landing Gear Subsystem](https://ntrs.nasa.gov/citations/19720018253) |
 | Instrumentos científicos | Sismômetro, retrorrefletor, vento solar, câmera e amostras da Apollo 11. Magnetômetro a partir da Apollo 12 | NASA — Apollo 11 Mission Overview |

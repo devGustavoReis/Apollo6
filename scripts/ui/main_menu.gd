@@ -368,6 +368,7 @@ func _on_settings() -> void:
 	_toggle(box, "FILTRO DE TV", crt_enabled, func(on):
 		crt_enabled = on
 		_crt.visible = on)
+	_toggle(box, "TREMOR DE TELA", Game.screen_shake, func(on): Game.screen_shake = on)
 	_button(box, "FECHAR", _close_panel).grab_focus()
 
 
