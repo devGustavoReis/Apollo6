@@ -61,10 +61,35 @@ const OBJECTIVES := {
 	"retroreflector": {"title": "Distância entre Terra e Lua", "action": "POSICIONAR O RETRORREFLETOR", "evidence": "Retrorrefletor instalado na Lua para medições por estações terrestres."},
 	"camera": {"title": "Textura e relevo do regolito", "action": "REGISTRAR PAR ESTÉREO", "evidence": "Par de fotografias próximas do solo registrado."},
 }
+## Necessidades do astronauta (FOME e SEDE no HUD), de 0 a 100. Cheia = necessidade atendida;
+## qualquer uma em 0 encerra a missão. A drenagem normal corre só na cabine, com o jogador
+## no controle. Dormir depois de um dia sem comer acorda o jogador com as duas em nível
+## crítico: cada uma cai até zero em CRITICAL_SECONDS, a menos que ele coma ou beba.
+const NEED_MAX := 100.0
+const MEAL_GAIN := 50.0
+const NEED_LOW := 25.0
+const CRITICAL_WAKE := 5.0
+const CRITICAL_SECONDS := 10.0
+## Pontos perdidos por dia jogável acordado e a duração típica desse dia, em segundos de
+## jogo ativo, por dificuldade. Ajuste aqui o balanceamento.
+const HUNGER_PER_DAY := 20.0
+const THIRST_PER_DAY := 30.0
+const NEEDS_DAY_SECONDS := {"easy": 360.0, "normal": 300.0, "hard": 240.0}
+const NEED_KINDS := ["food", "water"]
+
+## Pede ao jogo a fala "Estou com fome" ou "Estou com sede" quando a barra cruza 25%.
+signal need_warning(kind: String)
+
 var objective := ""
 var science_completed := false
-var nourishment := 1.0
-var hydration := 1.0
+var nourishment := NEED_MAX
+var hydration := NEED_MAX
+## Queda crítica em andamento, por necessidade: {"start": valor inicial, "elapsed": segundos}.
+var need_critical: Dictionary = {}
+## Aviso de voz já pedido no episódio atual abaixo de 25%, por necessidade.
+var need_warned: Dictionary = {}
+## O próximo despertar será crítico (o dia que fechou não teve nenhuma comida).
+var critical_wake_pending := false
 var slept_days: Dictionary = {}
 var supply_tokens: Dictionary = {}
 var next_supply_token := 1
@@ -72,6 +97,7 @@ var next_supply_token := 1
 ## Campos salvos nos checkpoints. Contadores de tentativas ficam de fora de propósito.
 const SAVED_FIELDS := [
 	"supply_tokens", "next_supply_token", "objective", "science_completed", "nourishment", "hydration", "slept_days",
+	"need_critical", "need_warned", "critical_wake_pending",
 	"difficulty", "cargo", "food_days", "water_days", "food_eaten", "water_drunk",
 	"power_capacity", "instruments_active", "spare_parts", "battery_used",
 	"sps_fuel", "lm_fuel", "lm_fuel_max", "integrity", "life_support",
@@ -169,8 +195,11 @@ func reset(new_difficulty: String) -> void:
 	cargo = {"food_day": MISSION_DAYS, "water_day": MISSION_DAYS}
 	objective = ""
 	science_completed = false
-	nourishment = 1.0
-	hydration = 1.0
+	nourishment = NEED_MAX
+	hydration = NEED_MAX
+	need_critical = {}
+	need_warned = {}
+	critical_wake_pending = false
 	slept_days = {}
 	supply_tokens = {}
 	next_supply_token = 1
@@ -475,10 +504,7 @@ func consume(kind: String) -> bool:
 	if not can_consume(kind) or available_supply(kind) < 1.0 - 0.0001:
 		return false
 	_set_stock(kind, stock(kind) - 1.0)
-	if kind == "food":
-		nourishment = 1.0
-	else:
-		hydration = 1.0
+	_restore_need(kind)
 	var key := str(day)
 	var today: Dictionary = intake.get(key, {"food": 0, "water": 0})
 	today[kind] = int(today.get(kind, 0)) + 1
@@ -615,7 +641,9 @@ func day_issues() -> Array:
 
 
 func verdict() -> Dictionary:
-	var causes := day_issues()
+	# Um dia sem comer ou beber não reprova a missão por si só: quem decide são as barras de
+	# FOME e SEDE (fim por "survival"). day_issues() continua no relatório de suprimentos.
+	var causes := []
 	if ended.get("stage", "") == "survival":
 		causes.append(ended["reason"])
 	if splashdown and not science_completed:
@@ -722,30 +750,103 @@ func complete_science() -> bool:
 	return true
 
 
+func need(kind: String) -> float:
+	return nourishment if kind == "food" else hydration
+
+
+func _set_need(kind: String, value: float) -> void:
+	value = clampf(value, 0.0, NEED_MAX)
+	if kind == "food":
+		nourishment = value
+	else:
+		hydration = value
+
+
+## Pontos perdidos por segundo de jogo ativo na drenagem normal.
+func need_rate(kind: String) -> float:
+	var per_day := HUNGER_PER_DAY if kind == "food" else THIRST_PER_DAY
+	return per_day / float(NEEDS_DAY_SECONDS.get(difficulty, 300.0))
+
+
+## Segundos que faltam para a barra zerar na queda crítica (0 sem queda crítica).
+func critical_left(kind: String) -> float:
+	if not need_critical.has(kind):
+		return 0.0
+	return maxf(0.0, CRITICAL_SECONDS - float(need_critical[kind]["elapsed"]))
+
+
+## Avança as necessidades. Chame só com o jogador no controle da cabine, sem pausa nem janela
+## aberta: é o relógio de jogo ativo das barras e da queda crítica.
 func advance_survival(seconds: float) -> void:
 	if stage != "cabin" or not ended.is_empty() or seconds <= 0.0:
 		return
-	var duration: float = {"easy": 1500.0, "normal": 1200.0, "hard": 1050.0}[difficulty]
-	nourishment = maxf(0.0, nourishment - seconds / duration)
-	hydration = maxf(0.0, hydration - seconds / (duration * 0.85))
-	var reasons: Array[String] = []
-	if nourishment <= 0.0:
-		reasons.append("Reserva de alimentação esgotada")
-	if hydration <= 0.0:
-		reasons.append("Reserva de hidratação esgotada")
-	if not reasons.is_empty():
-		end_mission("survival", "Dia %d · %s. Saldo: %s comida e %s água." % [day, " e ".join(reasons), amount_text(food_days), amount_text(water_days)])
-		ended["day"] = day
-		ended["nourishment"] = nourishment
-		ended["hydration"] = hydration
+	for kind: String in NEED_KINDS:
+		if need_critical.has(kind):
+			# Queda crítica linear: do valor inicial até zero em CRITICAL_SECONDS.
+			var entry: Dictionary = need_critical[kind]
+			entry["elapsed"] = minf(float(entry["elapsed"]) + seconds, CRITICAL_SECONDS)
+			_set_need(kind, float(entry["start"]) * (1.0 - float(entry["elapsed"]) / CRITICAL_SECONDS))
+		else:
+			_set_need(kind, need(kind) - need_rate(kind) * seconds)
+	_check_needs()
 
 
-func sleep_penalty(day_number: int) -> void:
-	if slept_days.has(day_number):
+## Avisos de voz (fome antes de sede) e derrota quando alguma barra chega a zero.
+func _check_needs() -> void:
+	for kind: String in NEED_KINDS:
+		if need(kind) < NEED_LOW:
+			if not need_warned.get(kind, false):
+				need_warned[kind] = true
+				need_warning.emit(kind)
+		else:
+			need_warned[kind] = false
+	var empty: Array[String] = []
+	for kind: String in NEED_KINDS:
+		if need(kind) <= 0.0:
+			empty.append(kind)
+	if empty.is_empty() or not ended.is_empty():
+		return
+	var what := "A fome chegou a zero"
+	if empty.size() == 2:
+		what = "A fome e a sede chegaram a zero juntas"
+	elif empty[0] == "water":
+		what = "A sede chegou a zero"
+	end_mission("survival", "Dia %d · %s. Saldo: %s comida e %s água." % [day, what, amount_text(food_days), amount_text(water_days)])
+	ended["day"] = day
+	ended["needs"] = empty
+	ended["nourishment"] = nourishment
+	ended["hydration"] = hydration
+
+
+## Uma cota consumida: +50 pontos na barra, encerra só a queda crítica dela e rearma o aviso.
+func _restore_need(kind: String) -> void:
+	need_critical.erase(kind)
+	_set_need(kind, minf(NEED_MAX, need(kind) + MEAL_GAIN))
+	if need(kind) >= NEED_LOW:
+		need_warned[kind] = false
+
+
+## Fecha o dia ao dormir: se nenhuma comida foi consumida, o próximo despertar é crítico.
+## Chame antes de avançar o dia.
+func close_day_needs(day_number: int) -> void:
+	if slept_days.has(day_number) or not ended.is_empty():
 		return
 	slept_days[day_number] = true
-	nourishment *= 0.5
-	hydration *= 0.5
+	if intake_on(day_number, "food") < 1:
+		critical_wake_pending = true
+	changed.emit()
+
+
+## Chame quando o jogador recuperar o controle depois de dormir. Num despertar crítico,
+## as duas barras ficam em no máximo 5% e começam a queda de 10 segundos.
+func begin_wake() -> void:
+	if not critical_wake_pending or not ended.is_empty():
+		return
+	critical_wake_pending = false
+	for kind: String in NEED_KINDS:
+		_set_need(kind, minf(need(kind), CRITICAL_WAKE))
+		need_critical[kind] = {"start": need(kind), "elapsed": 0.0}
+	_check_needs()
 	changed.emit()
 
 

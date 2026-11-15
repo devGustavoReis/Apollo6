@@ -19,7 +19,17 @@ Menu (dificuldade) → Planejamento (orçamento, massa, energia)
 - Cada dia jogável pede 1 comida e 1 água. O dia é selado no descanso (Dias 1, 2 e 4) ou na transição (Dias 3 e 5). Consumo depois do selo conta para o dia seguinte.
 - Cada transição cobra 1 de cada uma só vez. Se faltar, a missão termina naquela etapa e o relatório diz quanto faltou.
 - Na transição B a nave precisa de 3/3 (Dias 4 e 5 mais a transição C). Plano exato 8/8 termina em 0/0.
-- Comer mais que 1 por dia é permitido e gasta estoque. Pular um dia com estoque vira falha diária no relatório.
+- Comer mais que 1 por dia é permitido e gasta estoque. Pular um dia com estoque vira falha diária no bloco de suprimentos do relatório, mas não reprova a missão por si só.
+
+### Fome e sede
+
+- Duas barras independentes, de 0 a 100, começam cheias e persistem entre cenas, dias e checkpoints (`MissionState.nourishment` e `hydration`).
+- Drenagem normal no tempo ativo da cabine: 20 pontos de fome e 30 de sede por dia jogável. O dia de referência dura 360 s no fácil, 300 s no normal e 240 s no difícil (`NEEDS_DAY_SECONDS`). No normal isso dá cerca de 0,067/s de fome e 0,1/s de sede. Pausa, janelas modais, tutorial e jogador congelado param a contagem.
+- Cada consumo confirmado soma 50 à barra correspondente, até 100, e encerra só a queda crítica dela. Depois do Game Over nenhum consumo é aplicado.
+- Qualquer barra em 0 encerra a missão na hora. Se as duas zeram juntas, o encerramento roda uma vez e o motivo cita as duas.
+- Dormir depois de um dia sem nenhuma comida, mesmo tendo bebido, causa o despertar crítico. As duas barras ficam em no máximo 5% e caem linearmente até 0 em 10 s de jogo ativo, contados quando o controle volta. Comer e beber a tempo encerra cada queda.
+- Ao cruzar de 25% ou mais para menos de 25%, Thomas fala "Estou com fome" ou "Estou com sede" uma vez por episódio, pela fila do rádio (canal CABINE), fome antes de sede. O aviso rearma quando a barra volta a 25%. Os WAVs `thomas_hungry` e `thomas_thirsty` em `assets/audio/voice/` são opcionais; sem eles aparece só a legenda.
+- HUD: FOME (âmbar, ração) e SEDE (azul, gota). Alerta abaixo de 25%, pulso lento e segundos restantes na janela crítica, "<1%" para valores muito pequenos e brilho a cada +50.
 
 ### Decisões
 
@@ -218,10 +228,13 @@ godot --headless --path . --script tests/cabin_controls_test.gd
 godot --headless --path . --script tests/cabin_minigames_integration_test.gd
 godot --headless --path . --script tests/minigames_test.gd
 godot --headless --path . --script tests/mission_rules_test.gd
+godot --headless --path . --script tests/needs_test.gd
 godot --headless --path . --script tests/separation_test.gd
 ```
 
 `separation_test` cobre o painel de manobra: um piloto simples chega ao corte com desvio pequeno nas três dificuldades, a atitude solta aborta ou custa trajetória, a queima não depende da taxa de quadros, os três imprevistos começam e terminam, a janela de separação espera o silêncio do corte e as alavancas por QTE (fora de ordem, tecla errada, tempo esgotado, soltar cedo e procedimento completo) e pular o voo até a Lua mostra a telemetria.
+
+`needs_test` cobre a drenagem por dia e a independência de FPS, dormir com e sem comida, a janela crítica (2% até zero em 10 s, consumo aos 4, 7 e 9,9 s, nas duas ordens), Game Over único quando as duas zeram juntas, consumo bloqueado depois do Game Over, o cruzamento 25,0 → 24,9 e o rearme das falas, estoque vazio e confirmação duplicada, checkpoint e o caminho real da cabine (descanso, falas na fila, pausa de 11 s e Game Over).
 
 `mission_rules_test` cobre os exemplos de suprimentos, saltos, reserva de partida, os quatro quadrantes das decisões com amostras controladas, a janela da reentrada (0; 1; 1,999; 2,000; 2,001 s, toque antecipado e cruzamento dentro de um quadro), as causas do pouso nos limites e a projeção do radar.
 

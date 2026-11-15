@@ -82,16 +82,22 @@ func say_recorded(id: String, english: String, portuguese: String, speaker := "H
 	say(english, portuguese, speaker, RADIO_AUDIO + id + ".wav")
 
 
-func say(english: String, portuguese: String, speaker := "HOUSTON", voice_path := "") -> void:
+func say(english: String, portuguese: String, speaker := "HOUSTON", voice_path := "", channel := "RÁDIO") -> void:
 	var stream: AudioStream
 	if not voice_path.is_empty() and ResourceLoader.exists(voice_path, "AudioStream"):
 		stream = load(voice_path) as AudioStream
 	var duration := 2.5 + (english.length() + portuguese.length()) * 0.035
 	if stream != null:
 		duration = maxf(2.0, maxf(portuguese.length() * 0.038, stream.get_length() + 0.35))
-	_queue.append({"en": english, "pt": portuguese, "speaker": speaker, "stream": stream, "duration": duration})
+	_queue.append({"en": english, "pt": portuguese, "speaker": speaker, "stream": stream, "duration": duration, "channel": channel})
 	if _current.is_empty():
 		_next()
+
+
+## Fala do astronauta dentro da cabine, em português, pelo mesmo painel e fila do rádio.
+## Usa assets/audio/voice/<id>.wav quando existir; sem o arquivo, mostra só a legenda.
+func astronaut_say(id: String, portuguese: String) -> void:
+	say("", portuguese, "THOMAS WALKER", RADIO_AUDIO + id + ".wav", "CABINE")
 
 
 func is_busy() -> bool:
@@ -127,8 +133,9 @@ func _next() -> void:
 		queue_empty.emit()
 		return
 	_current = _queue.pop_front()
-	_speaker.text = "▌ " + _current["speaker"] + " — RÁDIO"
+	_speaker.text = "▌ %s — %s" % [_current["speaker"], _current.get("channel", "RÁDIO")]
 	_english.text = _current["en"]
+	_english.visible = _current["en"] != ""
 	_subtitle.text = _current["pt"]
 	_panel.visible = true
 	_time_left = _current["duration"]

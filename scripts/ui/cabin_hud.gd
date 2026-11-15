@@ -3,8 +3,13 @@ extends CanvasLayer
 
 signal modal_closed
 
-var _food_bar: ProgressBar
-var _water_bar: ProgressBar
+const NEED_COLORS := {"food": Color(0.96, 0.74, 0.36), "water": Color(0.38, 0.68, 1.0)}
+const NEED_LABELS := {"food": "FOME", "water": "SEDE"}
+var _needs: Control
+## Valor mostrado de cada barra: acompanha o real em uma animação curta (só visual).
+var _needs_shown := {"food": 100.0, "water": 100.0}
+var _needs_flash := {"food": 0.0, "water": 0.0}
+var _needs_clock := 0.0
 var _prompt: Label
 var _objective_title: Label
 var _objective_text: Label
@@ -76,16 +81,13 @@ func _ready() -> void:
 	var status_box := VBoxContainer.new()
 	status_panel.add_child(status_box)
 	status_box.add_child(_status)
-	status_box.add_child(Game.make_label("ALIMENTAÇÃO", 13))
-	_food_bar = ProgressBar.new()
-	_food_bar.max_value = 1.0
-	_food_bar.custom_minimum_size.y = 18
-	status_box.add_child(_food_bar)
-	status_box.add_child(Game.make_label("HIDRATAÇÃO", 13))
-	_water_bar = ProgressBar.new()
-	_water_bar.max_value = 1.0
-	_water_bar.custom_minimum_size.y = 18
-	status_box.add_child(_water_bar)
+	# FOME e SEDE: o quanto da necessidade está atendida (o estoque fica nas linhas acima).
+	_needs = Control.new()
+	_needs.custom_minimum_size = Vector2(260, 64)
+	_needs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_needs.draw.connect(_draw_needs)
+	_needs_shown = {"food": MissionState.need("food"), "water": MissionState.need("water")}
+	status_box.add_child(_needs)
 
 	_checklist = PanelContainer.new()
 	_checklist.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
@@ -170,6 +172,7 @@ func _process(delta: float) -> void:
 		_note_time -= delta
 		if _note_time <= 0.0:
 			_note.text = ""
+	_animate_needs(delta)
 
 
 func set_prompt(text: String) -> void:
@@ -188,9 +191,8 @@ func set_tutorial(text: String) -> void:
 
 func refresh_status() -> void:
 	var ms := MissionState
-	_food_bar.value = ms.nourishment
-	_water_bar.value = ms.hydration
-	var lines := "[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
+	_needs.queue_redraw()
+	var lines :="[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
 	lines += _line("COMIDA", "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
 	lines += _line("ÁGUA", "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
 	var use := ms.power_use()
@@ -199,6 +201,63 @@ func refresh_status() -> void:
 	lines += _line("SUPORTE VIDA", "%.0f%%" % ms.life_support, ms.life_support < 50, ms.life_support < 85)
 	lines += _line("INTEGRIDADE", "%.0f%%" % ms.integrity, ms.integrity < 60, ms.integrity < 90)
 	_status.text = lines
+
+
+func _animate_needs(delta: float) -> void:
+	if _needs == null:
+		return
+	_needs_clock += delta
+	for kind: String in _needs_shown:
+		var real: float = MissionState.need(kind)
+		if real > _needs_shown[kind] + 1.0:
+			_needs_flash[kind] = 1.0
+		# Subidas animam rápido; descidas acompanham o valor real sem atraso perceptível.
+		_needs_shown[kind] = lerpf(_needs_shown[kind], real, 1.0 - exp(-delta * 9.0)) if real > _needs_shown[kind] else real
+		_needs_flash[kind] = maxf(0.0, _needs_flash[kind] - delta * 1.5)
+	_needs.queue_redraw()
+
+
+## Duas linhas: ícone, rótulo, barra, percentual e, na janela crítica, os segundos restantes.
+func _draw_needs() -> void:
+	var font := _needs.get_theme_default_font()
+	var ms := MissionState
+	for i in 2:
+		var kind: String = ["food", "water"][i]
+		var y := 4.0 + i * 30.0
+		var value: float = ms.need(kind)
+		var color: Color = NEED_COLORS[kind]
+		var low := value < ms.NEED_LOW
+		var critical := ms.need_critical.has(kind)
+		var pulse := 0.5 + 0.5 * sin(_needs_clock * (3.0 if critical else 5.0))
+		var alert := Game.BAD.lerp(Game.CREAM, pulse * 0.4)
+		_draw_need_icon(kind, Vector2(8, y + 9), alert if low else color)
+		_needs.draw_string(font, Vector2(20, y + 15), NEED_LABELS[kind], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, alert if low else color)
+		var bar := Rect2(66, y + 3, 128, 14)
+		_needs.draw_rect(bar, Color(0.08, 0.08, 0.09))
+		var fill := clampf(_needs_shown[kind] / ms.NEED_MAX, 0.0, 1.0)
+		var bar_color := color.lerp(Color.WHITE, _needs_flash[kind] * 0.6)
+		if low:
+			bar_color = Game.BAD.lerp(color, pulse * 0.35)
+		_needs.draw_rect(Rect2(bar.position, Vector2(bar.size.x * fill, bar.size.y)), bar_color)
+		# Marca de 25%: abaixo dela o astronauta reclama.
+		var mark := bar.position.x + bar.size.x * ms.NEED_LOW / ms.NEED_MAX
+		_needs.draw_line(Vector2(mark, bar.position.y - 2), Vector2(mark, bar.end.y + 2), Color(1, 1, 1, 0.35), 1.0)
+		_needs.draw_rect(bar, (alert if low else color.darkened(0.3)), false, 2.0 if critical else 1.0)
+		var text := "<1%" if value > 0.0 and value < 1.0 else "%d%%" % int(value)
+		if critical:
+			text += " %.0f s" % ceilf(ms.critical_left(kind))
+		_needs.draw_string(font, Vector2(200, y + 15), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, alert if low or critical else Game.CREAM)
+
+
+func _draw_need_icon(kind: String, center: Vector2, color: Color) -> void:
+	if kind == "food":
+		# Ração: pacote com faixa.
+		_needs.draw_rect(Rect2(center - Vector2(6, 6), Vector2(12, 12)), color)
+		_needs.draw_rect(Rect2(center - Vector2(6, 1), Vector2(12, 2)), Color(0.05, 0.05, 0.05))
+	else:
+		# Gota.
+		_needs.draw_colored_polygon(PackedVector2Array([center + Vector2(0, -8), center + Vector2(5, 1), center + Vector2(0, 7), center + Vector2(-5, 1)]), color)
+		_needs.draw_circle(center + Vector2(0, 2), 5.0, color)
 
 
 func _line(name: String, value: String, bad: bool, warn: bool) -> String:

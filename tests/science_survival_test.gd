@@ -35,18 +35,20 @@ func run() -> void:
 	ms.set_qty("camera", 1)
 	ms.apply_plan()
 	ms.stage = "cabin"
-	ms.nourishment = 0.8
-	ms.hydration = 0.6
-	ms.sleep_penalty(1)
-	ms.sleep_penalty(1)
-	check(is_equal_approx(ms.nourishment, 0.4) and is_equal_approx(ms.hydration, 0.3), "Noite reduz uma vez à metade")
+	ms.nourishment = 80.0
+	ms.hydration = 60.0
+	ms.close_day_needs(1)
+	ms.close_day_needs(1)
+	check(ms.critical_wake_pending, "Dormir sem comer prepara o despertar crítico")
+	ms.begin_wake()
+	check(ms.nourishment == 5.0 and ms.hydration == 5.0 and ms.need_critical.size() == 2, "Despertar crítico deixa as duas barras em 5%")
 	var food: float = ms.food_days
 	check(ms.consume("food"), "Consumo válido")
-	check(ms.nourishment == 1.0 and ms.food_days == food - 1.0, "Consumo recupera e cobra")
+	check(is_equal_approx(ms.nourishment, 55.0) and ms.food_days == food - 1.0 and not ms.need_critical.has("food"), "Consumo soma 50, cobra e encerra só a queda crítica da fome")
 	ms.save_checkpoint("survival")
-	ms.advance_survival(2000)
-	check(ms.ended.get("stage") == "survival", "Game over imediato")
-	check(ms.verdict()["causes"][0].contains("esgotada"), "Motivo físico no relatório")
+	ms.advance_survival(10.0)
+	check(ms.ended.get("stage") == "survival", "Game over imediato quando a sede zera")
+	check(ms.verdict()["causes"][0].contains("sede chegou a zero"), "Motivo físico no relatório")
 	check(not ms.consume("food"), "Game over impede consumo")
 	var cargo := {"retroreflector": [2, false, "laser_retroreflector"], "camera": [2, false, "surface_camera"], "sample_kit": [4, true, "lunar_sample_container_open"], "sample_closed": [2, false, "lunar_sample_container_closed"]}
 	for key: String in cargo:

@@ -98,6 +98,7 @@ func _ready() -> void:
 	_build_hatch_barrier()
 	_build_backdrop()
 	MissionState.changed.connect(_update_supplies)
+	MissionState.need_warning.connect(_on_need_warning)
 	_update_supplies()
 	player = CharacterBody3D.new()
 	player.set_script(PLAYER_SCRIPT)
@@ -324,6 +325,16 @@ func _eat_marker() -> void:
 	_update_supplies()
 
 
+## Fala do astronauta quando a fome ou a sede cruza 25%. Duas ao mesmo tempo entram na fila.
+func _on_need_warning(kind: String) -> void:
+	if not MissionState.ended.is_empty():
+		return
+	if kind == "food":
+		Houston.astronaut_say("thomas_hungry", "Estou com fome")
+	else:
+		Houston.astronaut_say("thomas_thirsty", "Estou com sede")
+
+
 func _finish_eating() -> void:
 	var ms := MissionState
 	var id := held
@@ -512,6 +523,8 @@ func _process(delta: float) -> void:
 		hud.refresh_status()
 		if MissionState.ended.get("stage", "") == "survival":
 			player.frozen = true
+			# Falas pendentes de fome e sede não vazam para a tela de derrota.
+			Houston.clear()
 			_drop_item()
 			_modal("GAME OVER · MISSÃO FALHOU", MissionState.ended["reason"], ["VER RELATÓRIO"], func(_i): Game.finish_mission())
 			return
@@ -921,14 +934,18 @@ func _begin_rest() -> void:
 		tween.finished.connect(func(): player.pitch = -0.35)
 		player.velocity = Vector3.ZERO
 		player.grabbing = true
-	hud.show_night(MissionState.day + 1, player.camera, _next_day, func(): player.frozen = false)
+	# O despertar crítico começa quando o controle volta, depois da tela de noite.
+	hud.show_night(MissionState.day + 1, player.camera, _next_day, func():
+		player.frozen = false
+		MissionState.begin_wake())
 
 
 func _next_day() -> void:
 	var ms := MissionState
-	if not ms.sealed.has(str(ms.day)):
+	if not ms.sealed.has(str(ms.day)) or not ms.ended.is_empty():
 		return
-	ms.sleep_penalty(ms.day)
+	# Fecha a fome e a sede do dia antes de virar o calendário: sem comida, despertar crítico.
+	ms.close_day_needs(ms.day)
 	ms.day += 1
 	ms.changed.emit()
 	_update_backdrop()

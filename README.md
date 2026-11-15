@@ -43,7 +43,7 @@ As seis tarefas ficam distribuídas pelos cinco dias jogáveis:
 
 ## Missão completa e suprimentos
 
-A missão tem 5 dias jogáveis e 3 transições (A órbita lunar, B operações lunares, C aproximação da Terra). Cada dia pede 1 comida e 1 água, e cada transição cobra mais 1 de cada, então o plano mínimo é 8/8. Comer e beber são livres: pegue com E e consuma com E (Q devolve sem gastar, G solta em microgravidade e E recolhe). Os medidores de alimentação e hidratação caem durante o tempo ativo da cabine. Dormir reduz ambos à metade. Consumir recupera o medidor correspondente. Para sair da Lua é preciso ter 3/3. O relatório mostra um veredito único e blocos por etapa. Detalhes em [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
+A missão tem 5 dias jogáveis e 3 transições (A órbita lunar, B operações lunares, C aproximação da Terra). Cada dia pede 1 comida e 1 água, e cada transição cobra mais 1 de cada, então o plano mínimo é 8/8. Comer e beber são livres: pegue com E e consuma com E (Q devolve sem gastar, G solta em microgravidade e E recolhe). As barras FOME e SEDE caem no tempo ativo da cabine (20 e 30 pontos por dia jogável), cada consumo soma 50 e qualquer barra em zero encerra a missão. Dormir depois de um dia sem comer acorda o astronauta em estado crítico: as duas barras ficam em 5% e zeram em 10 s se ele não comer e beber. Para sair da Lua é preciso ter 3/3. O relatório mostra um veredito único e blocos por etapa. Detalhes em [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
 
 O relatório registra 100 pontos por tarefa concluída, inclusive com assistência, em um subtotal de 600 pontos das tarefas da tripulação. Avançar sem concluir uma delas a deixa pendente.
 

@@ -82,7 +82,8 @@ func supplies() -> void:
 	check(issues.size() == 1 and issues[0] == "Dia 2 · Nenhuma água foi consumida, apesar de haver estoque.", "Pular a água com estoque vira falha diária (%s)" % str(issues))
 	ms().pay_jump("A")
 	ms().landing_result = {"success": true}
-	check(not ms().verdict()["success"], "Falta diária impede o sucesso mesmo com estoque sobrando")
+	# Um dia sem beber não reprova sozinho: quem decide são as barras de FOME e SEDE.
+	check(not ms().verdict()["causes"].any(func(c): return c.contains("Nenhuma água")), "Falta diária não entra nas causas do veredito")
 
 	fresh(0.5, 2)
 	check(not ms().consume("food") and is_equal_approx(ms().food_days, 0.5) and ms().intake_on(1, "food") == 0, "Meia cota não pode ser consumida")
