@@ -329,6 +329,39 @@ func _button(parent: Node, text: String, callback: Callable) -> Button:
 	return button
 
 
+static func is_fullscreen(mode: int) -> bool:
+	return mode == Window.MODE_FULLSCREEN or mode == Window.MODE_EXCLUSIVE_FULLSCREEN
+
+
+## Tela cheia lê o modo real da janela a cada clique, em vez de guardar um SIM/NÃO próprio.
+## Rodando dentro da aba Game do editor (F5 com o jogo embutido) a janela pertence ao
+## editor e o pedido é ignorado; o botão avisa em vez de fingir que mudou.
+func _fullscreen_toggle(parent: Node) -> void:
+	var button := _button(parent, "", Callable())
+	if Engine.is_embedded_in_editor():
+		button.text = "TELA CHEIA: INDISPONÍVEL NO EDITOR"
+		button.tooltip_text = "Rode o jogo fora da aba Game do editor para usar tela cheia."
+		button.disabled = true
+		return
+	var window := get_window()
+	var refresh := func(): button.text = "TELA CHEIA: %s" % ("SIM" if is_fullscreen(window.mode) else "NÃO")
+	button.pressed.connect(func():
+		if is_fullscreen(window.mode):
+			window.mode = Window.MODE_WINDOWED
+			# Volta para uma janela menor que a tela, centralizada; senão a janela
+			# ocupa a tela toda e parece que nada mudou.
+			var screen := DisplayServer.screen_get_usable_rect(window.current_screen)
+			var target := Vector2i(1280, 720)
+			if target.x >= screen.size.x or target.y >= screen.size.y:
+				target = Vector2i(screen.size * 0.75)
+			window.size = target
+			window.position = screen.position + (screen.size - target) / 2
+		else:
+			window.mode = Window.MODE_FULLSCREEN
+		refresh.call())
+	refresh.call()
+
+
 ## Botão que alterna entre SIM e NÃO.
 func _toggle(parent: Node, text: String, on: bool, callback: Callable) -> void:
 	var state := [on]
@@ -363,8 +396,7 @@ func _on_settings() -> void:
 		slider.value_changed.connect(func(value): Sound.set_volume(bus_name, value))
 		row.add_child(slider)
 		box.add_child(row)
-	_toggle(box, "TELA CHEIA", DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN,
-		func(on): DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED))
+	_fullscreen_toggle(box)
 	_toggle(box, "FILTRO DE TV", crt_enabled, func(on):
 		crt_enabled = on
 		_crt.visible = on)

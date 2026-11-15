@@ -338,7 +338,8 @@ func _build_hud() -> void:
 	_panel = PanelContainer.new()
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
 	_panel.custom_minimum_size = Vector2(640, 0)
-	_panel.position = Vector2(-320, -190)
+	# Deslocado para a direita para não cobrir o painel de leituras nem os limites de toque.
+	_panel.position = Vector2(-218, -190)
 	layer.add_child(_panel)
 	_panel_box = VBoxContainer.new()
 	_panel_box.add_theme_constant_override("separation", 12)
@@ -485,7 +486,8 @@ func _update_readouts() -> void:
 	_set_readout("vh", "V. HORIZONTAL %6.1f m/s" % horizontal_speed(), horizontal_speed() / limits["land_vh"])
 	_set_readout("tilt", "INCLINAÇÃO    %6.1f°" % tilt_angle(), tilt_angle() / limits["land_tilt"])
 	var bars := int(roundf(throttle * 10.0))
-	_set_readout("throttle", "MOTOR %s %3.0f%%" % ["▮".repeat(bars) + "▯".repeat(10 - bars), throttle * 100.0], 0.0)
+	# Só ASCII: a fonte do HUD não tem os blocos ▮▯ e eles viravam quadrados vazios.
+	_set_readout("throttle", "MOTOR  [%s] %3.0f%%" % ["=".repeat(bars) + "-".repeat(10 - bars), throttle * 100.0], 0.0)
 	var fuel_ratio := MissionState.lm_fuel / MissionState.lm_fuel_max
 	_set_readout("fuel", "PROPELENTE    %6.1f s" % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
 	_set_readout("dist", "DIST. DO ALVO %6.0f m" % Vector2(pos.x, pos.z).length(), 0.0)

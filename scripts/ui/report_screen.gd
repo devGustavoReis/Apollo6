@@ -57,14 +57,19 @@ static func evaluate() -> Dictionary:
 	if ms.integrity < 80.0 or ms.life_support < 80.0:
 		tips.append("A nave terminou com sistemas desgastados (integridade %.0f%%, suporte à vida %.0f%%)." % [ms.integrity, ms.life_support])
 	if ms.separation_attempts > 1:
-		tips.append("A TLI precisou de %d tentativas. Espere o ponteiro entrar na faixa verde antes de apertar ESPAÇO." % ms.separation_attempts)
+		tips.append("A TLI precisou de %d tentativas. Mantenha o nariz no anel e aperte ESPAÇO quando o painel avisar ALINHAMENTO CONFIRMADO." % ms.separation_attempts)
+	if ms.ended.get("stage", "") == "survival":
+		tips.append("Fique de olho nas barras FOME e SEDE: coma antes de dormir e, se acordar em estado crítico, coma e beba nos primeiros 10 s.")
 	var score := 0.0
 	for p in parts:
 		score += p[1]
 	if not verdict["success"]:
 		score = minf(score, 59.0)
 	if tips.is_empty():
-		tips.append("Missão exemplar! Tente a próxima dificuldade, com orçamento menor.")
+		if verdict["success"]:
+			tips.append("Missão exemplar! Tente a próxima dificuldade, com orçamento menor.")
+		else:
+			tips.append("Leia os motivos da falha acima e tente de novo a partir da etapa em que a missão parou.")
 	var grade := "A" if score >= 85 else ("B" if score >= 70 else ("C" if score >= 55 else "D"))
 	return {"score": score, "grade": grade, "parts": parts, "tips": tips, "landed": landed, "verdict": verdict}
 
