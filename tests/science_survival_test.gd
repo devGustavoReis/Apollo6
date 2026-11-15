@@ -62,7 +62,7 @@ func run() -> void:
 	check(ms.consume_supply_token(token), "Consumo debita a cota reservada")
 	check(not ms.consume_supply_token(token) and ms.water_days == water - 1.0, "Mesmo objeto só pode ser consumido uma vez")
 	check(ms.restore_checkpoint("survival"), "Restaura a sede crítica para validar a derrota")
-	ms.advance_survival(10.0)
+	ms.advance_survival(ms.critical_seconds())
 	check(ms.ended.get("stage") == "survival", "Game over imediato quando a sede zera")
 	check(ms.verdict()["causes"][0].contains("sede chegou a zero"), "Motivo físico no relatório")
 	check(not ms.consume("food"), "Game over impede consumo")

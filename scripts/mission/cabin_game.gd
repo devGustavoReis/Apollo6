@@ -102,6 +102,7 @@ func _ready() -> void:
 	_build_backdrop()
 	MissionState.changed.connect(_update_supplies)
 	MissionState.need_warning.connect(_on_need_warning)
+	MissionState.critical_wake_started.connect(_start_alarm)
 	_update_supplies()
 	player = CharacterBody3D.new()
 	player.set_script(PLAYER_SCRIPT)

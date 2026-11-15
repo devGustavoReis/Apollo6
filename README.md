@@ -20,7 +20,7 @@ Ajuste o volume em **Configurações** no menu. A trilha, os eventos sonoros e a
 
 ## Ferramentas para os minigames de cabine
 
-A aba **Ferramentas** do planejamento oferece quatro itens opcionais. Eles entram no orçamento e na massa da carga e ajudam nas tarefas opcionais da cabine. Mire na estação e pressione **F**. **Esc** abandona a tentativa em andamento.
+A aba **Ferramentas** do planejamento oferece quatro itens opcionais. Eles ocupam espaço no armazenamento e entram na massa da carga e ajudam nas tarefas opcionais da cabine. Mire na estação e pressione **F**. **Esc** abandona a tentativa em andamento.
 
 | Ferramenta | Minigames previstos |
 | --- | --- |

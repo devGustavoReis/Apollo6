@@ -1,5 +1,5 @@
 extends SceneTree
-## Fome e sede: drenagem, consumo, sono sem comida, janela crítica de 10 s, falas e derrota.
+## Fome e sede: drenagem, consumo, sono sem comida, janela crítica por dificuldade, falas e derrota.
 ## Uso: godot --headless --path . --script tests/needs_test.gd
 
 var failures: Array[String] = []
@@ -18,8 +18,8 @@ func _initialize() -> void:
 
 
 ## Missão nova já na cabine, com estoque e as duas barras cheias.
-func fresh() -> void:
-	ms.reset("normal")
+func fresh(level := "normal") -> void:
+	ms.reset(level)
 	ms.select_objective("camera")
 	ms.set_qty("camera", 1)
 	ms.apply_plan()
@@ -38,6 +38,7 @@ func run() -> void:
 	voice_rules()
 	stock_and_duplicates()
 	persistence()
+	critical_by_difficulty()
 	await cabin_flow()
 	print("NEEDS CHECKS: ", failures.size(), " failures")
 	quit(0 if failures.is_empty() else 1)
@@ -65,7 +66,7 @@ func drain_and_day() -> void:
 
 
 func sleep_rules() -> void:
-	fresh()
+	fresh("hard")
 	check(ms.consume("water"), "Bebe no dia 1")
 	ms.close_day_needs(1)
 	check(ms.critical_wake_pending, "Dormir sem comer, mesmo tendo bebido, prepara o despertar crítico")
@@ -74,14 +75,14 @@ func sleep_rules() -> void:
 	check(ms.need_critical.has("food") and ms.need_critical.has("water"), "As duas barras entram na queda crítica")
 	check(is_equal_approx(ms.critical_left("food"), 10.0), "A contagem começa em 10 s")
 
-	fresh()
+	fresh("hard")
 	ms.hydration = 40.0
 	check(ms.consume("food"), "Come no dia 1")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	check(not ms.critical_wake_pending and ms.need_critical.is_empty() and ms.hydration == 40.0, "Dormir depois de comer, sem beber: sem urgência e a sede mantém o valor")
 
-	fresh()
+	fresh("hard")
 	ms.hydration = 2.0
 	ms.close_day_needs(1)
 	ms.begin_wake()
@@ -91,7 +92,7 @@ func sleep_rules() -> void:
 	ms.advance_survival(5.0)
 	check(ms.ended.get("stage", "") == "survival", "Começando em 2%, zera em 10 s sem consumo")
 
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.close_day_needs(1)
 	ms.consume("food")
@@ -101,7 +102,7 @@ func sleep_rules() -> void:
 
 func critical_window() -> void:
 	# Exemplo da especificação: come aos 4 s e bebe aos 7 s.
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	ms.advance_survival(4.0)
@@ -118,7 +119,7 @@ func critical_window() -> void:
 	check(absf(ms.nourishment - (53.0 - ms.need_rate("food") * 33.0)) < 0.01, "A fome volta à drenagem normal depois de comer")
 
 	# Ordem inversa: bebe primeiro.
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	ms.advance_survival(2.0)
@@ -128,7 +129,7 @@ func critical_window() -> void:
 	check(ms.ended.is_empty() and ms.need_critical.is_empty(), "Beber antes de comer também resolve")
 
 	# Come e não bebe.
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	ms.advance_survival(4.0)
@@ -138,14 +139,14 @@ func critical_window() -> void:
 
 
 func deadlines() -> void:
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	ms.advance_survival(9.9)
 	check(ms.hydration > 0.0 and ms.ended.is_empty(), "Aos 9,9 s a barra ainda é positiva")
 	check(ms.consume("water") and is_equal_approx(ms.hydration, 50.05), "Consumir aos 9,9 s aplica a recuperação (%.3f)" % ms.hydration)
 
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	ms.advance_survival(10.0)
@@ -238,7 +239,7 @@ func stock_and_duplicates() -> void:
 
 
 func persistence() -> void:
-	fresh()
+	fresh("hard")
 	ms.close_day_needs(1)
 	ms.begin_wake()
 	ms.advance_survival(3.0)
@@ -249,6 +250,20 @@ func persistence() -> void:
 
 
 ## Caminho real da cabine: descansar sem ter comido, acordar crítico, falas e Game Over.
+func critical_by_difficulty() -> void:
+	var expected := {"easy": 20.0, "normal": 15.0, "hard": 10.0}
+	for level: String in expected:
+		fresh(level)
+		ms.close_day_needs(1)
+		ms.begin_wake()
+		check(is_equal_approx(ms.critical_left("food"), expected[level]), "%s: a contagem crítica começa em %d s" % [level, int(expected[level])])
+		ms.advance_survival(expected[level] - 0.1)
+		check(ms.ended.is_empty() and ms.nourishment > 0.0, "%s: a barra ainda é positiva antes do prazo" % level)
+		ms.advance_survival(0.1)
+		check(ms.ended.get("stage", "") == "survival", "%s: a barra zera exatamente no prazo" % level)
+		check(ms.ended["reason"].contains("estado crítico"), "%s: o Game Over explica o despertar crítico" % level)
+
+
 func cabin_flow() -> void:
 	fresh()
 	ms.day = 1
@@ -276,6 +291,10 @@ func cabin_flow() -> void:
 		lines.append(houston._current["pt"])
 	for entry in houston._queue:
 		lines.append(entry["pt"])
+	await process_frame
+	check(cabin.hud.critical_visible(), "Despertar crítico mostra o aviso de GAME OVER")
+	check(cabin.hud.critical_text().contains("GAME OVER") and cabin.hud.critical_text().contains("15 SEGUNDOS"), "O aviso cita GAME OVER e o prazo da dificuldade (%s)" % cabin.hud.critical_text())
+	check(cabin.hud._critical.mouse_filter == Control.MOUSE_FILTER_IGNORE and not paused, "O aviso não bloqueia cliques nem pausa o jogo")
 	check(lines.has("Estou com fome") and lines.has("Estou com sede") and lines.find("Estou com fome") < lines.find("Estou com sede"), "Falas na fila do rádio, fome antes de sede (%s)" % str(lines))
 	# Pausa: o prazo crítico fica parado.
 	var left: float = ms.critical_left("water")
@@ -284,7 +303,7 @@ func cabin_flow() -> void:
 	check(absf(ms.critical_left("water") - left) < 0.05, "Pausa de 11 s reais preserva o tempo crítico (%.2f → %.2f)" % [left, ms.critical_left("water")])
 	paused = false
 	var before: float = ms.critical_left("water")
-	for i in 60:
+	for i in 100:
 		await create_timer(0.25).timeout
 		if not ms.ended.is_empty():
 			break

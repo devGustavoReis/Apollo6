@@ -3,7 +3,7 @@
 ## Fluxo
 
 ```text
-Menu (dificuldade) → Planejamento (orçamento, massa, energia)
+Menu (dificuldade) → Planejamento (armazenamento, massa, energia)
 → Cutscenes de lançamento → TLI + separação do CSM [checkpoint "separation"]
 → Cutscene de acoplamento → Cabine Dias 1–3 (ida): tarefas, decisões e 1 evento aleatório
 → Inserção em órbita lunar → Escotilha do LM → Transição A (cobra 1/1) [checkpoint "landing"]

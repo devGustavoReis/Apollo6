@@ -67,7 +67,7 @@ static func evaluate() -> Dictionary:
 		score = minf(score, 59.0)
 	if tips.is_empty():
 		if verdict["success"]:
-			tips.append("Missão exemplar! Tente a próxima dificuldade, com orçamento menor.")
+			tips.append("Missão exemplar! Tente a próxima dificuldade, com menos armazenamento.")
 		else:
 			tips.append("Leia os motivos da falha acima e tente de novo a partir da etapa em que a missão parou.")
 	var grade := "A" if score >= 85 else ("B" if score >= 70 else ("C" if score >= 55 else "D"))
@@ -155,7 +155,7 @@ func _report_text(result: Dictionary) -> String:
 	for e in ms.events:
 		t += "• %s: %s\n" % [e["title"], e["outcome"]]
 	t += "\n[color=#f5bd5c]PLANEJAMENTO INICIAL[/color]\n"
-	t += "Orçamento usado: US$ %.1f de %.1f mi · Massa: %.0f de %.0f kg\n" % [ms.plan_cost(), ms.settings()["budget"], ms.plan_mass(), ms.settings()["mass_limit"]]
+	t += "Armazenamento usado: %d de %d itens · Massa: %.0f de %.0f kg\n" % [ms.plan_items(), int(ms.settings()["storage"]), ms.plan_mass(), ms.settings()["mass_limit"]]
 	var carried := []
 	for id in ms.cargo:
 		if ms.qty(id) > 0:

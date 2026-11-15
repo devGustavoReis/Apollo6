@@ -1,25 +1,23 @@
 {
-  "_info": "Catálogo do planejamento. Custo em milhões de dólares fictícios, massa em kg, energia em W. Campo 'source' indica o que vem de referência real e o que é simplificação de gameplay. Ver docs/nasa_sources.md.",
+  "_info": "Catálogo do planejamento. Cada unidade ocupa 1 vaga do armazenamento, massa em kg, energia em W. Campo 'source' indica o que vem de referência real e o que é simplificação de gameplay. Ver docs/nasa_sources.md.",
   "items": [
     {
       "id": "food_day",
       "category": "supply",
       "name": "Ração diária (3 tripulantes)",
       "unit": "cota",
-      "cost": 0.3,
       "mass": 3.0,
       "power": 0,
       "science": 0,
       "max": 14,
       "description": "Uma cota de refeições da tripulação. São 8 cotas no mínimo: 1 por dia nos 5 dias jogáveis e 1 em cada um dos 3 saltos.",
-      "source": "A Apollo 11 durou 8 dias, 3 h e 19 min (NASA). O jogo usa 5 dias jogáveis e 3 saltos. Custo e massa por cota: simplificação de gameplay."
+      "source": "A Apollo 11 durou 8 dias, 3 h e 19 min (NASA). O jogo usa 5 dias jogáveis e 3 saltos. Massa por cota: simplificação de gameplay."
     },
     {
       "id": "water_day",
       "category": "supply",
       "name": "Reserva de água potável",
       "unit": "cota",
-      "cost": 0.2,
       "mass": 6.0,
       "power": 0,
       "science": 0,
@@ -32,38 +30,35 @@
       "category": "science",
       "name": "Kit de coleta de amostras",
       "unit": "kit",
-      "cost": 1.5,
       "mass": 15.0,
       "power": 0,
       "science": 25,
       "max": 1,
       "description": "Ferramentas e caixas seladas para trazer rochas lunares. Não consome energia.",
-      "source": "Inspirado nas caixas de amostras da Apollo 11 (cerca de 21,5 kg de material trazido). Custo/massa: simplificação."
+      "source": "Inspirado nas caixas de amostras da Apollo 11 (cerca de 21,5 kg de material trazido). Massa: simplificação."
     },
     {
       "id": "retroreflector",
       "category": "science",
       "name": "Retrorrefletor a laser",
       "unit": "un.",
-      "cost": 2.5,
       "mass": 30.0,
       "power": 0,
       "science": 22,
       "max": 1,
       "description": "Espelhos que refletem lasers da Terra para medir a distância Terra–Lua. Passivo.",
-      "source": "Inspirado no Laser Ranging Retroreflector da Apollo 11 (passivo, sem energia). Custo/massa: simplificação."
+      "source": "Inspirado no Laser Ranging Retroreflector da Apollo 11 (passivo, sem energia). Massa: simplificação."
     },
     {
       "id": "camera",
       "category": "science",
       "name": "Câmera estéreo de superfície",
       "unit": "un.",
-      "cost": 1.0,
       "mass": 8.0,
       "power": 6,
       "science": 10,
       "max": 1,
-      "description": "Fotografa o solo em detalhe. Leve e barata.",
+      "description": "Fotografa o solo em detalhe. Leve e compacta.",
       "source": "Inspirado na Apollo Lunar Surface Closeup Camera. Valores: simplificação."
     },
     {
@@ -71,7 +66,6 @@
       "category": "reserve",
       "name": "Bateria auxiliar",
       "unit": "un.",
-      "cost": 2.0,
       "mass": 25.0,
       "power": 0,
       "science": 0,
@@ -85,7 +79,6 @@
       "category": "reserve",
       "name": "Reserva de propelente do LM",
       "unit": "un.",
-      "cost": 3.0,
       "mass": 40.0,
       "power": 0,
       "science": 0,
@@ -99,7 +92,6 @@
       "category": "reserve",
       "name": "Kit de peças e ferramentas",
       "unit": "kit",
-      "cost": 1.0,
       "mass": 10.0,
       "power": 0,
       "science": 0,
@@ -112,7 +104,6 @@
       "category": "assist",
       "name": "Kit de fixação",
       "unit": "un.",
-      "cost": 0.5,
       "mass": 3.0,
       "power": 0,
       "science": 0,
@@ -122,14 +113,13 @@
         "M06"
       ],
       "description": "Cintas e fechos extras para prender objetos soltos e fechar a bolsa de embalagens.",
-      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito e massa são valores de gameplay."
     },
     {
       "id": "sealing_kit",
       "category": "assist",
       "name": "Kit de vedação e encaixe",
       "unit": "un.",
-      "cost": 0.8,
       "mass": 4.0,
       "power": 0,
       "science": 0,
@@ -139,14 +129,13 @@
         "M04"
       ],
       "description": "Adaptador e anéis de vedação para o abastecimento de água e o conector do traje.",
-      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito e massa são valores de gameplay."
     },
     {
       "id": "signal_meter",
       "category": "assist",
       "name": "Medidor de sinal",
       "unit": "un.",
-      "cost": 1.2,
       "mass": 6.0,
       "power": 0,
       "science": 0,
@@ -155,14 +144,13 @@
         "M03"
       ],
       "description": "Mede a intensidade do sinal e ajuda a recuperar o alinhamento da antena.",
-      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito e massa são valores de gameplay."
     },
     {
       "id": "blackout_kit",
       "category": "assist",
       "name": "Kit de escurecimento",
       "unit": "un.",
-      "cost": 0.4,
       "mass": 2.0,
       "power": 0,
       "science": 0,
@@ -171,7 +159,7 @@
         "M05"
       ],
       "description": "Coberturas opacas sobressalentes para vedar as entradas de luz na hora do descanso.",
-      "source": "Ferramenta de assistência para minigames da cabine. Efeito, custo e massa são valores de gameplay."
+      "source": "Ferramenta de assistência para minigames da cabine. Efeito e massa são valores de gameplay."
     }
   ]
 }

@@ -267,7 +267,7 @@ func _on_difficulty(index: int) -> void:
 	_difficulty = index
 	var s: Dictionary = MissionState.DIFFICULTIES[DIFF_KEYS[index]]
 	_diff_item.get_meta("label").text = "DIFICULDADE  ◀ %s ▶" % s["name"]
-	var info := "%s\nORÇAMENTO: US$ %.0f MI · CARGA MÁX.: %.0f KG" % [s["summary"], s["budget"], s["mass_limit"]]
+	var info := "%s\nARMAZENAMENTO: %d ITENS · CARGA MÁX.: %.0f KG" % [s["summary"], int(s["storage"]), s["mass_limit"]]
 	_hints[_items[0]] = info
 	_hints[_diff_item] = info
 	if _last_item == _items[0] or _last_item == _diff_item:

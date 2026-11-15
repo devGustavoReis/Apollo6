@@ -141,10 +141,37 @@ func run() -> void:
 		for id in ms().items:
 			ms().set_qty(id, 99)
 		var limits: Dictionary = ms().settings()
-		var within_limits: bool = ms().plan_cost() <= limits["budget"] + 0.001 and ms().plan_mass() <= limits["mass_limit"] + 0.001
-		check(ms().validate_plan()["ok"] == within_limits, "%s: carga máxima respeita os limites de orçamento e massa" % diff)
+		var within_limits: bool = ms().plan_items() <= int(limits["storage"]) and ms().plan_mass() <= limits["mass_limit"] + 0.001
+		check(ms().validate_plan()["ok"] == within_limits, "%s: carga máxima respeita os limites de armazenamento e massa" % diff)
 		ms().set_qty("retroreflector", 1)
 		check(ms().qty("retroreflector") == 0, "Objetivo de amostras bloqueia outro instrumento")
+
+	var storage := {"easy": 24, "normal": 21, "hard": 17}
+	var optional := ["battery_pack", "propellant_reserve", "spare_parts", "fastening_kit", "sealing_kit", "signal_meter", "blackout_kit"]
+	for diff: String in storage:
+		ms().reset(diff)
+		check(int(ms().settings()["storage"]) == storage[diff], "%s: armazenamento de %d itens" % [diff, storage[diff]])
+		check(not ms().settings().has("budget"), "%s: sem orçamento" % diff)
+		ms().select_objective("camera")
+		ms().set_qty("camera", 1)
+		check(ms().plan_items() == 17 and ms().validate_plan()["ok"], "%s: plano mínimo de 17 itens é válido" % diff)
+		var added := 0
+		for id: String in optional:
+			var before: int = ms().plan_items()
+			ms().set_qty(id, 1)
+			if ms().plan_items() > before:
+				added += 1
+		check(added == storage[diff] - 17, "%s: cabem %d opcionais além do mínimo (%d)" % [diff, storage[diff] - 17, added])
+		check(ms().plan_items() <= storage[diff], "%s: o total nunca passa do armazenamento" % diff)
+		ms().set_qty("food_day", 9)
+		check(ms().plan_items() <= storage[diff], "%s: mais comida não passa do armazenamento" % diff)
+		if diff == "easy":
+			check(ms().plan_items() == 24 and ms().validate_plan()["ok"] == (ms().plan_mass() <= ms().settings()["mass_limit"]), "easy: leva o mínimo e todos os opcionais")
+		var full: int = ms().plan_items()
+		ms().set_qty("water_day", 7)
+		check(ms().plan_items() == full - 1, "%s: diminuir funciona com o armazenamento cheio" % diff)
+		ms().cargo["water_day"] = 30
+		check(str(ms().validate_plan()["errors"]).contains("Armazenamento excedido"), "%s: carga acima do limite acusa armazenamento excedido" % diff)
 
 	# 3. Missão completa na cabine (normal), com cada evento aleatório, nos cinco dias.
 	for event_id in ["comm_dropout", "water_leak", "ptc"]:

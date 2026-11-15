@@ -30,6 +30,11 @@ var _night: ColorRect
 var _night_tween: Tween
 var _note: Label
 var _note_time := 0.0
+var _critical: PanelContainer
+var _critical_title: Label
+var _critical_text: Label
+var _critical_time: Label
+var _critical_clock := 0.0
 
 
 func _ready() -> void:
@@ -154,6 +159,36 @@ func _ready() -> void:
 	_note.add_theme_constant_override("outline_size", 6)
 	add_child(_note)
 
+	_critical = PanelContainer.new()
+	_critical.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_critical.position = Vector2(-330, 110)
+	_critical.custom_minimum_size = Vector2(660, 0)
+	_critical.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var critical_style := StyleBoxFlat.new()
+	critical_style.bg_color = Color(0.1, 0.0, 0.0, 0.92)
+	critical_style.border_color = Game.BAD
+	critical_style.set_border_width_all(3)
+	critical_style.set_corner_radius_all(8)
+	critical_style.set_content_margin_all(16)
+	_critical.add_theme_stylebox_override("panel", critical_style)
+	_critical.visible = false
+	add_child(_critical)
+	var cbox := VBoxContainer.new()
+	cbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cbox.add_theme_constant_override("separation", 6)
+	_critical.add_child(cbox)
+	_critical_title = Game.make_label("⚠ ESTADO CRÍTICO ⚠", 30, Game.BAD)
+	_critical_text = Game.make_label("", 19, Game.CREAM)
+	_critical_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_critical_text.custom_minimum_size = Vector2(620, 0)
+	_critical_time = Game.make_label("", 44, Game.BAD)
+	for label: Label in [_critical_title, _critical_text, _critical_time]:
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label.add_theme_color_override("font_outline_color", Color.BLACK)
+		label.add_theme_constant_override("outline_size", 6)
+		cbox.add_child(label)
+
 	MissionState.changed.connect(refresh_status)
 	refresh_status()
 
@@ -173,6 +208,44 @@ func _process(delta: float) -> void:
 		if _note_time <= 0.0:
 			_note.text = ""
 	_animate_needs(delta)
+	_update_critical(delta)
+
+
+func critical_visible() -> bool:
+	return _critical.visible and _critical.modulate.a > 0.0
+
+
+func critical_text() -> String:
+	return _critical_text.text
+
+
+func _update_critical(delta: float) -> void:
+	var ms := MissionState
+	if ms.need_critical.is_empty() or not ms.ended.is_empty():
+		if _critical.visible:
+			_critical.modulate.a = maxf(0.0, _critical.modulate.a - delta * 3.0)
+			if _critical.modulate.a <= 0.0:
+				_critical.visible = false
+		return
+	if not _critical.visible:
+		_critical.visible = true
+		_critical_clock = 0.0
+	var left := ms.critical_seconds()
+	for kind: String in ms.need_critical:
+		left = minf(left, ms.critical_left(kind))
+	if ms.need_critical.size() == 2:
+		_critical_text.text = "Você dormiu sem se alimentar.\nComa e beba água em %d SEGUNDOS ou a missão termina em GAME OVER.\nVá até a estação de comida e de água." % int(ms.critical_seconds())
+	elif ms.need_critical.has("water"):
+		_critical_text.text = "Agora beba água em %d s ou a missão termina em GAME OVER.\nVá até a estação de água." % int(ceilf(left))
+	else:
+		_critical_text.text = "Agora coma em %d s ou a missão termina em GAME OVER.\nVá até a estação de comida." % int(ceilf(left))
+	_critical_time.text = "%d s" % int(ceilf(left))
+	_critical_clock += delta
+	var speed := 9.0 if left <= 5.0 else 4.0
+	_critical.modulate.a = 1.0
+	var glow := 0.5 + 0.5 * sin(_critical_clock * speed)
+	_critical_title.modulate = Color(1, 1, 1, 0.55 + 0.45 * glow)
+	_critical_time.modulate = Color(1, 1, 1, 0.55 + 0.45 * glow)
 
 
 func set_prompt(text: String) -> void:

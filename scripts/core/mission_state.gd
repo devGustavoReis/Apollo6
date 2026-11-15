@@ -34,25 +34,25 @@ const CABIN_MINIGAMES := {
 ## Velocidade aproximada da Apollo 11 ao fim da injeção translunar: 35.545,6 ft/s (NASA SP-4029).
 const TLI_TARGET_KMS := 10.83
 
-## Diferença principal entre dificuldades: orçamento e margem de erro.
+## Diferença principal entre dificuldades: armazenamento e margem de erro.
 const DIFFICULTIES := {
 	"easy": {
-		"name": "FÁCIL", "budget": 30.0, "mass_limit": 260.0, "power": 80.0,
+		"name": "FÁCIL", "storage": 24, "mass_limit": 260.0, "power": 80.0,
 		"land_vy": 3.0, "land_vh": 1.5, "land_tilt": 12.0, "land_alt": 110.0,
 		"land_fuel": 80.0, "land_drift": 1.5, "tli_tol": 0.12, "sep_time": 40.0, "traj_tol": 50.0,
-		"summary": "Orçamento folgado, alertas claros e maior tolerância nos procedimentos.",
+		"summary": "Armazenamento folgado, alertas claros e maior tolerância nos procedimentos.",
 	},
 	"normal": {
-		"name": "NORMAL", "budget": 22.0, "mass_limit": 220.0, "power": 60.0,
+		"name": "NORMAL", "storage": 21, "mass_limit": 220.0, "power": 60.0,
 		"land_vy": 2.5, "land_vh": 1.2, "land_tilt": 10.0, "land_alt": 140.0,
 		"land_fuel": 70.0, "land_drift": 2.5, "tli_tol": 0.08, "sep_time": 30.0, "traj_tol": 36.0,
-		"summary": "Orçamento equilibrado. Você terá de fazer algumas escolhas.",
+		"summary": "Armazenamento equilibrado. Você terá de escolher o que levar.",
 	},
 	"hard": {
-		"name": "DIFÍCIL", "budget": 17.0, "mass_limit": 190.0, "power": 50.0,
+		"name": "DIFÍCIL", "storage": 17, "mass_limit": 190.0, "power": 50.0,
 		"land_vy": 2.0, "land_vh": 1.0, "land_tilt": 8.0, "land_alt": 160.0,
 		"land_fuel": 64.0, "land_drift": 3.5, "tli_tol": 0.06, "sep_time": 24.0, "traj_tol": 26.0,
-		"summary": "Orçamento apertado e menos margem para erros. O planejamento decide.",
+		"summary": "Armazenamento mínimo: só o essencial cabe na nave e há menos margem para erros.",
 	},
 }
 
@@ -64,12 +64,12 @@ const OBJECTIVES := {
 ## Necessidades do astronauta (FOME e SEDE no HUD), de 0 a 100. Cheia = necessidade atendida;
 ## qualquer uma em 0 encerra a missão. A drenagem normal corre só na cabine, com o jogador
 ## no controle. Dormir depois de um dia sem comer acorda o jogador com as duas em nível
-## crítico: cada uma cai até zero em CRITICAL_SECONDS, a menos que ele coma ou beba.
+## crítico: cada uma cai até zero no tempo crítico da dificuldade, a menos que ele coma ou beba.
 const NEED_MAX := 100.0
 const MEAL_GAIN := 50.0
 const NEED_LOW := 25.0
 const CRITICAL_WAKE := 5.0
-const CRITICAL_SECONDS := 10.0
+const CRITICAL_SECONDS := {"easy": 20.0, "normal": 15.0, "hard": 10.0}
 ## Pontos perdidos por dia jogável acordado e a duração típica desse dia, em segundos de
 ## jogo ativo, por dificuldade. Ajuste aqui o balanceamento.
 const HUNGER_PER_DAY := 20.0
@@ -79,6 +79,7 @@ const NEED_KINDS := ["food", "water"]
 
 ## Pede ao jogo a fala "Estou com fome" ou "Estou com sede" quando a barra cruza 25%.
 signal need_warning(kind: String)
+signal critical_wake_started
 
 var objective := ""
 var science_completed := false
@@ -285,16 +286,19 @@ func set_qty(id: String, value: int) -> void:
 	var item: Dictionary = items[id]
 	if item["category"] == "science" and id != objective:
 		return
-	cargo[id] = clampi(value, 0, int(item["max"]))
+	var limit := int(item["max"])
+	if value > qty(id):
+		limit = mini(limit, int(settings()["storage"]) - plan_items() + qty(id))
+	cargo[id] = clampi(value, 0, maxi(limit, qty(id)))
 	changed.emit()
 
 
-func plan_cost() -> float:
-	var total := 0.0
+func plan_items() -> int:
+	var total := 0
 	for id in cargo:
 		if not items.has(id):
 			continue
-		total += float(items[id]["cost"]) * qty(id)
+		total += qty(id)
 	return total
 
 
@@ -337,8 +341,8 @@ func validate_plan() -> Dictionary:
 	var errors: Array[String] = []
 	var warnings: Array[String] = []
 	var s := settings()
-	if plan_cost() > s["budget"] + 0.001:
-		errors.append("Orçamento excedido em US$ %.1f mi." % (plan_cost() - s["budget"]))
+	if plan_items() > int(s["storage"]):
+		errors.append("Armazenamento excedido em %d itens." % (plan_items() - int(s["storage"])))
 	if plan_mass() > s["mass_limit"] + 0.001:
 		errors.append("Massa acima do limite do foguete em %.0f kg." % (plan_mass() - s["mass_limit"]))
 	if qty("food_day") < MISSION_DAYS:
@@ -789,7 +793,11 @@ func need_rate(kind: String) -> float:
 func critical_left(kind: String) -> float:
 	if not need_critical.has(kind):
 		return 0.0
-	return maxf(0.0, CRITICAL_SECONDS - float(need_critical[kind]["elapsed"]))
+	return maxf(0.0, critical_seconds() - float(need_critical[kind]["elapsed"]))
+
+
+func critical_seconds() -> float:
+	return float(CRITICAL_SECONDS.get(difficulty, 15.0))
 
 
 ## Avança as necessidades. Chame só com o jogador no controle da cabine, sem pausa nem janela
@@ -799,10 +807,10 @@ func advance_survival(seconds: float) -> void:
 		return
 	for kind: String in NEED_KINDS:
 		if need_critical.has(kind):
-			# Queda crítica linear: do valor inicial até zero em CRITICAL_SECONDS.
+			# Queda crítica linear: do valor inicial até zero no tempo crítico da dificuldade.
 			var entry: Dictionary = need_critical[kind]
-			entry["elapsed"] = minf(float(entry["elapsed"]) + seconds, CRITICAL_SECONDS)
-			_set_need(kind, float(entry["start"]) * (1.0 - float(entry["elapsed"]) / CRITICAL_SECONDS))
+			entry["elapsed"] = minf(float(entry["elapsed"]) + seconds, critical_seconds())
+			_set_need(kind, float(entry["start"]) * (1.0 - float(entry["elapsed"]) / critical_seconds()))
 		else:
 			_set_need(kind, need(kind) - need_rate(kind) * seconds)
 	_check_needs()
@@ -828,6 +836,8 @@ func _check_needs() -> void:
 		what = "A fome e a sede chegaram a zero juntas"
 	elif empty[0] == "water":
 		what = "A sede chegou a zero"
+	if not need_critical.is_empty():
+		what += " depois de acordar em estado crítico sem comer e beber água a tempo"
 	end_mission("survival", "Dia %d · %s. Saldo: %s comida e %s água." % [day, what, amount_text(food_days), amount_text(water_days)])
 	ended["day"] = day
 	ended["needs"] = empty
@@ -855,7 +865,7 @@ func close_day_needs(day_number: int) -> void:
 
 
 ## Chame quando o jogador recuperar o controle depois de dormir. Num despertar crítico,
-## as duas barras ficam em no máximo 5% e começam a queda de 10 segundos.
+## as duas barras ficam em no máximo 5% e começam a queda crítica da dificuldade.
 func begin_wake() -> void:
 	if not critical_wake_pending or not ended.is_empty():
 		return
@@ -864,6 +874,7 @@ func begin_wake() -> void:
 		_set_need(kind, minf(need(kind), CRITICAL_WAKE))
 		need_critical[kind] = {"start": need(kind), "elapsed": 0.0}
 	_check_needs()
+	critical_wake_started.emit()
 	changed.emit()
 
 

@@ -332,9 +332,9 @@ func _equipment_icon(id: String, pixels: int) -> TextureRect:
 
 
 func _item_stats(item: Dictionary) -> String:
-	var stats := "US$ %s mi  ·  %d kg" % [_decimal(item["cost"]), int(item["mass"])]
+	var stats := "1 vaga  ·  %d kg" % int(item["mass"])
 	if item["category"] == "supply":
-		return stats + " por dia"
+		return "1 vaga e %d kg por dia" % int(item["mass"])
 	if float(item["power"]) > 0.0:
 		stats += "  ·  %d W" % int(item["power"])
 	if int(item["science"]) > 0:
@@ -381,7 +381,7 @@ func _build_summary(parent: HBoxContainer) -> void:
 	metrics.add_theme_constant_override("h_separation", 8)
 	metrics.add_theme_constant_override("v_separation", 8)
 	contents.add_child(metrics)
-	_add_meter(metrics, "budget", "Orçamento")
+	_add_meter(metrics, "storage", "Armazenamento")
 	_add_meter(metrics, "mass", "Massa da carga")
 	_add_meter(metrics, "power", "Energia")
 	var science := _stat_tile(metrics, "Ciência prevista")
@@ -467,11 +467,13 @@ func _refresh() -> void:
 	var ms := MissionState
 	_refresh_objectives()
 	var s := ms.settings()
-	var cost := ms.plan_cost()
+	var used := ms.plan_items()
 	var mass := ms.plan_mass()
 	var power := ms.plan_power()
 	var capacity := ms.plan_power_capacity()
-	_set_meter("budget", "US$ %s / %s mi" % [_decimal(cost), _decimal(s["budget"])], cost, s["budget"], RED)
+	_set_meter("storage", "%d / %d itens" % [used, int(s["storage"])], used, s["storage"], RED)
+	if used == int(s["storage"]):
+		_meters["storage"][0].add_theme_color_override("font_color", AMBER)
 	_set_meter("mass", "%d / %d kg" % [int(mass), int(s["mass_limit"])], mass, s["mass_limit"], RED)
 	_set_meter("power", "%d / %d W" % [int(power), int(capacity)], power, capacity, AMBER)
 	var science := ms.plan_science()
@@ -510,13 +512,15 @@ func _refresh_card(id: String) -> void:
 		controls["loaded"].visible = selected
 		var toggle: Button = controls["toggle"]
 		toggle.disabled = MissionState.items[id]["category"] == "science" and id != MissionState.objective
+		if not selected and MissionState.plan_items() >= int(MissionState.settings()["storage"]):
+			toggle.disabled = true
 		toggle.text = "Retirar" if selected else "+ Adicionar"
 		toggle.tooltip_text = ("Retirar " if selected else "Adicionar ") + str(MissionState.items[id]["name"])
 		toggle.theme_type_variation = &"SelectedButton" if selected else &"AddButton"
 	else:
 		controls["count"].text = "%d dia%s" % [quantity, "" if quantity == 1 else "s"]
 		controls["minus"].disabled = quantity == 0
-		controls["plus"].disabled = quantity >= int(MissionState.items[id]["max"])
+		controls["plus"].disabled = quantity >= int(MissionState.items[id]["max"]) or MissionState.plan_items() >= int(MissionState.settings()["storage"])
 
 
 func _set_meter(id: String, text: String, value: float, limit: float, over_color: Color) -> void:
@@ -560,21 +564,18 @@ func _show_item_info(item: Dictionary) -> void:
 func _show_help() -> void:
 	_open_info("Como planejar a missão", (
 		"1. Escolha um objetivo científico e adicione o instrumento correspondente à carga.\n\n"
-		+ "2. Leve ao menos %d cotas de comida e %d de água: uma por dia nos 5 dias jogáveis e mais uma em cada um dos 3 saltos (órbita lunar, operações na Lua e aproximação da Terra). Com 8 exatas, não sobra margem para consumo extra ou perda. Confira também o orçamento e a massa.\n\n"
+		+ "2. Leve ao menos %d cotas de comida e %d de água: uma por dia nos 5 dias jogáveis e mais uma em cada um dos 3 saltos (órbita lunar, operações na Lua e aproximação da Terra). Com 8 exatas, não sobra margem para consumo extra ou perda. Confira também o armazenamento e a massa.\n\n"
+		+ "Cada unidade de cada item ocupa 1 vaga do armazenamento: %d vagas nesta dificuldade. No DIFÍCIL só cabe o essencial.\n\n"
 		+ "3. Se quiser, leve bateria, propelente ou ferramentas para lidar com imprevistos. "
 		+ "Use o resumo para comparar os limites e os alertas antes de lançar.\n\n"
 		+ "A aba Ferramentas mostra a assistência disponível para as tarefas da cabine."
-	) % [MissionState.MISSION_DAYS, MissionState.MISSION_DAYS])
+	) % [MissionState.MISSION_DAYS, MissionState.MISSION_DAYS, int(MissionState.settings()["storage"])])
 
 
 func _open_info(title: String, body: String) -> void:
 	_info_dialog.title = title
 	_info_dialog.dialog_text = body
 	_info_dialog.popup_centered(Vector2i(520, 0))
-
-
-func _decimal(value: float) -> String:
-	return ("%.1f" % value).replace(".", ",")
 
 
 func _stack(spacing: int) -> VBoxContainer:
