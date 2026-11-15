@@ -36,6 +36,14 @@ for name, color, roughness, metal, emission in [
     ("Amber","FFC473",.53,0,.38), ("Lamp","F9DFB1",.59,0,.52),
     ("FlagRed","A83243",.94,0,0), ("FlagWhite","ECE6D9",.9,0,0),
     ("FlagBlue","274361",.92,0,0),
+    ("Plate","C4AE8E",.84,0,0), ("PlateLit","D5BE9B",.8,0,0), ("PlateDeep","8D8273",.88,0,0),
+    ("PlateAlt","B9A383",.86,0,0),
+    ("Teal","40545B",.7,.12,0), ("TealDeep","273942",.74,.08,0), ("Niche","3E4438",.9,0,0),
+    ("Graphite","2B3235",.66,.1,0), ("Key","E6DCC4",.62,0,0), ("KeyAmber","E3A33C",.55,0,.12),
+    ("Steel","4A4F4E",.45,.55,0), ("Sky","3F6FA6",.6,0,0), ("Ochre","C79E62",.7,0,0),
+    ("Pouch","DCE3E3",.48,0,0), ("PouchSeam","B9C3C4",.5,0,0), ("WaterTint","9FC6D8",.35,0,0),
+    ("Ration","D9C7A2",.78,0,0), ("RationSeal","C9B48A",.42,0,0), ("LabelOrange","E4A36A",.8,0,0),
+    ("Screen","8FF0A0",.5,0,.55), ("ScreenAmber","FFB45A",.5,0,.6),
 ]:
     if reexport:
         break
@@ -99,6 +107,58 @@ FRONT_RIGHT=Vector((-1,0,0))
 UP=Vector((0,0,1))
 
 
+def octagon(cx,cz,w,h,cut):
+    x0,x1,z0,z1=cx-w/2,cx+w/2,cz-h/2,cz+h/2
+    return [(x0+cut,z0),(x1-cut,z0),(x1,z0+cut),(x1,z1-cut),(x1-cut,z1),(x0+cut,z1),(x0,z1-cut),(x0,z0+cut)]
+
+
+def solid(col,name,back,front,mat):
+    n=len(back)
+    verts=[Vector(p) for p in back]+[Vector(p) for p in front]
+    faces=[tuple(range(n-1,-1,-1)),tuple(range(n,2*n))]
+    faces+=[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+    obj=mesh(col,name,verts,faces,mat)
+    return obj
+
+
+def housing(col,name,cx,cz,w,h,cut,yb,yf,mat,shrink=.02):
+    back=[(x,yb,z) for x,z in octagon(cx,cz,w,h,cut)]
+    front=[(x,yf,z) for x,z in octagon(cx,cz,w-2*shrink,h-2*shrink,max(cut-shrink*.5,.004))]
+    return solid(col,name,back,front,mat)
+
+
+def frame(col,name,outer,inner,y0,y1,mat):
+    n=len(outer)
+    verts=[Vector((x,y,z)) for y in (y0,y1) for x,z in outer]+[Vector((x,y,z)) for y in (y0,y1) for x,z in inner]
+    ob,of,ib,inf=0,n,2*n,3*n
+    faces=[]
+    for i in range(n):
+        j=(i+1)%n
+        faces.append((of+i,of+j,inf+j,inf+i))
+        faces.append((ob+j,ob+i,ib+i,ib+j))
+        faces.append((ob+i,ob+j,of+j,of+i))
+        faces.append((inf+i,inf+j,ib+j,ib+i))
+    return mesh(col,name,verts,faces,mat)
+
+
+def circle(cx,cz,r,sides):
+    return [(cx+r*math.cos(i*math.tau/sides),cz+r*math.sin(i*math.tau/sides)) for i in range(sides)]
+
+
+def ring(col,name,cx,cz,ro,ri,y0,y1,mat,sides=28):
+    return frame(col,name,circle(cx,cz,ro,sides),circle(cx,cz,ri,sides),y0,y1,mat)
+
+
+def half_disc(col,name,cx,cz,r,y,upper,mat,sides=16):
+    start=0 if upper else math.pi
+    pts=[Vector((cx,y,cz))]+[Vector((cx+r*math.cos(start+i*math.pi/sides),y,cz+r*math.sin(start+i*math.pi/sides))) for i in range(sides+1)]
+    return mesh(col,name,pts,[tuple(range(sides+1,0,-1))+(0,)],mat)
+
+
+def tilted_axes(angle):
+    return ((1,0,0),(0,math.cos(angle),math.sin(angle)),(0,-math.sin(angle),math.cos(angle)))
+
+
 # Compact geometric lettering with the same low-resolution vocabulary as the HUD.
 GLYPHS = {
     "A":"0e11111f111111","B":"1e11111e11111e","C":"0e11101010110e","D":"1e11111111111e",
@@ -111,6 +171,7 @@ GLYPHS = {
     "2":"0e11010204081f","3":"1e01010601011e","4":"02060a121f0202","5":"1f10101e01011e",
     "6":"0608101e11110e","7":"1f010204080808","8":"0e11110e11110e","9":"0e11110f01020c",
     "-":"0000001f000000","/":"01010204081010"," ":"00000000000000",
+    ".":"0000000000000c","+":"0004041f040400",
 }
 
 
@@ -201,56 +262,128 @@ def unit(name,title,w,h,d):
 
 def console():
     col=group("main_console")
-    box(col,"Gabinete inferior",(0,-.13,-.325),(2.27,.22,.643),"Slate",.026)
-    for x in (-.76,0,.76):
-        box(col,"Tampa de baia",(x,-.014,-.29),(.71,.013,.46),"Liner",.009)
-        box(col,"Faixa de numeração",(x,-.004,-.224),(.43,.006,.026),"Slate",.004)
-        rod(col,"Puxador",(x-.067,-.004,-.337),(x+.067,-.004,-.337),.009,"Metal")
-    box(col,"Estrutura de comando",(0,-.015,.214),(2.385,.45,.424),"Slate",.026)
-    box(col,"Quebra-luz",(0,.05,.425),(2.36,.31,.033),"Ink",.009)
-    for x,label in [(.791,"FLIGHT CONTROL"),(0,"COMMAND CONSOLE"),(-.791,"SYSTEM STATUS")]:
-        face(col,"Cassete",x,.217,.744,.356,"Edge",.217,.027,.014)
-        face(col,"Máscara",x,.216,.707,.322,"Ink",.231,.012,.008)
-        face(col,"Faixa gravada",x,.369,.665,.038,"Slate",.238)
-        inscription(col,label,(x,.243,.354),.032,center=True)
-        bolt(col,x-.332,.075,.241,.005)
-        bolt(col,x+.332,.075,.241,.005)
-    for i,x in enumerate((.57,.79,1.01)):
-        gauge(col,x,.236,.239,.075,.21+i*.34)
-    display(col,0,.25,.50,.133,.239,[("APOLLO 6","Green"),("COMMAND MODULE","Paper")])
-    keys(col,.164,.138,.24,[["MODE","SEL","TEST","CLR"]],.109,.040)
-    for x,title in [(-.55,"GUID"),(-.71,"COMM"),(-.865,"PWR"),(-1.02,"ECS")]:
-        lamp(col,x,.276,.241,"Green")
-        inscription(col,title,(x,.245,.23),.026,center=True)
-        knob(col,x,.147,.24,.024)
-    for x in (-1.09,-.95,-.81,-.67,-.53,.56,.70,.84,.98,1.12):
-        face(col,"Base da chave",x,.079,.040,.031,"Slate",.24)
-        rod(col,"Alavanca",(x,.244,.073),(x,.263,.090),.005,"Metal",8)
+    F=.19
+    P=F+.004
+    box(col,"Gabinete inferior",(0,-.13,-.33),(2.24,.22,.62),"TealDeep",.024)
+    for x in (-.62,0,.62):
+        box(col,"Tampa de manutenção",(x,-.016,-.11),(.44,.012,.1),"Steel",.006)
+        box(col,"Puxador embutido",(x,-.009,-.11),(.15,.006,.016),"Black",.002)
+        for dx in (-.2,.2):
+            bolt(col,x+dx,-.11,-.012,.005)
+    for x in (-.3,.3):
+        for k in range(4):
+            box(col,"Abertura de ventilação",(x+(k-1.5)*.03,-.016,-.27),(.012,.012,.06),"Black",.002)
+    for side in (-1,1):
+        rod(col,"Suporte inclinado",(side*.64,-.05,-.59),(side*.46,-.05,-.06),.028,"Teal",8)
+        box(col,"Sapata",(side*.66,-.07,-.625),(.15,.09,.03),"TealDeep",.008)
+        for dx in (-.05,.05):
+            bolt(col,side*.66+dx,-.625,-.024,.006)
+    box(col,"Estrutura de comando",(0,-.05,.215),(2.38,.36,.43),"TealDeep",.03)
+    box(col,"Tampo",(0,-.02,.44),(2.36,.42,.03),"Teal",.01)
+    for c,label in [(.79,"ATTITUDE"),(0,"COMPUTER"),(-.79,"SYSTEMS")]:
+        housing(col,"Caixa do módulo",c,.215,.76,.4,.06,.10,F,"Teal",.016)
+        frame(col,"Moldura do módulo",octagon(c,.215,.72,.37,.05),octagon(c,.215,.64,.29,.034),F,F+.016,"Teal")
+        box(col,"Placa grafite",(c,F+.001,.215),(.65,.006,.30),"Graphite",.003)
+        inscription(col,label,(c,F+.0165,.367),.026,"Paper",center=True)
+        for dx in (-.3,.3):
+            for z in (.07,.36):
+                bolt(col,c+dx,z,F+.016,.007)
+    c=.79
+    ring(col,"Aro do indicador de atitude",c+.13,.19,.118,.088,P,P+.03,"TealDeep",32)
+    half_disc(col,"Céu",c+.13,.19,.09,P+.002,True,"Sky",20)
+    half_disc(col,"Solo",c+.13,.19,.09,P+.002,False,"Ochre",20)
+    box(col,"Linha do horizonte",(c+.13,P+.004,.19),(.15,.003,.006),"Paper")
+    for k,dz in enumerate((-.06,-.035,.035,.06)):
+        box(col,"Escala de arfagem",(c+.13,P+.004,.19+dz),(.05 if k in (1,2) else .07,.003,.004),"Paper")
+    box(col,"Eixo vertical",(c+.13,P+.004,.19),(.004,.003,.16),"Paper")
+    box(col,"Símbolo da nave",(c+.13,P+.006,.19),(.05,.003,.012),"Amber")
+    for z,angle in ((.27,.6),(.12,-.9)):
+        ring(col,"Aro do mostrador",c-.17,z,.062,.05,P,P+.02,"TealDeep",24)
+        rod(col,"Fundo do mostrador",(c-.17,P,z),(c-.17,P+.004,z),.05,"Black",24)
+        for i in range(9):
+            t=math.radians(-135+i*33.75)
+            u,v=math.sin(t),math.cos(t)
+            box(col,"Graduação",(c-.17+.04*u,P+.006,z+.04*v),(.003,.002,.01),"Paper",0,((v,0,-u),(0,1,0),(u,0,v)))
+        rod(col,"Ponteiro",(c-.17,P+.007,z),(c-.17+.036*math.sin(angle),P+.007,z+.036*math.cos(angle)),.0025,"Paper",6)
+    box(col,"Moldura do visor",(0,P+.012,.255),(.36,.024,.15),"TealDeep",.008)
+    box(col,"Visor do computador",(0,P+.022,.255),(.31,.006,.11),"Black",.003)
+    inscription(col,"00012",(0,P+.026,.268),.04,"Screen",center=True)
+    inscription(col,"+00456",(0,P+.026,.214),.04,"Screen",center=True)
+    box(col,"Aba do visor",(0,P+.034,.338),(.38,.048,.012),"Teal",.004)
+    tilt=math.radians(-38)
+    axes=tilted_axes(tilt)
+    box(col,"Base do teclado",(0,P+.045,.1),(.36,.12,.03),"TealDeep",.008,axes)
+    up=Vector(axes[2])
+    depth=Vector(axes[1])
+    for row in range(3):
+        for column in range(4):
+            x=.105-column*.07
+            q=Vector((x,P+.045,.1))+depth*((row-1)*.034)+up*.02
+            box(col,"Tecla",q,(.056,.026,.014),"KeyAmber" if column==3 else "Key",.004,axes)
+    c=-.79
+    for i,mat in enumerate(("Green","Green","Amber","Amber")):
+        x=c+.18-i*.12
+        box(col,"Aro da lâmpada",(x,P+.008,.27),(.052,.016,.052),"Black",.006)
+        box(col,"Lente",(x,P+.017,.27),(.034,.006,.034),mat,.004)
+        rod(col,"Base da chave",(x,P,.13),(x,P+.016,.13),.022,"Steel",6)
+        rod(col,"Colar da chave",(x,P+.014,.13),(x,P+.024,.13),.012,"Metal",10)
+        rod(col,"Alavanca",(x,P+.022,.13),(x,P+.058,.15),.006,"Metal",8)
+        rod(col,"Ponta",(x,P+.056,.149),(x,P+.064,.154),.009,"Key",10)
+    for side in (-1,1):
+        x=c+side*.3
+        pts=[(x,P,.24),(x,P+.06,.22),(x,P+.06,.08),(x,P,.06)]
+        for a,b in zip(pts,pts[1:]):
+            rod(col,"Guarda lateral",a,b,.011,"Metal",10)
+    return col
+
+
+def station_housing(name):
+    col=group(name)
+    housing(col,"Carcaça traseira",0,.16,.54,.31,.05,-.074,.052,"Teal",.02)
+    frame(col,"Moldura chanfrada",octagon(0,.16,.50,.27,.04),octagon(0,.16,.45,.22,.026),.052,.068,"Teal")
+    box(col,"Face rebaixada",(0,.054,.16),(.46,.006,.23),"Graphite",.002)
+    for x,z in ((-.215,.045),(.215,.045),(-.215,.275),(.215,.275)):
+        bolt(col,x,z,.070,.006)
+    for x in (-.17,.17):
+        box(col,"Suporte de fixação",(x,-.055,.012),(.07,.05,.025),"TealDeep",.006)
     return col
 
 
 def nav():
-    col=unit("nav_panel","NAVIGATION",.55,.32,.15)
-    display(col,.101,.175,.235,.143,.078,[("VERB     NOUN","Paper"),("--        --","Green"),("GUIDANCE","Green")])
-    keys(col,-.020,.217,.079,[["7","8","9"],["4","5","6"],["1","2","3"],["CLR","0","ENT"]],.059,.042)
-    for x,mat in ((.196,"Green"),(.156,"Amber"),(.116,"Green")):
-        lamp(col,x,.066,.078,mat)
-    inscription(col,"DSKY",(.215,.083,.026),.021)
+    col=station_housing("nav_panel")
+    box(col,"Moldura do visor",(.105,.064,.16),(.2,.024,.175),"TealDeep",.008)
+    box(col,"Visor",(.105,.074,.16),(.165,.006,.142),"Black",.003)
+    for i,(text,mat) in enumerate((("VIAJ-LUA","Screen"),("--- 042","Screen"),("DV --","Screen"))):
+        inscription(col,text,(.105,.078,.198-i*.045),.026,mat,center=True)
+    box(col,"Base do teclado",(-.095,.058,.16),(.19,.012,.175),"TealDeep",.004)
+    for row in range(3):
+        for column in range(3):
+            x=-.037-column*.058
+            z=.212-row*.052
+            kind="KeyAmber" if (row,column)==(2,2) else "Key"
+            box(col,"Tecla",(x,.069,z),(.044,.016,.04),kind,.005)
     return col
 
 
 def radio():
-    col=unit("radio_panel","RADIO",.55,.32,.15)
-    display(col,.102,.194,.22,.101,.078,[("S-BAND / VHF","Paper"),("COMMS","Amber")])
-    for i in range(9):
-        face(col,"Fenda da grade",.196-i*.022,.107,.011,.051,"Slate",.080,.003,.001)
-    knob(col,-.078,.141,.078,.046)
-    knob(col,-.187,.140,.078,.030)
-    for x,title,mat in ((.188,"RX","Green"),(.108,"TX","Amber")):
-        lamp(col,x,.054,.078,mat)
-        inscription(col,title,(x-.019,.084,.048),.018)
-    for x,title in ((-.078,"GAIN"),(-.187,"BAND")):
-        inscription(col,title,(x,.079,.062),.021,center=True)
+    col=station_housing("radio_panel")
+    box(col,"Moldura do visor",(.06,.064,.218),(.27,.022,.085),"TealDeep",.007)
+    box(col,"Visor âmbar",(.06,.074,.218),(.235,.006,.058),"Black",.003)
+    inscription(col,"7.320 MHZ",(.06,.078,.207),.026,"ScreenAmber",center=True)
+    box(col,"Fundo da grade",(.06,.056,.11),(.25,.004,.085),"Black")
+    for i in range(12):
+        box(col,"Barra da grade",(.168-i*.0196,.063,.11),(.0085,.016,.085),"TealDeep",.0015)
+    box(col,"Aro da grade",(.06,.059,.155),(.262,.012,.01),"Teal",.002)
+    box(col,"Aro da grade",(.06,.059,.065),(.262,.012,.01),"Teal",.002)
+    for x,z,r in ((-.115,.15,.047),(-.205,.118,.026)):
+        rod(col,"Base do seletor",(x,.056,z),(x,.068,z),r*1.25,"Steel",20)
+        rod(col,"Seletor",(x,.066,z),(x,.096,z),r,"Graphite",20)
+        for k in range(14):
+            a=k*math.tau/14
+            box(col,"Ranhura",(x+math.cos(a)*r,.081,z+math.sin(a)*r),(.006,.026,.006),"Ink",.001)
+        box(col,"Marcador",(x,.097,z+r*.5),(.006,.003,r*.8),"Paper")
+    box(col,"Aro do indicador",(-.205,.062,.232),(.03,.012,.03),"Black",.004)
+    box(col,"Indicador verde",(-.205,.069,.232),(.018,.006,.018),"Green",.003)
     return col
 
 
@@ -300,6 +433,128 @@ def seat():
         box(col,"Ancoragem do cinto",(x,-.277,.888),(.066,.036,.053),"Trim",.005,axes)
     box(col,"Fivela",(0,-.135,.546),(.089,.061,.018),"Metal",.006)
     box(col,"Destrave",(0,-.137,.558),(.031,.029,.009),"Red",.004)
+    return col
+
+
+def front_trim():
+    col=group("cabin_front_trim")
+    base=Vector((0,1.9,1.65))
+    v=Vector((0,-.418,.95)).normalized()
+    n=Vector((1,0,0)).cross(v)
+    c=base+v*.33+n*.03
+    box(col,"Carcaça da luminária",c,(.78,.06,.07),"Teal",.012,((1,0,0),v,n))
+    for side in (-1,1):
+        box(col,"Ponta facetada",c+Vector((side*.405,0,0)),(.05,.05,.06),"TealDeep",.016,((1,0,0),v,n))
+    box(col,"Difusor quente",c+n*.035-v*.004,(.68,.026,.012),"Lamp",.004,((1,0,0),v,n))
+    box(col,"Quebra-luz",c+n*.04+v*.026,(.72,.012,.03),"Teal",.004,((1,0,0),v,n))
+    y=1.792
+    frame(col,"Moldura da escotilha frontal",octagon(0,1.29,.94,.70,.07),octagon(0,1.29,.78,.54,.035),y,y-.035,"Teal")
+    frame(col,"Friso interno",octagon(0,1.29,.80,.56,.036),octagon(0,1.29,.74,.50,.03),y-.035,y-.045,"TealDeep")
+    for x,z in ((-.42,.98),(.42,.98),(-.42,1.6),(.42,1.6),(0,.98),(0,1.6)):
+        rod(col,"Fixação",(x,y-.035,z),(x,y-.042,z),.008,"Bolt",8)
+    for x in (-.86,.86):
+        box(col,"Placa de inspeção",(x,1.775,1.3),(.36,.012,.34),"PlateLit",.008)
+        box(col,"Rebaixo",(x,1.768,1.3),(.3,.004,.28),"Plate",.004)
+        for dx in (-.15,.15):
+            for dz in (-.14,.14):
+                rod(col,"Fixação",(x+dx,1.769,1.3+dz),(x+dx,1.762,1.3+dz),.007,"Bolt",8)
+    box(col,"Travessa estrutural",(0,1.79,1.69),(2.5,.03,.05),"Teal",.008)
+    box(col,"Friso da travessa",(0,1.772,1.69),(2.4,.006,.012),"PlateLit",.002)
+    return col
+
+
+def niche(col,cx,cz,w,h,depth,y_wall):
+    yf=y_wall+depth
+    frame(col,"Moldura do nicho",octagon(cx,cz,w,h,.07),octagon(cx,cz,w-.1,h-.1,.04),y_wall+.01,yf,"Teal")
+    frame(col,"Aba de fixação",octagon(cx,cz,w+.06,h+.06,.085),octagon(cx,cz,w-.02,h-.02,.06),y_wall,y_wall+.012,"TealDeep")
+    box(col,"Fundo do nicho",(cx,y_wall+.006,cz),(w-.08,.01,h-.08),"Niche")
+    for side in (-1,1):
+        box(col,"Parede inclinada",(cx+side*(w*.5-.065),y_wall+depth*.5,cz),(.012,depth-.01,h-.12),"Niche",0,
+            ((math.cos(.25),side*math.sin(.25),0),(-side*math.sin(.25),math.cos(.25),0),(0,0,1)))
+    for x,z in ((cx-w*.5+.035,cz-h*.5+.06),(cx+w*.5-.035,cz-h*.5+.06),(cx-w*.5+.035,cz+h*.5-.06),(cx+w*.5-.035,cz+h*.5-.06),
+                (cx-w*.5-.012,cz),(cx+w*.5+.012,cz)):
+        rod(col,"Parafuso da aba",(x,yf,z),(x,yf+.006,z),.007,"Steel",8)
+    return yf
+
+
+def shelf(col,cx,z,w,y_wall,y_front):
+    box(col,"Prateleira",(cx,(y_wall+y_front)*.5,z),(w,y_front-y_wall,.014),"Graphite",.004)
+    box(col,"Batente de retenção",(cx,y_front-.006,z+.028),(w,.012,.014),"PlateLit",.004)
+    for x in (cx-w*.5+.012,cx+w*.5-.012):
+        box(col,"Montante do batente",(x,y_front-.006,z+.014),(.012,.012,.03),"Steel",.002)
+
+
+def supply_lamp(col,x,z,y,length):
+    box(col,"Carcaça da luminária",(x,y+.03,z),(length,.06,.05),"Teal",.012)
+    for side in (-1,1):
+        box(col,"Ponta facetada",(x+side*(length*.5+.012),y+.03,z),(.03,.05,.045),"TealDeep",.012)
+    box(col,"Difusor quente",(x,y+.061,z-.004),(length-.05,.006,.022),"Lamp",.003)
+
+
+def food_niche():
+    col=group("supply_food_niche")
+    yf=niche(col,0,.245,.62,.58,.15,-.21)
+    shelf(col,0,.042,.52,-.2,-.07)
+    shelf(col,0,.275,.52,-.2,-.07)
+    for side in (-1,1):
+        mesh(col,"Mão francesa",[Vector((side*.2,-.21,-.04)),Vector((side*.2,-.11,-.04)),Vector((side*.2,-.21,-.12)),
+             Vector((side*.22,-.21,-.04)),Vector((side*.22,-.11,-.04)),Vector((side*.22,-.21,-.12))],
+             [(0,2,1),(3,4,5),(0,1,4,3),(1,2,5,4),(2,0,3,5)],"TealDeep")
+    return col
+
+
+def water_niche():
+    col=group("supply_water_niche")
+    niche(col,0,.165,.62,.42,.15,-.21)
+    shelf(col,0,-.008,.52,-.2,-.08)
+    supply_lamp(col,.17,.47,-.21,.28)
+    return col
+
+
+def water_pouch():
+    col=group("supply_pouch")
+    th=.034
+    body=[(-.052,-.03),(.052,-.03),(.058,.02),(.058,.15),(.05,.17),(-.05,.17),(-.058,.15),(-.058,.02)]
+    solid(col,"Bolsa",[(x,-th*.5,z) for x,z in body],[(x*.94,th*.5,z) for x,z in body],"Pouch")
+    for side in (-1,1):
+        box(col,"Costura lateral",(side*.06,0,.07),(.008,.014,.19),"PouchSeam",.002)
+    box(col,"Solda superior",(0,0,.172),(.11,.014,.012),"PouchSeam",.002)
+    box(col,"Janela da água",(0,-.019,.06),(.08,.004,.11),"WaterTint",.003)
+    box(col,"Etiqueta",(0,-.022,.115),(.064,.003,.036),"Paper",.002)
+    for k,(dx,dz) in enumerate(((-.016,.003),(0,-.006),(.016,.003))):
+        rod(col,"Gota",(dx,-.0245,.115+dz),(dx,-.0235,.115+dz),.006,"FlagBlue",8)
+    rod(col,"Válvula",(0,0,-.03),(0,0,-.012),.012,"Steel",10)
+    rod(col,"Bico",(0,0,-.036),(0,0,-.028),.007,"Slate",8)
+    return col
+
+
+def ration_pack(name,label):
+    col=group(name)
+    box(col,"Borda selada",(0,0,0),(.116,.008,.116),"RationSeal",.003)
+    box(col,"Corpo acolchoado",(0,0,0),(.1,.024,.1),"Ration",.009)
+    box(col,"Etiqueta",(0,-.0125,.012),(.07,.003,.044),label,.002)
+    box(col,"Faixa de texto",(0,-.0145,.02),(.05,.001,.006),"Ink")
+    box(col,"Faixa de texto",(0,-.0145,.004),(.034,.001,.005),"Ink")
+    box(col,"Vinco",(0,-.012,-.03),(.08,.002,.004),"RationSeal")
+    return col
+
+
+def disposal_bin():
+    col=group("disposal_bin")
+    box(col,"Flange de parede",(0,-.155,.14),(.42,.012,.36),"TealDeep",.01)
+    housing(col,"Carcaça",0,.14,.36,.3,.05,-.15,.05,"Teal",.015)
+    frame(col,"Moldura da boca",octagon(0,.215,.28,.08,.02),octagon(0,.215,.24,.045,.012),.05,.068,"Metal")
+    box(col,"Boca escura",(0,.04,.215),(.24,.06,.045),"Black")
+    tilt=math.radians(28)
+    box(col,"Aba recuada",(0,.035,.205),(.22,.006,.04),"Steel",.002,tilted_axes(tilt))
+    box(col,"Faixa âmbar",(0,.052,.272),(.2,.006,.012),"Amber",.002)
+    inscription(col,"DESCARTE",(0,.055,.243),.018,"Paper",center=True)
+    box(col,"Chapa de inspeção",(0,.053,.09),(.22,.006,.1),"Steel",.004)
+    rod(col,"Puxador protegido",(-.05,.062,.075),(.05,.062,.075),.007,"Metal",8)
+    for dx in (-.09,.09):
+        bolt(col,dx,.12,.057,.005)
+    for x,z in ((-.19,-.015),(.19,-.015),(-.19,.3),(.19,.3)):
+        rod(col,"Parafuso da flange",(x,-.149,z),(x,-.143,z),.007,"Steel",8)
     return col
 
 
@@ -381,10 +636,10 @@ def wall_details(wall_parts):
             pw=width-.026
             ph=h-.045
             box(col,"Chapa "+name,q+n*.014,(pw,ph,.026),
-                ("Putty" if i%2 and h>.7 else "Ivory") if h>.6 else "Liner",.010,(u,v,n))
+                ("PlateAlt" if i%2 and h>.7 else "Plate") if h>.6 else "PlateDeep",.010,(u,v,n))
             if ph > .58:
                 box(col,"Tampa embutida",q+n*.030+v*ph*.12,(pw-.074,ph*.66,.012),
-                    "Liner",.010,(u,v,n))
+                    "PlateLit",.010,(u,v,n))
                 box(col,"Placa estreita",q+n*.039+v*ph*.355,(pw-.105,.061,.009),
                     "Slate",.005,(u,v,n))
                 for side in (-1,1):
@@ -423,8 +678,8 @@ def roof():
         n=u.cross(v)
         mid=(base_a+base_b+tip_a+tip_b)*.25+n*.023
         w=(base_b-base_a).length*.72
-        box(col,"Painel do teto",mid,(w,.47,.031),"Liner" if i%2 else "Ivory",.013,(u,v,n))
-        if i%2==0:
+        box(col,"Painel do teto",mid,(w,.47,.031),"PlateAlt" if i%2 else "Plate",.013,(u,v,n))
+        if i%2==0 and i!=0:
             box(col,"Canal da luminária",mid+n*.027,(w*.62,.073,.035),"Edge",.007,(u,v,n))
             box(col,"Difusor da luminária",mid+n*.047,(w*.56,.038,.013),"Lamp",.005,(u,v,n))
         else:
@@ -504,6 +759,17 @@ def lunar_flag():
     return col
 
 
+EQUIPMENT_MODELS=("supply_pouch","ration_pack_cream","ration_pack_orange")
+
+
+def destination(name):
+    if name=="lunar_flag":
+        return out.parent/"landing"
+    if name in EQUIPMENT_MODELS:
+        return out.parent/"equipment"
+    return out
+
+
 def export(col):
     deps=bpy.context.evaluated_depsgraph_get()
     verts, faces, mats, indices = [], [], [], []
@@ -539,7 +805,7 @@ def export(col):
     model.select_set(True)
     bpy.context.view_layer.objects.active=model
     result=bpy.ops.export_scene.gltf(
-        filepath=str((out.parent/"landing" if col.name=="lunar_flag" else out)/(col.name+".glb")), export_format="GLB",
+        filepath=str(destination(col.name)/(col.name+".glb")), export_format="GLB",
         use_selection=True, export_yup=True, export_materials="EXPORT",
         export_cameras=False, export_lights=False, export_animations=False,
         export_attributes=False)
@@ -558,9 +824,10 @@ def review_scene(slots):
     review.render.resolution_percentage=100
     mapping={"main_console":["MainConsole"],"nav_panel":["NavigationPanel"],
              "radio_panel":["RadioPanel"],"power_panel":["PowerPanel"],"life_support":["LifeSupport"],
-             "crew_seat":["SeatLeft","SeatCenter","SeatRight"]}
+             "crew_seat":["SeatLeft","SeatCenter","SeatRight"],
+             "supply_food_niche":["FoodStorage"],"supply_water_niche":["WaterStorage"]}
     for key,col in collections.items():
-        if key == 'lunar_flag':
+        if key == 'lunar_flag' or key in EQUIPMENT_MODELS:
             continue
         for slot in mapping.get(key,[None]):
             inst=bpy.data.objects.new(slot or key,None)
@@ -570,6 +837,8 @@ def review_scene(slots):
                 p,(x,y,z)=slots[slot]
                 inst.matrix_world=Matrix((x,-z,y)).transposed().to_4x4()
                 inst.location=p
+            if key=="disposal_bin":
+                inst.location=(-1.17,-1.66,.88)
             review.collection.objects.link(inst)
     for at,target,watts,size in [((0,-1.04,2.12),(0,1,.8),105,1.8),
                                   ((.7,.3,2.2),(0,0,.7),52,1.15),((-.6,1.1,1.7),(0,-1,1),34,1.8)]:
@@ -597,7 +866,9 @@ if reexport:
     names = (
         "main_console", "nav_panel", "radio_panel", "power_panel", "life_support",
         "crew_seat", "cabin_wall_panels", "cabin_deck_panels", "cabin_roof_trim",
-        "cabin_hatch_trim", "cabin_markings", "lunar_flag",
+        "cabin_hatch_trim", "cabin_markings", "lunar_flag", "cabin_front_trim",
+        "supply_food_niche", "supply_water_niche", "supply_pouch", "ration_pack_cream",
+        "ration_pack_orange", "disposal_bin",
     )
     for name in names:
         export(bpy.data.collections[name])
@@ -617,6 +888,13 @@ else:
         hatch()
         markings()
         lunar_flag()
+        front_trim()
+        food_niche()
+        water_niche()
+        water_pouch()
+        ration_pack("ration_pack_cream","Paper")
+        ration_pack("ration_pack_orange","LabelOrange")
+        disposal_bin()
 
     for collection in collections.values():
         export(collection)

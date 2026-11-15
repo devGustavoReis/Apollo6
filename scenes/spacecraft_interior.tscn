@@ -18,6 +18,7 @@
 [ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_roof_trim.glb" id="cab_roof_trim"]
 [ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_hatch_trim.glb" id="cab_hatch_trim"]
 [ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_markings.glb" id="cab_markings"]
+[ext_resource type="PackedScene" path="res://assets/models/cabin/cabin_front_trim.glb" id="cab_front_trim"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c8v58"]
 cull_mode = 2
@@ -1008,6 +1009,8 @@ mesh = SubResource("BoxMesh_g1img")
 
 [node name="MissionMarkings" parent="CabinStructure" instance=ExtResource("cab_markings")]
 
+[node name="FrontTrim" parent="CabinStructure" instance=ExtResource("cab_front_trim")]
+
 [node name="CollisionStructure" type="Node3D" parent="." unique_id=2102399647]
 
 [node name="Deck" type="StaticBody3D" parent="CollisionStructure" unique_id=1394813844]
@@ -1571,6 +1574,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0.7)
 light_color = Color(1, 0.9411765, 0.84705883, 1)
 light_energy = 0.7
 omni_range = 4.5
+
+[node name="FrontLampGlow" type="OmniLight3D" parent="Lighting"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.86, -1.62)
+light_color = Color(1, 0.86, 0.62, 1)
+light_energy = 0.45
+omni_range = 1.4
 
 [node name="PreviewPlayer" type="CharacterBody3D" parent="." unique_id=77355617]
 script = ExtResource("1_5ib6t")

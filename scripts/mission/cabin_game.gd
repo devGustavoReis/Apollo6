@@ -132,8 +132,9 @@ func _build_interaction_zones() -> void:
 	cabin.add_child(disposal)
 	disposal.position = Vector3(-1.17, 0.88, 1.66)
 	_add_zone(disposal, "disposal", LABELS["disposal"], Vector3(0.36, 0.28, 0.30))
-	_add_station_prop(disposal, Vector3(0.30, 0.20, 0.22), Vector3(0, 0.10, 0.05), Color("#405b65"))
-	_add_station_prop(disposal, Vector3(0.32, 0.04, 0.23), Vector3(0, 0.22, 0.05), Color("#869da0"))
+	var bin: Node3D = load("res://assets/models/cabin/disposal_bin.glb").instantiate()
+	bin.name = "Model"
+	disposal.add_child(bin)
 	var bench: Node3D = slots.get_node_or_null("ToolsStorage")
 	if bench != null:
 		_add_station_prop(bench, Vector3(0.36, 0.055, 0.24), Vector3(0, 0.38, 0), Color("#718489"))

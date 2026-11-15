@@ -13,10 +13,16 @@ A cabine do módulo de comando usa módulos modelados no Blender 5.3. A referên
 | `cabin_wall_panels`, `cabin_deck_panels`, `cabin_roof_trim` | Revestimentos sob `CabinStructure/Walls`, `Floor` e `Ceiling`, em coordenadas da cabine. |
 | `cabin_hatch_trim` | Arremates sob `CabinStructure/HatchOpening`. A porta e a barreira mantêm a gestão do jogo. |
 | `cabin_markings` | Placas no gabinete frontal e na parede traseira, sob `CabinStructure`. |
+| `cabin_front_trim` | `CabinStructure/FrontTrim`: luminária frontal entre navegação e rádio, moldura da janela frontal, placas de inspeção e travessa. A luz `Lighting/FrontLampGlow` acompanha o difusor. |
+| `supply_water_niche`, `supply_food_niche` | `Niche` dentro de `WaterRack` e `FoodRack`: nichos chanfrados, prateleiras com batente, mãos-francesas e luminária compacta da água. Os nós `Pouches` e `Packs` continuam controlando o estoque visível. |
+| `supply_pouch`, `ration_pack_cream`, `ration_pack_orange` | Unidades visíveis nos suportes de água e comida, em `assets/models/equipment/`. Os modelos segurados na mão continuam em `HELD_MODELS`. |
+| `disposal_bin` | `MealDisposal/Model`, criado por `cabin_game.gd` sobre a zona de descarte. Sem colisor próprio. |
 | `lunar_flag` | `scripts/ui/menu_backdrop.gd`, no cenário em que o módulo já está pousado. A escala do mastro segue o ponto de composição do menu. |
 | `laser_retroreflector`, `surface_camera` | `ScienceCargo/Model`, na raiz da cabine, nos Dias 1 a 3, quando o objetivo é o retrorrefletor ou a câmera estéreo. Fontes em `assets/source/science/`, GLBs em `assets/models/science/`. |
 | `lunar_sample_container_closed` | `ScienceCargo/Model` nos Dias 1 a 3, na ida, quando o objetivo é a coleta de amostras. |
 | `lunar_sample_container_open` | `ScienceCargo/Model` a partir do Dia 4, na volta, depois da coleta de amostras. Caixa aberta com a pedra lunar e o martelo de geologia preso na tampa. Substitui o `sample_case` provisório na cabine. |
+
+A frente segue a composição de referência: navegação à esquerda, rádio à direita, luminária quente no centro, janela emoldurada como painel escuro e console em três módulos (ATTITUDE, COMPUTER, SYSTEMS). As chapas usam bege quente (`Plate` #C4AE8E, `PlateLit` #D5BE9B, `PlateDeep` #8D8273) e os equipamentos azul-petróleo (`Teal` #40545B, `TealDeep` #273942), com nichos em `Niche` #3E4438.
 
 A fonte `assets/source/cabin/apollo6_cabine.blend` abre na cena **Cabine montada**. Edite os componentes na cena **Peças editáveis**, com escala métrica e uma coleção por modelo. O GLB agrupa cada coleção em uma malha com superfícies por material. Inscrições, bandeiras e indicadores têm geometria própria e materiais PBR, com UV de projeção e sem texturas externas. O arquivo `.gdignore` impede a importação automática da fonte na árvore de recursos do jogo.
 
