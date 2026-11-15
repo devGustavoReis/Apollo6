@@ -13,6 +13,7 @@ const HELD_MODELS := {
 	"food_even": "res://assets/models/equipment/bacon_bars.glb",
 	"water": "res://assets/models/equipment/water_pouch.glb",
 }
+const SCIENCE_SCALE := {"lunar_sample_container_open": 0.8, "laser_retroreflector": 0.65, "surface_camera": 1.0}
 const INTERACT_LAYER := 2
 const REACH := 2.3
 const EAT_TIME := 1.6
@@ -950,10 +951,16 @@ func _build_science_cargo() -> void:
 	slot.name = "ScienceCargo"
 	cabin.add_child(slot)
 	slot.position = Vector3(1.05, 0.75, 1.4)
+	var model := ""
 	if MissionState.objective == "sample_kit" and MissionState.science_completed and MissionState.day >= 4:
-		slot.add_child(load("res://assets/models/equipment/sample_case.glb").instantiate())
-	elif MissionState.objective == "retroreflector" and MissionState.qty("retroreflector") > 0 and MissionState.day <= 3:
-		_add_station_prop(slot, Vector3(0.45, 0.25, 0.32), Vector3(0, 0.125, 0), Color("#8a8c83"))
+		model = "lunar_sample_container_open"
+	elif MissionState.objective in ["retroreflector", "camera"] and MissionState.qty(MissionState.objective) > 0 and MissionState.day <= 3:
+		model = "laser_retroreflector" if MissionState.objective == "retroreflector" else "surface_camera"
+	if model != "":
+		var cargo: Node3D = load("res://assets/models/science/" + model + ".glb").instantiate()
+		cargo.name = "Model"
+		cargo.scale = Vector3.ONE * SCIENCE_SCALE[model]
+		slot.add_child(cargo)
 
 
 func _open_cartridge() -> void:

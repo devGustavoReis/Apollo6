@@ -48,5 +48,22 @@ func run() -> void:
 	check(ms.ended.get("stage") == "survival", "Game over imediato")
 	check(ms.verdict()["causes"][0].contains("esgotada"), "Motivo físico no relatório")
 	check(not ms.consume("food"), "Game over impede consumo")
+	var cargo := {"retroreflector": [2, false, "laser_retroreflector"], "camera": [2, false, "surface_camera"], "sample_kit": [4, true, "lunar_sample_container_open"]}
+	for id: String in cargo:
+		ms.reset("normal")
+		ms.select_objective(id)
+		ms.set_qty(id, 1)
+		ms.apply_plan()
+		ms.day = cargo[id][0]
+		ms.science_completed = cargo[id][1]
+		ms.stage = "cabin"
+		var cabin: Node = load(root.get_node("Game").SCENES["cabin"]).instantiate()
+		root.add_child(cabin)
+		await process_frame
+		var model: Node = cabin.cabin.get_node_or_null("ScienceCargo/Model")
+		check(model != null and model.scene_file_path.ends_with(cargo[id][2] + ".glb"), "Carga científica mostra o modelo de " + id)
+		cabin.queue_free()
+		await process_frame
+		root.get_node("Houston").clear()
 	print("SCIENCE / SURVIVAL CHECKS: %d failures" % failures)
 	quit(0 if failures == 0 else 1)

@@ -14,6 +14,8 @@ A cabine do módulo de comando usa módulos modelados no Blender 5.3. A referên
 | `cabin_hatch_trim` | Arremates sob `CabinStructure/HatchOpening`. A porta e a barreira mantêm a gestão do jogo. |
 | `cabin_markings` | Placas no gabinete frontal e na parede traseira, sob `CabinStructure`. |
 | `lunar_flag` | `scripts/ui/menu_backdrop.gd`, no cenário em que o módulo já está pousado. A escala do mastro segue o ponto de composição do menu. |
+| `laser_retroreflector`, `surface_camera` | `ScienceCargo/Model`, na raiz da cabine, nos Dias 1 a 3, quando o objetivo é o retrorrefletor ou a câmera estéreo. Fontes em `assets/source/science/`, GLBs em `assets/models/science/`. |
+| `lunar_sample_container_open` | `ScienceCargo/Model` a partir do Dia 4, depois da coleta de amostras. Caixa aberta com a pedra lunar e o martelo de geologia preso na tampa. Substitui o `sample_case` provisório na cabine. |
 
 A fonte `assets/source/cabin/apollo6_cabine.blend` abre na cena **Cabine montada**. Edite os componentes na cena **Peças editáveis**, com escala métrica e uma coleção por modelo. O GLB agrupa cada coleção em uma malha com superfícies por material. Inscrições, bandeiras e indicadores têm geometria própria e materiais PBR, com UV de projeção e sem texturas externas. O arquivo `.gdignore` impede a importação automática da fonte na árvore de recursos do jogo.
 
