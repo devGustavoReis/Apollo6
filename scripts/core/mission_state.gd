@@ -9,6 +9,7 @@ const EQUIPMENT_PATH := "res://data/equipment/equipment.json"
 const MISSION_DAYS := 8
 ## Dias jogáveis da viagem até a Lua (a Apollo 11 levou cerca de 3 dias).
 const TRAVEL_DAYS := 3
+const MINIGAME_ASSIST_CHANCE := 0.8
 ## Velocidade aproximada da Apollo 11 ao fim da injeção translunar: 35.545,6 ft/s (NASA SP-4029).
 const TLI_TARGET_KMS := 10.83
 
@@ -41,10 +42,12 @@ const SAVED_FIELDS := [
 	"sps_fuel", "lm_fuel", "lm_fuel_max", "integrity", "life_support",
 	"science_multiplier", "science_collected", "trajectory_error", "stage", "day",
 	"tasks_done", "events", "decisions", "random_event", "separation_mistakes",
+	"minigame_attempts", "minigame_completions",
 ]
 
 var catalog: Array = []
 var items: Dictionary = {}
+var _minigame_tools: Dictionary = {}
 
 var difficulty := "normal"
 var cargo: Dictionary = {}
@@ -69,6 +72,8 @@ var trajectory_error := 0.0
 var stage := "menu"
 var day := 1
 var tasks_done: Dictionary = {}
+var minigame_attempts: Dictionary = {}
+var minigame_completions: Dictionary = {}
 var events: Array = []
 var decisions: Array = []
 var random_event := ""
@@ -96,8 +101,11 @@ func _load_catalog() -> void:
 	var data: Variant = JSON.parse_string(file.get_as_text())
 	catalog = data["items"]
 	items.clear()
+	_minigame_tools.clear()
 	for item in catalog:
 		items[item["id"]] = item
+		for task_id: String in item.get("minigames", []):
+			_minigame_tools[task_id] = item["id"]
 
 
 func reset(new_difficulty: String) -> void:
@@ -122,6 +130,8 @@ func reset(new_difficulty: String) -> void:
 	stage = "planning"
 	day = 1
 	tasks_done = {}
+	minigame_attempts = {}
+	minigame_completions = {}
 	events = []
 	decisions = []
 	separation_mistakes = 0
@@ -226,6 +236,52 @@ func apply_plan() -> void:
 			instruments_active[id] = true
 	stage = "launch"
 	changed.emit()
+
+
+# ---------- Minigames de cabine ----------
+
+## Chame ao finalizar uma tentativa. Cada tarefa usa um ID de tentativa novo e positivo
+## a cada repetição legítima. O mesmo ID sempre devolve o resultado já resolvido.
+func resolve_minigame_attempt(task_id: String, attempt_id: int, played_well: bool) -> Dictionary:
+	if not _minigame_tools.has(task_id) or attempt_id < 1:
+		push_error("Tentativa de minigame inválida: %s, tentativa %d." % [task_id, attempt_id])
+		return {}
+
+	var attempts: Dictionary = minigame_attempts.get(task_id, {})
+	var previous: Dictionary = attempts.get(attempt_id, minigame_completions.get(task_id, {}))
+	if not previous.is_empty():
+		var replay := previous.duplicate()
+		replay["new_attempt"] = false
+		replay["new_completion"] = false
+		return replay
+
+	var tool_id: String = _minigame_tools[task_id]
+	var has_tool := not played_well and qty(tool_id) > 0
+	var assisted := has_tool and randf() < MINIGAME_ASSIST_CHANCE
+	var completed := played_well or assisted
+	var tool_name: String = items[tool_id]["name"]
+	var title := "Tarefa concluída"
+	var message := "Você concluiu a tarefa no minigame."
+	if assisted:
+		title = "Tarefa concluída com ajuda"
+		message = "Você errou o minigame. A tarefa foi concluída graças a: %s." % tool_name
+	elif not played_well:
+		title = "Tarefa pendente"
+		message = "Você errou o minigame. Tente novamente."
+		if has_tool:
+			message = "Você errou o minigame. A ferramenta %s não recuperou esta tentativa. Tente novamente." % tool_name
+
+	var result := {
+		"completed": completed, "played_well": played_well, "assisted": assisted,
+		"tool_id": tool_id if has_tool else "", "title": title, "message": message,
+		"new_attempt": true, "new_completion": completed,
+	}
+	attempts[attempt_id] = result
+	minigame_attempts[task_id] = attempts
+	if completed:
+		minigame_completions[task_id] = result
+	changed.emit()
+	return result.duplicate()
 
 
 # ---------- Viagem ----------

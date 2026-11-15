@@ -234,5 +234,61 @@ func run() -> void:
 	minigame.queue_free()
 	await process_frame
 
+	check_minigame_assistance()
 	print("FLOW CHECKS: ", failures.size(), " failures")
 	quit(0 if failures.is_empty() else 1)
+
+func _seed_assist(should_recover: bool) -> void:
+	for value in range(100):
+		seed(value)
+		if (randf() < 0.8) == should_recover:
+			seed(value)
+			return
+
+
+func check_minigame_assistance() -> void:
+	var mission := ms()
+	mission.reset("normal")
+	var failure: Dictionary = mission.resolve_minigame_attempt("M01", 1, false)
+	check(not failure["completed"] and not failure["assisted"] and failure["new_attempt"], "Sem ferramenta, um erro mantém a tarefa pendente")
+	var direct: Dictionary = mission.resolve_minigame_attempt("M01", 2, true)
+	check(direct["completed"] and direct["played_well"] and not direct["assisted"], "Minigame pode ser concluído sem ferramenta")
+	mission.reset("normal")
+
+	var assignments := {
+		"M01": "fastening_kit", "M02": "sealing_kit", "M03": "signal_meter",
+		"M04": "sealing_kit", "M05": "blackout_kit", "M06": "fastening_kit",
+	}
+	for id: String in assignments:
+		var tool: String = assignments[id]
+		mission.set_qty(tool, 1)
+		_seed_assist(true)
+		var assist: Dictionary = mission.resolve_minigame_attempt(id, 1, false)
+		check(assist["completed"] and assist["assisted"] and not assist["played_well"], id + ": assistência conclui a tarefa sem atribuir acerto")
+		check(assist["tool_id"] == tool and assist["message"].contains(mission.items[tool]["name"]), id + ": feedback identifica a ferramenta")
+		check(assist["message"].contains("errou"), id + ": feedback reconhece o erro")
+		var duplicate: Dictionary = mission.resolve_minigame_attempt(id, 1, false)
+		check(not duplicate["new_attempt"] and not duplicate["new_completion"], id + ": sinal duplicado não dá nova conclusão")
+		var replay: Dictionary = mission.resolve_minigame_attempt(id, 2, true)
+		check(replay["assisted"] and not replay["new_completion"], id + ": tarefa concluída preserva como foi resolvida")
+		mission.set_qty(tool, 0)
+
+	mission.reset("normal")
+	mission.set_qty("signal_meter", 1)
+	_seed_assist(true)
+	var wrong_tool: Dictionary = mission.resolve_minigame_attempt("M05", 1, false)
+	check(not wrong_tool["completed"] and wrong_tool["tool_id"].is_empty(), "Ferramenta de outra tarefa não assiste")
+	_seed_assist(false)
+	var unlucky: Dictionary = mission.resolve_minigame_attempt("M03", 1, false)
+	check(not unlucky["completed"] and not unlucky["assisted"] and unlucky["tool_id"] == "signal_meter", "Uma ferramenta pode falhar em recuperar o erro")
+	mission.save_checkpoint("assist_test")
+	_seed_assist(true)
+	var reemit: Dictionary = mission.resolve_minigame_attempt("M03", 1, false)
+	check(not reemit["completed"] and not reemit["new_attempt"], "Repetir o sinal de falha não sorteia de novo")
+	var retry: Dictionary = mission.resolve_minigame_attempt("M03", 2, false)
+	check(retry["completed"] and retry["new_completion"], "Uma nova tentativa real pode receber assistência")
+	check(mission.restore_checkpoint("assist_test"), "Checkpoint de assistência restaurado")
+	check(not mission.minigame_completions.has("M03") and mission.minigame_attempts["M03"].size() == 1, "Checkpoint preserva tentativas e conclusões no momento salvo")
+	mission.reset("normal")
+	check(mission.minigame_attempts.is_empty() and mission.minigame_completions.is_empty(), "Nova missão limpa os resultados de assistência")
+	randomize()

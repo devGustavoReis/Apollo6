@@ -8,6 +8,21 @@ Abra o projeto no Godot 4.7.2 e pressione F5. O jogo começa no menu principal.
 Fluxo, controles, arquitetura, instalação de modelos e nomes dos vídeos: [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
 Fontes científicas e simplificações: [docs/nasa_sources.md](docs/nasa_sources.md).
 
+## Ferramentas para os minigames de cabine
+
+A aba **Ferramentas** do planejamento oferece quatro itens opcionais. Eles entram no orçamento e na massa da carga e ficam disponíveis para os minigames quando as seis atividades forem implementadas.
+
+| Ferramenta | Minigames previstos |
+| --- | --- |
+| Kit de fixação | M01 — Prender objetos soltos e M06 — Guardar embalagens da refeição |
+| Kit de vedação e encaixe | M02 — Abastecer a bolsa de água e M04 — Encaixar o conector do traje |
+| Medidor de sinal | M03 — Recuperar o sinal da antena |
+| Kit de escurecimento | M05 — Preparar a cabine para descanso |
+
+Cada minigame pode ser concluído sem equipamento. Após um erro, a ferramenta correspondente, se embarcada, dá **80% de chance** de recuperar a tentativa. Em caso de recuperação, o jogo deve mostrar **Tarefa concluída com ajuda** e informar que o jogador errou e qual ferramenta concluiu a tarefa. Se a recuperação falhar, a tarefa fica pendente e pode ser tentada novamente. Bateria auxiliar, reserva de propelente e kit de reparos continuam disponíveis na aba **Reservas** para seus efeitos na missão.
+
+Ao integrar as cenas, chame `MissionState.resolve_minigame_attempt(task_id, attempt_id, played_well)` ao finalizar uma tentativa, com um ID positivo e único por tarefa. Use `title` e `message` para informar o desfecho de uma `new_attempt`. Use `new_completion` para registrar a conclusão uma vez e `assisted`/`played_well` para preservar a diferença entre assistência e acerto direto. A mesma tentativa reutiliza o resultado anterior, inclusive ao retomar um checkpoint que a contenha.
+
 ## Primeiro acesso
 
 1. Aceite o convite do GitHub com sua conta pessoal.

@@ -7,3 +7,10 @@
 - Com a árvore limpa, execute `./scripts/enviar.ps1`. Só entregue a vez após o script confirmar o mesmo commit local e remoto. Informe ao próximo integrante o hash, o que mudou, os testes executados e o próximo passo.
 - Se houver conflito, divergência ou mudanças locais inesperadas, interrompa e explique a situação antes de tentar resolvê-la. Preserve as alterações de todos. Nunca use `git push --force` nem `--force-with-lease`. Operações destrutivas do Git exigem aprovação.
 - Execute a sincronização manualmente entre sessões, com o Godot fechado e sem outros processos editando os arquivos.
+
+## Ferramentas e minigames da cabine
+
+- Mantenha o catálogo de assistência em `data/equipment/equipment.json` e siga a associação de M01 a M06 descrita no README. As seis cenas de minigame ainda precisam ser implementadas.
+- Permita concluir qualquer minigame sem ferramenta. Ao finalizar uma tentativa, use `MissionState.resolve_minigame_attempt` com o mesmo ID quando o evento se repetir. A ferramenta correspondente dá 80% de chance de recuperar cada tentativa legítima que terminar em erro. Uma tarefa concluída mantém seu desfecho.
+- Apresente `title` e `message` em uma nova tentativa resolvida. Use `new_completion` para registrar a conclusão uma vez. Exiba o nome da ferramenta em conclusões assistidas e preserve a distinção entre acerto direto e assistência em qualquer relatório.
+- Ao mudar a assistência, teste erro sem ferramenta, ferramenta incompatível, recuperação, falha da assistência, acerto direto, repetição do sinal e restauração de checkpoint.

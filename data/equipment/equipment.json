@@ -145,6 +145,72 @@
       "max": 1,
       "description": "Permite reparos mais rápidos e baratos em eventos da viagem.",
       "source": "Simplificação de gameplay."
+    },
+    {
+      "id": "fastening_kit",
+      "category": "assist",
+      "name": "Kit de fixação",
+      "unit": "un.",
+      "cost": 0.5,
+      "mass": 3.0,
+      "power": 0,
+      "science": 0,
+      "max": 1,
+      "minigames": [
+        "M01",
+        "M06"
+      ],
+      "description": "Cintas e fechos extras para prender objetos soltos e fechar a bolsa de embalagens.",
+      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+    },
+    {
+      "id": "sealing_kit",
+      "category": "assist",
+      "name": "Kit de vedação e encaixe",
+      "unit": "un.",
+      "cost": 0.8,
+      "mass": 4.0,
+      "power": 0,
+      "science": 0,
+      "max": 1,
+      "minigames": [
+        "M02",
+        "M04"
+      ],
+      "description": "Adaptador e anéis de vedação para o abastecimento de água e o conector do traje.",
+      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+    },
+    {
+      "id": "signal_meter",
+      "category": "assist",
+      "name": "Medidor de sinal",
+      "unit": "un.",
+      "cost": 1.2,
+      "mass": 6.0,
+      "power": 0,
+      "science": 0,
+      "max": 1,
+      "minigames": [
+        "M03"
+      ],
+      "description": "Mede a intensidade do sinal e ajuda a recuperar o alinhamento da antena.",
+      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
+    },
+    {
+      "id": "blackout_kit",
+      "category": "assist",
+      "name": "Kit de escurecimento",
+      "unit": "un.",
+      "cost": 0.4,
+      "mass": 2.0,
+      "power": 0,
+      "science": 0,
+      "max": 1,
+      "minigames": [
+        "M05"
+      ],
+      "description": "Coberturas opacas sobressalentes para vedar as entradas de luz na hora do descanso.",
+      "source": "Ferramenta de assistência para minigames futuros. Efeito, custo e massa são valores de gameplay."
     }
   ]
 }
