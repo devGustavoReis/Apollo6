@@ -33,7 +33,7 @@ const AMBER := Color("#f7c584")
 const RED := Color("#ffaeac")
 
 var _objective_hint: Label
-var _objective_choice: OptionButton
+var _objective_cards: Dictionary = {}
 var _tabs: Dictionary = {}
 var _category_grids: Dictionary = {}
 var _item_controls: Dictionary = {}
@@ -72,14 +72,7 @@ func _ready() -> void:
 	var layout := _stack(14)
 	margin.add_child(layout)
 	_build_header(layout)
-	_objective_choice = OptionButton.new()
-	_objective_choice.add_item("Escolha o objetivo científico")
-	for id: String in MissionState.OBJECTIVES:
-		_objective_choice.add_item(MissionState.OBJECTIVES[id]["title"])
-	_objective_choice.item_selected.connect(_choose_objective)
-	layout.add_child(_objective_choice)
-	_objective_hint = _label("", 15, MINT, true)
-	layout.add_child(_objective_hint)
+	_build_objectives(layout)
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 16)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -97,6 +90,10 @@ func _ready() -> void:
 	MissionState.changed.connect(_refresh)
 	_select_category("science")
 	_refresh()
+	var focus_id: String = MissionState.objective
+	if not _objective_cards.has(focus_id):
+		focus_id = MissionState.OBJECTIVES.keys()[0]
+	_objective_cards[focus_id][0].grab_focus.call_deferred()
 
 
 func _build_header(parent: VBoxContainer) -> void:
@@ -113,6 +110,86 @@ func _build_header(parent: VBoxContainer) -> void:
 	difficulty.add_theme_stylebox_override("panel", _box(CARD, OUTLINE, 10, 12, 7))
 	difficulty.add_child(_label("Dificuldade  ·  " + str(MissionState.settings()["name"]), 15, MINT))
 	header.add_child(difficulty)
+
+
+func _build_objectives(parent: VBoxContainer) -> void:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _box(PANEL, Color("#8a724e"), 12, 16, 12))
+	parent.add_child(panel)
+	var column := _stack(9)
+	panel.add_child(column)
+	column.add_child(_label("Escolha o objetivo científico", 25, AMBER))
+	var choices := GridContainer.new()
+	choices.columns = MissionState.OBJECTIVES.size()
+	choices.add_theme_constant_override("h_separation", 10)
+	choices.add_theme_constant_override("v_separation", 8)
+	choices.resized.connect(func(): choices.columns = MissionState.OBJECTIVES.size() if choices.size.x >= 1080.0 else 1)
+	column.add_child(choices)
+	var group := ButtonGroup.new()
+	for id: String in MissionState.OBJECTIVES:
+		var objective: Dictionary = MissionState.OBJECTIVES[id]
+		var instrument: String = MissionState.items[id]["name"]
+		var button := Button.new()
+		button.name = id
+		button.theme_type_variation = &"ObjectiveChoice"
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size.y = 100
+		button.toggle_mode = true
+		button.button_group = group
+		button.accessibility_name = objective["title"]
+		button.accessibility_description = instrument
+		button.pressed.connect(_choose_objective.bind(id))
+		choices.add_child(button)
+
+		var padding := MarginContainer.new()
+		padding.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		padding.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		for side in ["left", "top", "right", "bottom"]:
+			padding.add_theme_constant_override("margin_" + side, 12)
+		button.add_child(padding)
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override("separation", 10)
+		padding.add_child(row)
+		var icon := _equipment_icon(id, 48)
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(icon)
+		var captions := _stack(3)
+		captions.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		captions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		captions.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(captions)
+		captions.add_child(_label(objective["title"], 19, TEXT, true))
+		captions.add_child(_label(instrument, 15, MUTED, true))
+		var state := _label("○", 17, MUTED)
+		state.custom_minimum_size.x = 18
+		state.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(state)
+		_objective_cards[id] = [button, state]
+
+	_objective_hint = _label("", 15, AMBER, true)
+	column.add_child(_objective_hint)
+
+
+func _refresh_objectives() -> void:
+	var ms := MissionState
+	for id: String in _objective_cards:
+		var selected := id == ms.objective
+		var button: Button = _objective_cards[id][0]
+		var state: Label = _objective_cards[id][1]
+		button.set_pressed_no_signal(selected)
+		state.text = "✓" if selected else "○"
+		state.add_theme_color_override("font_color", MINT if selected else MUTED)
+
+	var has_objective := ms.OBJECTIVES.has(ms.objective)
+	var loaded := has_objective and ms.qty(ms.objective) > 0
+	if not has_objective:
+		_objective_hint.text = "Selecione uma opção para liberar o instrumento correspondente."
+	elif loaded:
+		_objective_hint.text = "Instrumento a bordo · " + str(ms.items[ms.objective]["name"])
+	else:
+		_objective_hint.text = "Próximo passo · Adicione %s à carga na aba Instrumentos." % ms.items[ms.objective]["name"]
+	_objective_hint.add_theme_color_override("font_color", MINT if loaded else AMBER)
 
 
 func _build_catalog(parent: HBoxContainer) -> void:
@@ -183,25 +260,12 @@ func _item_card(item: Dictionary) -> PanelContainer:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	contents.add_child(top)
-	var assist := ASSIST_SPRITES.has(id)
-	var positions := ASSIST_SPRITES if assist else SPRITES
-	if positions.has(id):
+	if ASSIST_SPRITES.has(id) or SPRITES.has(id):
 		var icon_frame := PanelContainer.new()
 		icon_frame.add_theme_stylebox_override("panel", _box(INK, OUTLINE, 8, 4, 4))
 		icon_frame.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		top.add_child(icon_frame)
-		var sprite := TextureRect.new()
-		var texture := AtlasTexture.new()
-		texture.atlas = ASSIST_ATLAS if assist else EQUIPMENT_ATLAS
-		var cell := texture.atlas.get_size() / (2.0 if assist else 4.0)
-		texture.region = Rect2(Vector2(positions[id]) * cell, cell)
-		texture.filter_clip = true
-		sprite.texture = texture
-		sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		sprite.custom_minimum_size = Vector2(66, 66)
-		sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon_frame.add_child(sprite)
+		icon_frame.add_child(_equipment_icon(id, 66))
 	var captions := _stack(2)
 	captions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(captions)
@@ -248,6 +312,23 @@ func _item_card(item: Dictionary) -> PanelContainer:
 		actions.add_child(plus)
 		_item_controls[id].merge({"minus": minus, "count": count, "plus": plus})
 	return card
+
+
+func _equipment_icon(id: String, pixels: int) -> TextureRect:
+	var assist := ASSIST_SPRITES.has(id)
+	var positions := ASSIST_SPRITES if assist else SPRITES
+	var texture := AtlasTexture.new()
+	texture.atlas = ASSIST_ATLAS if assist else EQUIPMENT_ATLAS
+	var cell := texture.atlas.get_size() / (2.0 if assist else 4.0)
+	texture.region = Rect2(Vector2(positions[id]) * cell, cell)
+	texture.filter_clip = true
+	var sprite := TextureRect.new()
+	sprite.texture = texture
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.custom_minimum_size = Vector2(pixels, pixels)
+	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return sprite
 
 
 func _item_stats(item: Dictionary) -> String:
@@ -384,10 +465,7 @@ func _refresh() -> void:
 	for id: String in _item_controls:
 		_refresh_card(id)
 	var ms := MissionState
-	_objective_choice.select(ms.OBJECTIVES.keys().find(ms.objective) + 1)
-	_objective_hint.text = "Escolha um objetivo e adicione seu instrumento na carga."
-	if ms.OBJECTIVES.has(ms.objective):
-		_objective_hint.text = ms.OBJECTIVES[ms.objective]["title"] + " · Instrumento necessário: " + ms.items[ms.objective]["name"]
+	_refresh_objectives()
 	var s := ms.settings()
 	var cost := ms.plan_cost()
 	var mass := ms.plan_mass()
@@ -411,6 +489,10 @@ func _refresh() -> void:
 	_status.text = "Plano pronto para lançar" if missing == 0 else (
 		"1 requisito pendente" if missing == 1 else "%d requisitos pendentes" % missing
 	)
+	if ms.objective.is_empty():
+		_status.text = "Escolha o objetivo científico acima"
+	elif ms.qty(ms.objective) == 0:
+		_status.text = "Adicione o instrumento do objetivo"
 	_status.add_theme_color_override("font_color", MINT if missing == 0 else AMBER)
 
 
@@ -419,7 +501,11 @@ func _refresh_card(id: String) -> void:
 	var controls: Dictionary = _item_controls[id]
 	var selected := quantity > 0
 	var card: PanelContainer = controls["card"]
-	card.theme_type_variation = &"LoadedCard" if selected else &"CargoCard"
+	card.theme_type_variation = &"CargoCard"
+	if selected:
+		card.theme_type_variation = &"LoadedCard"
+	elif id == MissionState.objective:
+		card.theme_type_variation = &"ObjectiveInstrumentCard"
 	if controls.has("toggle"):
 		controls["loaded"].visible = selected
 		var toggle: Button = controls["toggle"]
@@ -473,7 +559,7 @@ func _show_item_info(item: Dictionary) -> void:
 
 func _show_help() -> void:
 	_open_info("Como planejar a missão", (
-		"1. Adicione um instrumento científico para coletar dados na Lua.\n\n"
+		"1. Escolha um objetivo científico e adicione o instrumento correspondente à carga.\n\n"
 		+ "2. Leve ao menos %d cotas de comida e %d de água: uma por dia nos 5 dias jogáveis e mais uma em cada um dos 3 saltos (órbita lunar, operações na Lua e aproximação da Terra). Com 8 exatas, não sobra margem para consumo extra ou perda. Confira também o orçamento e a massa.\n\n"
 		+ "3. Se quiser, leve bateria, propelente ou ferramentas para lidar com imprevistos. "
 		+ "Use o resumo para comparar os limites e os alertas antes de lançar.\n\n"
@@ -537,10 +623,11 @@ func _planning_theme() -> Theme:
 	result.default_font_size = 16
 	result.set_color("font_color", "Label", TEXT)
 	result.set_stylebox("panel", "PanelContainer", _box(PANEL, OUTLINE, 12, 14, 13))
-	for variant in [&"CargoCard", &"LoadedCard"]:
+	for variant in [&"CargoCard", &"LoadedCard", &"ObjectiveInstrumentCard"]:
 		result.set_type_variation(variant, &"PanelContainer")
 	result.set_stylebox("panel", &"CargoCard", _box(CARD, OUTLINE, 9, 10, 9))
 	result.set_stylebox("panel", &"LoadedCard", _box(Color("#1b3843"), Color("#509c90"), 9, 10, 9))
+	result.set_stylebox("panel", &"ObjectiveInstrumentCard", _box(CARD, AMBER, 9, 10, 9))
 
 	result.set_stylebox("normal", "Button", _box(INK, OUTLINE, 7, 10, 6))
 	result.set_stylebox("hover", "Button", _box(Color("#233f4c"), MINT, 7, 10, 6))
@@ -551,8 +638,12 @@ func _planning_theme() -> Theme:
 	result.set_color("font_hover_color", "Button", TEXT)
 	result.set_color("font_pressed_color", "Button", MINT)
 	result.set_color("font_disabled_color", "Button", Color("#8195a2"))
-	for variant in [&"TextButton", &"AddButton", &"SelectedButton", &"LaunchButton"]:
+	for variant in [&"TextButton", &"AddButton", &"SelectedButton", &"LaunchButton", &"ObjectiveChoice"]:
 		result.set_type_variation(variant, &"Button")
+	result.set_stylebox("normal", &"ObjectiveChoice", _box(CARD, OUTLINE, 9, 0, 0))
+	result.set_stylebox("hover", &"ObjectiveChoice", _box(Color("#233f4c"), MINT, 9, 0, 0))
+	result.set_stylebox("pressed", &"ObjectiveChoice", _box(Color("#1b4348"), MINT, 9, 0, 0))
+	result.set_stylebox("hover_pressed", &"ObjectiveChoice", _box(Color("#235258"), MINT, 9, 0, 0))
 	result.set_stylebox("normal", &"TextButton", _box(Color.TRANSPARENT, Color.TRANSPARENT, 7, 6, 6))
 	result.set_color("font_color", &"TextButton", MUTED)
 	result.set_stylebox("normal", &"AddButton", _box(Color("#204651"), Color("#45736e"), 7, 10, 6))
@@ -568,8 +659,9 @@ func _planning_theme() -> Theme:
 	return result
 
 
-func _choose_objective(index: int) -> void:
-	if index == 0:
-		_refresh()
-		return
-	MissionState.select_objective(MissionState.OBJECTIVES.keys()[index - 1])
+func _choose_objective(id: String) -> void:
+	if id != MissionState.objective:
+		MissionState.select_objective(id)
+		Sound.play_cue("confirm", "Interface")
+	_select_category("science")
+	_catalog_scroll.ensure_control_visible.call_deferred(_item_controls[id]["card"])
