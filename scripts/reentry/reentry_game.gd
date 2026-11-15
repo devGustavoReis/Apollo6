@@ -62,7 +62,7 @@ func _ready() -> void:
 	for label in [_alt_label, _status, _hint]:
 		label.add_theme_color_override("font_outline_color", Color(0.02, 0.03, 0.06, 0.9))
 		label.add_theme_constant_override("outline_size", 6)
-	_pause_label = Game.make_label("PAUSADO · ESC para continuar", 26, Game.AMBER)
+	_pause_label = Game.make_label(str(TranslationServer.translate("PAUSADO · ESC para continuar")), 26, Game.AMBER)
 	_pause_label.position = Vector2(270, 240)
 	_pause_label.visible = false
 	_view.add_child(_pause_label)
@@ -116,15 +116,15 @@ func _show_panel(title: String, text: String, buttons: Array) -> void:
 
 
 func _show_intro() -> void:
-	var text := "O módulo de serviço vai se separar e o Columbia entra sozinho na atmosfera, com os três astronautas.\n\n"
-	text += "Os paraquedas de estabilização abrem sozinhos perto de 7.300 m (24.000 pés).\n"
-	text += "Os três paraquedas principais da Apollo abriam perto de 3.050 m (10.000 pés). No jogo, você faz o acionamento manual de contingência:\n\n"
-	text += "• Após os estabilizadores, use ←/→ ou A/D para manter a marca no centro. Essa preparação melhora a amerissagem.\n"
-	text += "• Quando a cápsula cruzar 3.050 m, aparece ESPAÇO · ABRIR PARAQUEDAS.\n"
-	text += "• Você tem 2 segundos para apertar ESPAÇO.\n"
-	text += "• Apertar antes da hora não gasta a tentativa.\n\n"
-	text += "Tentativa %d. O tempo da queda é comprimido para o jogo." % attempt
-	_show_panel("REENTRADA E AMERISSAGEM", text, [["INICIAR REENTRADA", start]])
+	var text := str(TranslationServer.translate("O módulo de serviço vai se separar e o Columbia entra sozinho na atmosfera, com os três astronautas.\n\n"))
+	text += str(TranslationServer.translate("Os paraquedas de estabilização abrem sozinhos perto de 7.300 m (24.000 pés).\n"))
+	text += str(TranslationServer.translate("Os três paraquedas principais da Apollo abriam perto de 3.050 m (10.000 pés). No jogo, você faz o acionamento manual de contingência:\n\n"))
+	text += str(TranslationServer.translate("• Após os estabilizadores, use ←/→ ou A/D para manter a marca no centro. Essa preparação melhora a amerissagem.\n"))
+	text += str(TranslationServer.translate("• Quando a cápsula cruzar 3.050 m, aparece ESPAÇO · ABRIR PARAQUEDAS.\n"))
+	text += str(TranslationServer.translate("• Você tem 2 segundos para apertar ESPAÇO.\n"))
+	text += str(TranslationServer.translate("• Apertar antes da hora não gasta a tentativa.\n\n"))
+	text += str(TranslationServer.translate("Tentativa %d. O tempo da queda é comprimido para o jogo.")) % attempt
+	_show_panel(str(TranslationServer.translate("REENTRADA E AMERISSAGEM")), text, [[str(TranslationServer.translate("INICIAR REENTRADA")), start]])
 
 
 func start() -> void:
@@ -260,9 +260,9 @@ func _miss() -> void:
 	MissionState.reentry_history.append(result)
 	Sound.set_motor(0.0)
 	Sound.play_cue("abort", "Voice", true)
-	_show_panel("JANELA DE ABERTURA PERDIDA",
-		"A cápsula passou de 3.050 m e o comando não veio nos 2 segundos da janela. Sem os paraquedas principais, o pouso na água seria violento.\n\nNa próxima tentativa, acompanhe o altímetro e aperte ESPAÇO assim que aparecer ESPAÇO · ABRIR PARAQUEDAS.\n\nO pouso lunar, os suprimentos e as decisões continuam registrados.",
-		[["TENTAR REENTRADA NOVAMENTE", _retry], ["ENCERRAR E VER RELATÓRIO", _give_up]])
+	_show_panel(str(TranslationServer.translate("JANELA DE ABERTURA PERDIDA")),
+		str(TranslationServer.translate("A cápsula passou de 3.050 m e o comando não veio nos 2 segundos da janela. Sem os paraquedas principais, o pouso na água seria violento.\n\nNa próxima tentativa, acompanhe o altímetro e aperte ESPAÇO assim que aparecer ESPAÇO · ABRIR PARAQUEDAS.\n\nO pouso lunar, os suprimentos e as decisões continuam registrados.")),
+		[[str(TranslationServer.translate("TENTAR REENTRADA NOVAMENTE")), _retry], [str(TranslationServer.translate("ENCERRAR E VER RELATÓRIO")), _give_up]])
 
 
 func _retry() -> void:
@@ -276,7 +276,7 @@ func _give_up() -> void:
 	if _ended:
 		return
 	_ended = true
-	MissionState.end_mission("reentry", "Janela de abertura dos paraquedas perdida.")
+	MissionState.end_mission("reentry", str(TranslationServer.translate("Janela de abertura dos paraquedas perdida.")))
 	Game.finish_mission()
 
 
@@ -287,13 +287,13 @@ func _splash() -> void:
 	phase_time = 0.0
 	altitude = 0.0
 	MissionState.splashdown = true
-	MissionState.add_event("splashdown", "Amerissagem", "Paraquedas abertos a %.0f m, %.2f s depois da abertura da janela. Contato com a água no Pacífico." % [result["altitude"], result["time"]])
+	MissionState.add_event("splashdown", "Amerissagem", str(TranslationServer.translate("Paraquedas abertos a %.0f m, %.2f s depois da abertura da janela. Contato com a água no Pacífico.")) % [result["altitude"], result["time"]])
 	Sound.set_motor(0.0)
 	Sound.play_cue("impact")
 	Houston.say("Columbia, Houston. We have splashdown. Welcome home.", "Columbia, aqui é Houston. Amerissagem confirmada. Bem-vindos de volta.")
-	_show_panel("AMERISSAGEM CONFIRMADA",
-		"O Columbia tocou o Oceano Pacífico. Na Apollo 11, isso aconteceu 8 dias, 3 h e 19 min depois do lançamento.\n\nParaquedas principais abertos a %.0f m, %.2f s depois da abertura da janela." % [result["altitude"], result["time"]],
-		[["VER RELATÓRIO", func():
+	_show_panel(str(TranslationServer.translate("AMERISSAGEM CONFIRMADA")),
+		str(TranslationServer.translate("O Columbia tocou o Oceano Pacífico. Na Apollo 11, isso aconteceu 8 dias, 3 h e 19 min depois do lançamento.\n\nParaquedas principais abertos a %.0f m, %.2f s depois da abertura da janela.")) % [result["altitude"], result["time"]],
+		[[str(TranslationServer.translate("VER RELATÓRIO")), func():
 			if _ended:
 				return
 			_ended = true
@@ -302,20 +302,20 @@ func _splash() -> void:
 
 func _update_hud() -> void:
 	_alt_label.text = "ALTITUDE %s m" % _thousands(altitude)
-	var titles := {"separation": "SEPARAÇÃO DO MÓDULO DE SERVIÇO", "entry": "REENTRADA · PLASMA E DESACELERAÇÃO",
-		"drogue": "PARAQUEDAS DE ESTABILIZAÇÃO ABERTOS", "window": "PARAQUEDAS DE ESTABILIZAÇÃO ABERTOS",
-		"mains": "PARAQUEDAS PRINCIPAIS ABERTOS", "splash": "AMERISSAGEM", "failed": "JANELA PERDIDA"}
-	_status.text = "COLUMBIA · MÓDULO DE COMANDO\n" + titles.get(phase, "")
+	var titles := {"separation": str(TranslationServer.translate("SEPARAÇÃO DO MÓDULO DE SERVIÇO")), "entry": str(TranslationServer.translate("REENTRADA · PLASMA E DESACELERAÇÃO")),
+		"drogue": str(TranslationServer.translate("PARAQUEDAS DE ESTABILIZAÇÃO ABERTOS")), "window": str(TranslationServer.translate("PARAQUEDAS DE ESTABILIZAÇÃO ABERTOS")),
+		"mains": str(TranslationServer.translate("PARAQUEDAS PRINCIPAIS ABERTOS")), "splash": str(TranslationServer.translate("AMERISSAGEM")), "failed": str(TranslationServer.translate("JANELA PERDIDA"))}
+	_status.text = str(TranslationServer.translate("COLUMBIA · MÓDULO DE COMANDO\n")) + titles.get(phase, "")
 	_hint.modulate = Game.CREAM
 	if phase == "window":
-		_hint.text = "ESPAÇO · ABRIR PARAQUEDAS"
+		_hint.text = str(TranslationServer.translate("ESPAÇO · ABRIR PARAQUEDAS"))
 		_hint.modulate = Game.WARN
 	elif early_note > 0.0:
 		_hint.text = "Aguarde a altitude de abertura: 3.050 m"
 	elif phase == "drogue":
-		_hint.text = "←/→ ou A/D · Centralize a cápsula · Estabilidade %d%%" % roundi(stabilization * 100.0)
+		_hint.text = str(TranslationServer.translate("←/→ ou A/D · Centralize a cápsula · Estabilidade %d%%")) % roundi(stabilization * 100.0)
 	elif phase in ["separation", "entry"]:
-		_hint.text = "Aperte ESPAÇO quando a cápsula atingir 3.050 m"
+		_hint.text = str(TranslationServer.translate("Aperte ESPAÇO quando a cápsula atingir 3.050 m"))
 	else:
 		_hint.text = ""
 

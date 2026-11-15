@@ -103,12 +103,12 @@ func _build_header(parent: VBoxContainer) -> void:
 	var title := _stack(2)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
-	title.add_child(_label("Planejamento da missão", 38))
-	title.add_child(_label("Monte a carga da nave e confira o plano antes de lançar.", 17, MUTED, true))
+	title.add_child(_label(str(TranslationServer.translate("Planejamento da missão")), 38))
+	title.add_child(_label(str(TranslationServer.translate("Monte a carga da nave e confira o plano antes de lançar.")), 17, MUTED, true))
 	var difficulty := PanelContainer.new()
 	difficulty.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	difficulty.add_theme_stylebox_override("panel", _box(CARD, OUTLINE, 10, 12, 7))
-	difficulty.add_child(_label("Dificuldade  ·  " + str(MissionState.settings()["name"]), 15, MINT))
+	difficulty.add_child(_label(str(TranslationServer.translate("Dificuldade  ·  ")) + str(MissionState.settings()["name"]), 15, MINT))
 	header.add_child(difficulty)
 
 
@@ -118,7 +118,7 @@ func _build_objectives(parent: VBoxContainer) -> void:
 	parent.add_child(panel)
 	var column := _stack(9)
 	panel.add_child(column)
-	column.add_child(_label("Escolha o objetivo científico", 25, AMBER))
+	column.add_child(_label(str(TranslationServer.translate("Escolha o objetivo científico")), 25, AMBER))
 	var choices := GridContainer.new()
 	choices.columns = MissionState.OBJECTIVES.size()
 	choices.add_theme_constant_override("h_separation", 10)
@@ -136,7 +136,7 @@ func _build_objectives(parent: VBoxContainer) -> void:
 		button.custom_minimum_size.y = 100
 		button.toggle_mode = true
 		button.button_group = group
-		button.accessibility_name = objective["title"]
+		button.accessibility_name = tr(objective["title"])
 		button.accessibility_description = instrument
 		button.pressed.connect(_choose_objective.bind(id))
 		choices.add_child(button)
@@ -159,7 +159,7 @@ func _build_objectives(parent: VBoxContainer) -> void:
 		captions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		captions.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(captions)
-		captions.add_child(_label(objective["title"], 19, TEXT, true))
+		captions.add_child(_label(tr(objective["title"]), 19, TEXT, true))
 		captions.add_child(_label(instrument, 15, MUTED, true))
 		var state := _label("○", 17, MUTED)
 		state.custom_minimum_size.x = 18
@@ -184,11 +184,11 @@ func _refresh_objectives() -> void:
 	var has_objective := ms.OBJECTIVES.has(ms.objective)
 	var loaded := has_objective and ms.qty(ms.objective) > 0
 	if not has_objective:
-		_objective_hint.text = "Selecione uma opção para liberar o instrumento correspondente."
+		_objective_hint.text = str(TranslationServer.translate("Selecione uma opção para liberar o instrumento correspondente."))
 	elif loaded:
-		_objective_hint.text = "Instrumento a bordo · " + str(ms.items[ms.objective]["name"])
+		_objective_hint.text = str(TranslationServer.translate("Instrumento a bordo · ")) + str(ms.items[ms.objective]["name"])
 	else:
-		_objective_hint.text = "Próximo passo · Adicione %s à carga na aba Instrumentos." % ms.items[ms.objective]["name"]
+		_objective_hint.text = str(TranslationServer.translate("Próximo passo · Adicione %s à carga na aba Instrumentos.")) % ms.items[ms.objective]["name"]
 	_objective_hint.add_theme_color_override("font_color", MINT if loaded else AMBER)
 
 
@@ -236,7 +236,7 @@ func _select_category(category: String) -> void:
 		var selected: bool = key == category
 		_category_grids[key].visible = selected
 		_tabs[key].set_pressed_no_signal(selected)
-	var hint: String = CATEGORIES[category][1]
+	var hint: String = tr(CATEGORIES[category][1])
 	match category:
 		"supply":
 			hint = hint % MissionState.MISSION_DAYS
@@ -279,7 +279,7 @@ func _item_card(item: Dictionary) -> PanelContainer:
 	actions.add_theme_constant_override("separation", 5)
 	contents.add_child(actions)
 	var details := Button.new()
-	details.text = "Detalhes"
+	details.text = str(TranslationServer.translate("Detalhes"))
 	details.tooltip_text = "Ver detalhes de " + str(item["name"])
 	details.theme_type_variation = &"TextButton"
 	details.pressed.connect(_show_item_info.bind(item))
@@ -294,15 +294,15 @@ func _item_card(item: Dictionary) -> PanelContainer:
 		var toggle := Button.new()
 		toggle.custom_minimum_size.x = 106
 		toggle.pressed.connect(_toggle_item.bind(id))
-		var loaded := _label("Na carga", 14, MINT)
+		var loaded := _label(str(TranslationServer.translate("Na carga")), 14, MINT)
 		loaded.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		actions.add_child(loaded)
 		actions.add_child(toggle)
 		_item_controls[id]["toggle"] = toggle
 		_item_controls[id]["loaded"] = loaded
 	else:
-		var minus := _step_button("−", "Retirar um dia de " + str(item["name"]), id, -1)
-		var plus := _step_button("+", "Adicionar um dia de " + str(item["name"]), id, 1)
+		var minus := _step_button("−", str(TranslationServer.translate("Retirar um dia de ")) + str(item["name"]), id, -1)
+		var plus := _step_button("+", str(TranslationServer.translate("Adicionar um dia de ")) + str(item["name"]), id, 1)
 		var count := _label("", 15)
 		count.custom_minimum_size.x = 62
 		count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -334,7 +334,7 @@ func _equipment_icon(id: String, pixels: int) -> TextureRect:
 func _item_stats(item: Dictionary) -> String:
 	var stats := "1 vaga  ·  %d kg" % int(item["mass"])
 	if item["category"] == "supply":
-		return "1 vaga e %d kg por dia" % int(item["mass"])
+		return str(TranslationServer.translate("1 vaga e %d kg por dia")) % int(item["mass"])
 	if float(item["power"]) > 0.0:
 		stats += "  ·  %d W" % int(item["power"])
 	if int(item["science"]) > 0:
@@ -369,7 +369,7 @@ func _build_summary(parent: HBoxContainer) -> void:
 	parent.add_child(panel)
 	var shell := _stack(11)
 	panel.add_child(shell)
-	shell.add_child(_label("Resumo do plano", 23))
+	shell.add_child(_label(str(TranslationServer.translate("Resumo do plano")), 23))
 	var scroll := _scroll()
 	shell.add_child(scroll)
 	var contents := _stack(9)
@@ -381,20 +381,20 @@ func _build_summary(parent: HBoxContainer) -> void:
 	metrics.add_theme_constant_override("h_separation", 8)
 	metrics.add_theme_constant_override("v_separation", 8)
 	contents.add_child(metrics)
-	_add_meter(metrics, "storage", "Armazenamento")
-	_add_meter(metrics, "mass", "Massa da carga")
-	_add_meter(metrics, "power", "Energia")
-	var science := _stat_tile(metrics, "Ciência prevista")
+	_add_meter(metrics, "storage", str(TranslationServer.translate("Armazenamento")))
+	_add_meter(metrics, "mass", str(TranslationServer.translate("Massa da carga")))
+	_add_meter(metrics, "power", str(TranslationServer.translate("Energia")))
+	var science := _stat_tile(metrics, str(TranslationServer.translate("Ciência prevista")))
 	_science = _label("", 17)
 	science.add_child(_science)
 
 	var supplies := HBoxContainer.new()
 	supplies.add_theme_constant_override("separation", 8)
 	contents.add_child(supplies)
-	var food := _stat_tile(supplies, "Comida")
+	var food := _stat_tile(supplies, str(TranslationServer.translate("Comida")))
 	_food = _label("", 17)
 	food.add_child(_food)
-	var water := _stat_tile(supplies, "Água")
+	var water := _stat_tile(supplies, str(TranslationServer.translate("Água")))
 	_water = _label("", 17)
 	water.add_child(_water)
 
@@ -434,13 +434,13 @@ func _build_footer(parent: VBoxContainer) -> void:
 	row.add_theme_constant_override("separation", 9)
 	panel.add_child(row)
 	var back := Button.new()
-	back.text = "Voltar ao menu"
+	back.text = str(TranslationServer.translate("Voltar ao menu"))
 	back.pressed.connect(func():
 		Sound.play_cue("back", "Interface")
 		Game.go("menu"))
 	row.add_child(back)
 	var help := Button.new()
-	help.text = "Ajuda"
+	help.text = str(TranslationServer.translate("Ajuda"))
 	help.pressed.connect(_show_help)
 	row.add_child(help)
 	_status = _label("", 15, MUTED, true)
@@ -449,7 +449,7 @@ func _build_footer(parent: VBoxContainer) -> void:
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(_status)
 	_launch = Button.new()
-	_launch.text = "Aprovar e lançar  ›"
+	_launch.text = str(TranslationServer.translate("Aprovar e lançar  ›"))
 	_launch.theme_type_variation = &"LaunchButton"
 	_launch.custom_minimum_size = Vector2(190, 42)
 	_launch.pressed.connect(func():
@@ -481,20 +481,20 @@ func _refresh() -> void:
 	_science.add_theme_color_override("font_color", MINT if science > 0 else AMBER)
 	_show_days(_food, ms.qty("food_day"))
 	_show_days(_water, ms.qty("water_day"))
-	_engine.text = "Motor no pouso: %.0f s a 100%%" % ms.plan_landing_fuel()
+	_engine.text = str(TranslationServer.translate("Motor no pouso: %.0f s a 100%%")) % ms.plan_landing_fuel()
 
 	var validation := ms.validate_plan()
 	_update_issues(validation["errors"], validation["warnings"])
 	_launch.disabled = not validation["ok"]
 	_launch.tooltip_text = "\n".join(validation["errors"]) if _launch.disabled else ""
 	var missing: int = validation["errors"].size()
-	_status.text = "Plano pronto para lançar" if missing == 0 else (
+	_status.text = str(TranslationServer.translate("Plano pronto para lançar")) if missing == 0 else (
 		"1 requisito pendente" if missing == 1 else "%d requisitos pendentes" % missing
 	)
 	if ms.objective.is_empty():
-		_status.text = "Escolha o objetivo científico acima"
+		_status.text = str(TranslationServer.translate("Escolha o objetivo científico acima"))
 	elif ms.qty(ms.objective) == 0:
-		_status.text = "Adicione o instrumento do objetivo"
+		_status.text = str(TranslationServer.translate("Adicione o instrumento do objetivo"))
 	_status.add_theme_color_override("font_color", MINT if missing == 0 else AMBER)
 
 
@@ -514,11 +514,11 @@ func _refresh_card(id: String) -> void:
 		toggle.disabled = MissionState.items[id]["category"] == "science" and id != MissionState.objective
 		if not selected and MissionState.plan_items() >= int(MissionState.settings()["storage"]):
 			toggle.disabled = true
-		toggle.text = "Retirar" if selected else "+ Adicionar"
+		toggle.text = str(TranslationServer.translate("Retirar")) if selected else str(TranslationServer.translate("+ Adicionar"))
 		toggle.tooltip_text = ("Retirar " if selected else "Adicionar ") + str(MissionState.items[id]["name"])
 		toggle.theme_type_variation = &"SelectedButton" if selected else &"AddButton"
 	else:
-		controls["count"].text = "%d dia%s" % [quantity, "" if quantity == 1 else "s"]
+		controls["count"].text = str(TranslationServer.translate("%d dia%s")) % [quantity, "" if quantity == 1 else "s"]
 		controls["minus"].disabled = quantity == 0
 		controls["plus"].disabled = quantity >= int(MissionState.items[id]["max"]) or MissionState.plan_items() >= int(MissionState.settings()["storage"])
 
@@ -545,11 +545,11 @@ func _update_issues(errors: Array, warnings: Array) -> void:
 		_issues.remove_child(child)
 		child.queue_free()
 	if not errors.is_empty():
-		_issues.add_child(_label("Para poder lançar", 15, RED))
+		_issues.add_child(_label(str(TranslationServer.translate("Para poder lançar")), 15, RED))
 		for error: String in errors:
 			_issues.add_child(_label("•  " + error, 14, TEXT, true))
 	if not warnings.is_empty():
-		_issues.add_child(_label("Alertas da missão", 15, AMBER))
+		_issues.add_child(_label(str(TranslationServer.translate("Alertas da missão")), 15, AMBER))
 		for warning: String in warnings:
 			_issues.add_child(_label("•  " + warning, 14, MUTED, true))
 
@@ -557,18 +557,18 @@ func _update_issues(errors: Array, warnings: Array) -> void:
 func _show_item_info(item: Dictionary) -> void:
 	var description: String = item["description"]
 	if item["category"] == "assist":
-		description += "\n\nA ferramenta tem %d%% de chance de concluir a tarefa após um erro. Ela é opcional." % int(MissionState.MINIGAME_ASSIST_CHANCE * 100.0)
-	_open_info(item["name"], "%s\n\nOrigem dos números\n%s" % [description, item["source"]])
+		description += str(TranslationServer.translate("\n\nA ferramenta tem %d%% de chance de concluir a tarefa após um erro. Ela é opcional.")) % int(MissionState.MINIGAME_ASSIST_CHANCE * 100.0)
+	_open_info(item["name"], str(TranslationServer.translate("%s\n\nOrigem dos números\n%s")) % [description, item["source"]])
 
 
 func _show_help() -> void:
-	_open_info("Como planejar a missão", (
-		"1. Escolha um objetivo científico e adicione o instrumento correspondente à carga.\n\n"
-		+ "2. Leve ao menos %d cotas de comida e %d de água: uma por dia nos 5 dias jogáveis e mais uma em cada um dos 3 saltos (órbita lunar, operações na Lua e aproximação da Terra). Com 8 exatas, não sobra margem para consumo extra ou perda. Confira também o armazenamento e a massa.\n\n"
-		+ "Cada unidade de cada item ocupa 1 vaga do armazenamento: %d vagas nesta dificuldade. No DIFÍCIL só cabe o essencial.\n\n"
-		+ "3. Se quiser, leve bateria, propelente ou ferramentas para lidar com imprevistos. "
-		+ "Use o resumo para comparar os limites e os alertas antes de lançar.\n\n"
-		+ "A aba Ferramentas mostra a assistência disponível para as tarefas da cabine."
+	_open_info(str(TranslationServer.translate("Como planejar a missão")), (
+		str(TranslationServer.translate("1. Escolha um objetivo científico e adicione o instrumento correspondente à carga.\n\n"))
+		+ str(TranslationServer.translate("2. Leve ao menos %d cotas de comida e %d de água: uma por dia nos 5 dias jogáveis e mais uma em cada um dos 3 saltos (órbita lunar, operações na Lua e aproximação da Terra). Com 8 exatas, não sobra margem para consumo extra ou perda. Confira também o armazenamento e a massa.\n\n"))
+		+ str(TranslationServer.translate("Cada unidade de cada item ocupa 1 vaga do armazenamento: %d vagas nesta dificuldade. No DIFÍCIL só cabe o essencial.\n\n"))
+		+ str(TranslationServer.translate("3. Se quiser, leve bateria, propelente ou ferramentas para lidar com imprevistos. "))
+		+ str(TranslationServer.translate("Use o resumo para comparar os limites e os alertas antes de lançar.\n\n"))
+		+ str(TranslationServer.translate("A aba Ferramentas mostra a assistência disponível para as tarefas da cabine."))
 	) % [MissionState.MISSION_DAYS, MissionState.MISSION_DAYS, int(MissionState.settings()["storage"])])
 
 

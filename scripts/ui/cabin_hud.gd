@@ -142,8 +142,8 @@ func _ready() -> void:
 	var pbox := VBoxContainer.new()
 	pbox.add_theme_constant_override("separation", 10)
 	_pause.add_child(pbox)
-	pbox.add_child(Game.make_label("PAUSA", 26, Game.AMBER))
-	for entry in [["CONTINUAR", toggle_pause], ["MENU PRINCIPAL", func(): Game.go("menu")], ["SAIR DO JOGO", func(): get_tree().quit()]]:
+	pbox.add_child(Game.make_label(str(TranslationServer.translate("PAUSA")), 26, Game.AMBER))
+	for entry in [[str(TranslationServer.translate("CONTINUAR")), toggle_pause], [str(TranslationServer.translate("MENU PRINCIPAL")), func(): Game.go("menu")], [str(TranslationServer.translate("SAIR DO JOGO")), func(): get_tree().quit()]]:
 		var b := Button.new()
 		b.text = entry[0]
 		b.custom_minimum_size = Vector2(0, 42)
@@ -177,7 +177,7 @@ func _ready() -> void:
 	cbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cbox.add_theme_constant_override("separation", 6)
 	_critical.add_child(cbox)
-	_critical_title = Game.make_label("⚠ ESTADO CRÍTICO ⚠", 30, Game.BAD)
+	_critical_title = Game.make_label(str(TranslationServer.translate("⚠ ESTADO CRÍTICO ⚠")), 30, Game.BAD)
 	_critical_text = Game.make_label("", 19, Game.CREAM)
 	_critical_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_critical_text.custom_minimum_size = Vector2(620, 0)
@@ -234,11 +234,11 @@ func _update_critical(delta: float) -> void:
 	for kind: String in ms.need_critical:
 		left = minf(left, ms.critical_left(kind))
 	if ms.need_critical.size() == 2:
-		_critical_text.text = "Você dormiu sem se alimentar.\nComa e beba água em %d SEGUNDOS ou a missão termina em GAME OVER.\nVá até a estação de comida e de água." % int(ms.critical_seconds())
+		_critical_text.text = str(TranslationServer.translate("Você dormiu sem se alimentar.\nComa e beba água em %d SEGUNDOS ou a missão termina em GAME OVER.\nVá até a estação de comida e de água.")) % int(ms.critical_seconds())
 	elif ms.need_critical.has("water"):
-		_critical_text.text = "Agora beba água em %d s ou a missão termina em GAME OVER.\nVá até a estação de água." % int(ceilf(left))
+		_critical_text.text = str(TranslationServer.translate("Agora beba água em %d s ou a missão termina em GAME OVER.\nVá até a estação de água.")) % int(ceilf(left))
 	else:
-		_critical_text.text = "Agora coma em %d s ou a missão termina em GAME OVER.\nVá até a estação de comida." % int(ceilf(left))
+		_critical_text.text = str(TranslationServer.translate("Agora coma em %d s ou a missão termina em GAME OVER.\nVá até a estação de comida.")) % int(ceilf(left))
 	_critical_time.text = "%d s" % int(ceilf(left))
 	_critical_clock += delta
 	var speed := 9.0 if left <= 5.0 else 4.0
@@ -265,14 +265,14 @@ func set_tutorial(text: String) -> void:
 func refresh_status() -> void:
 	var ms := MissionState
 	_needs.queue_redraw()
-	var lines := "[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
-	lines += _line("COMIDA", "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
-	lines += _line("ÁGUA", "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
+	var lines := str(TranslationServer.translate("[color=#f5bd5c]DIA %d/%d · %s[/color]\n")) % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
+	lines += _line(str(TranslationServer.translate("COMIDA")), "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
+	lines += _line(str(TranslationServer.translate("ÁGUA")), "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
 	var use := ms.power_use()
-	lines += _line("ENERGIA", "%.0f/%.0f W" % [use, ms.power_capacity], use > ms.power_capacity, use > ms.power_capacity * 0.8)
+	lines += _line(str(TranslationServer.translate("ENERGIA")), "%.0f/%.0f W" % [use, ms.power_capacity], use > ms.power_capacity, use > ms.power_capacity * 0.8)
 	lines += _line("PROPEL. CSM", "%.0f%%" % ms.sps_fuel, ms.sps_fuel < 45, ms.sps_fuel < 70)
-	lines += _line("SUPORTE VIDA", "%.0f%%" % ms.life_support, ms.life_support < 50, ms.life_support < 85)
-	lines += _line("INTEGRIDADE", "%.0f%%" % ms.integrity, ms.integrity < 60, ms.integrity < 90)
+	lines += _line(str(TranslationServer.translate("SUPORTE VIDA")), "%.0f%%" % ms.life_support, ms.life_support < 50, ms.life_support < 85)
+	lines += _line(str(TranslationServer.translate("INTEGRIDADE")), "%.0f%%" % ms.integrity, ms.integrity < 60, ms.integrity < 90)
 	_status.text = lines
 
 
@@ -304,8 +304,8 @@ func _draw_needs() -> void:
 		var pulse := 0.5 + 0.5 * sin(_needs_clock * (3.0 if critical else 5.0))
 		var alert := Game.BAD.lerp(Game.CREAM, pulse * 0.4)
 		_draw_need_icon(kind, Vector2(8, y + 9), alert if low else color)
-		_needs.draw_string(font, Vector2(20, y + 15), NEED_LABELS[kind], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, alert if low else color)
-		var bar := Rect2(66, y + 3, 128, 14)
+		_needs.draw_string(font, Vector2(20, y + 15), tr(NEED_LABELS[kind]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, alert if low else color)
+		var bar := Rect2(77, y + 3, 117, 14)
 		_needs.draw_rect(bar, Color(0.08, 0.08, 0.09))
 		var fill := clampf(_needs_shown[kind] / ms.NEED_MAX, 0.0, 1.0)
 		var bar_color := color.lerp(Color.WHITE, _needs_flash[kind] * 0.6)
@@ -335,17 +335,17 @@ func _draw_need_icon(kind: String, center: Vector2, color: Color) -> void:
 
 func _line(name: String, value: String, bad: bool, warn: bool) -> String:
 	var color := "#ff5f50" if bad else ("#ffcc44" if warn else "#77ee77")
-	return "%s [color=%s]%s[/color]\n" % [name.rpad(13), color, value]
+	return "%s [color=%s]%s[/color]\n" % [str(tr(name)).rpad(13), color, value]
 
 
 func show_checklist(tasks: Array) -> void:
-	var text := "[color=#f5bd5c]CHECKLIST · DIA %d[/color]\n" % MissionState.day
+	var text := str(TranslationServer.translate("[color=#f5bd5c]CHECKLIST · DIA %d[/color]\n")) % MissionState.day
 	for task in tasks:
 		var done: bool = task["done"]
 		var mark := "[color=#77ee77][x][/color]" if done else "[ ]"
 		var optional := " (opcional)" if task.get("optional", false) else ""
-		text += "%s [b]%s[/b] — %s%s\n" % [mark, task["station"], task["text"], optional]
-	text += "\n[color=#999]TAB fecha · F inicia tarefas na estação[/color]"
+		text += "%s [b]%s[/b] — %s%s\n" % [mark, tr(task["station"]), tr(task["text"]), optional]
+	text += str(TranslationServer.translate("\n[color=#999]TAB fecha · F inicia tarefas na estação[/color]"))
 	_checklist_text.text = text
 
 
@@ -368,7 +368,7 @@ func show_modal(title: String, body: String, buttons: Array, callback: Callable 
 	_modal_callback = callback
 	for i in buttons.size():
 		var b := Button.new()
-		b.text = "%d. %s" % [i + 1, buttons[i]] if buttons.size() > 1 else buttons[i]
+		b.text = "%d. %s" % [i + 1, tr(buttons[i])] if buttons.size() > 1 else buttons[i]
 		b.custom_minimum_size = Vector2(0, 42)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.pressed.connect(_on_modal_button.bind(i))
@@ -429,7 +429,7 @@ func show_night(next_day: int, camera: Camera3D, on_next_day: Callable, on_finis
 	_night.color = Color(0.0, 0.0, 0.0, 0.0)
 	_night.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_night)
-	var title := Game.make_label("Dia %d · Volta à Terra" % next_day if next_day >= 4 else "Dia %d" % next_day, 36, Game.CREAM)
+	var title := Game.make_label(str(TranslationServer.translate("Dia %d · Volta à Terra")) % next_day if next_day >= 4 else str(TranslationServer.translate("Dia %d")) % next_day, 36, Game.CREAM)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

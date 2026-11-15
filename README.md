@@ -10,11 +10,13 @@ Fontes científicas e simplificações: [docs/nasa_sources.md](docs/nasa_sources
 
 ## Objetivo científico
 
-Escolha no planejamento entre coleta de amostras, medição da distância Terra–Lua e fotografia estéreo do regolito. Acrescente à carga o instrumento correspondente. Após o pouso, prepare o instrumento com a opção adequada e confirme a atividade antes de iniciar a partida. O relatório apresenta o resultado científico e a situação da tripulação.
+Escolha no planejamento entre coleta de amostras, medição da distância Terra–Lua e fotografia estéreo do regolito. Acrescente à carga o instrumento correspondente. Após um pouso seguro, caminhe pela Lua, use o instrumento no local sinalizado e volte ao módulo depois de fincar a bandeira. O relatório apresenta o resultado científico e a situação da tripulação.
 
 No Dia 2, a ordem do alerta de energia e da ocorrência sorteada pode variar. O checklist mostra o comando que deve ser executado primeiro. Em **LIFE SUPPORT**, abra o compartimento, retire o cartucho usado, alinhe o novo com o controle deslizante e confirme o encaixe.
 
-## Áudio
+## Idioma e áudio
+
+O jogo inicia em inglês. Em **Settings → Language**, escolha **Brazilian Portuguese** para jogar com interface e legendas em português brasileiro. A escolha é salva.
 
 Ajuste o volume em **Configurações** no menu. A trilha, os eventos sonoros e a integração com os minigames estão em [docs/audio.md](docs/audio.md).
 

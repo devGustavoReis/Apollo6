@@ -33,7 +33,7 @@ func _ready():
 	while terra.distance_to(mira) < 140:
 		terra = Vector2(area.position.x + 40 + randf() * 300, area.position.y + 40 + randf() * 300)
 	rumo = Vector2(1, 0).rotated(randf() * TAU)
-	var titulo = Game.make_label("RÁDIO · RECUPERAR O SINAL DA ANTENA", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("RÁDIO · RECUPERAR O SINAL DA ANTENA")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
 	contador = Game.make_label("", 20, Color.WHITE)
@@ -42,7 +42,7 @@ func _ready():
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("A antena de alto ganho só funciona apontada para a Terra.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("A antena de alto ganho só funciona apontada para a Terra.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	medir()
@@ -146,16 +146,16 @@ func atualizar_textos():
 	if tempo < 10:
 		contador.modulate = Game.WARN
 	if acabou and acertou:
-		aviso.text = "Sinal travado. Houston na escuta. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Sinal travado. Houston na escuta. Voltando à cabine..."))
 		aviso.modulate = Game.GOOD
 	elif acabou:
-		aviso.text = "O tempo acabou sem contato. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("O tempo acabou sem contato. Voltando à cabine..."))
 		aviso.modulate = Game.BAD
 	elif trava > 0:
-		aviso.text = "Sinal forte! Segure a antena nesta posição até travar."
+		aviso.text = str(TranslationServer.translate("Sinal forte! Segure a antena nesta posição até travar."))
 		aviso.modulate = Game.GOOD
 	else:
-		aviso.text = "Mova a antena com WASD ou SETAS (ou segure o clique no visor). Procure o sinal mais forte."
+		aviso.text = str(TranslationServer.translate("Mova a antena com WASD ou SETAS (ou segure o clique no visor). Procure o sinal mais forte."))
 		aviso.modulate = Game.CREAM
 
 
@@ -186,7 +186,7 @@ func _draw():
 	var yaw = (mira.x - area.position.x) / 380.0 * 360.0
 	var pitch = 90.0 - (mira.y - area.position.y) / 380.0 * 180.0
 	draw_string(fonte, Vector2(60, 488), "PITCH %d°   YAW %d°" % [pitch, yaw], HORIZONTAL_ALIGNMENT_CENTER, 380, 14, Game.CREAM)
-	draw_string(fonte, Vector2(500, 110), "INTENSIDADE DO SINAL", HORIZONTAL_ALIGNMENT_LEFT, 300, 16, Game.AMBER)
+	draw_string(fonte, Vector2(500, 110), str(TranslationServer.translate("INTENSIDADE DO SINAL")), HORIZONTAL_ALIGNMENT_LEFT, 300, 16, Game.AMBER)
 	for i in range(10):
 		var cor = Color(0.18, 0.19, 0.19)
 		if sinal * 10 > i:
@@ -197,13 +197,13 @@ func _draw():
 				cor = Game.GOOD
 		draw_rect(Rect2(500 + i * 30, 300 - 14 - i * 16, 22, 14 + i * 16), cor)
 	draw_string(fonte, Vector2(820, 300), "%d%%" % (sinal * 100), HORIZONTAL_ALIGNMENT_LEFT, 120, 30, Game.CREAM)
-	var seta = "▼ CAINDO"
+	var seta = str(TranslationServer.translate("▼ CAINDO"))
 	var cor_seta = Game.BAD
 	if subindo:
-		seta = "▲ SUBINDO"
+		seta = str(TranslationServer.translate("▲ SUBINDO"))
 		cor_seta = Game.GOOD
 	draw_string(fonte, Vector2(820, 250), seta, HORIZONTAL_ALIGNMENT_LEFT, 130, 14, cor_seta)
-	draw_string(fonte, Vector2(500, 350), "TRAVA DO SINAL", HORIZONTAL_ALIGNMENT_LEFT, 300, 16, Game.AMBER)
+	draw_string(fonte, Vector2(500, 350), str(TranslationServer.translate("TRAVA DO SINAL")), HORIZONTAL_ALIGNMENT_LEFT, 300, 16, Game.AMBER)
 	draw_rect(Rect2(500, 362, 400, 26), Color(0.07, 0.08, 0.08))
 	draw_rect(Rect2(500, 362, 400 * min(trava / 2.0, 1.0), 26), Game.GOOD)
 	draw_rect(Rect2(500, 362, 400, 26), Game.AMBER, false, 2)

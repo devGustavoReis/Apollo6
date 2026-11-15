@@ -7,7 +7,7 @@ Menu (dificuldade) → Planejamento (armazenamento, massa, energia)
 → Cutscenes de lançamento → TLI + separação do CSM [checkpoint "separation"]
 → Cutscene de acoplamento → Cabine Dias 1–3 (ida): tarefas, decisões e 1 evento aleatório
 → Inserção em órbita lunar → Escotilha do LM → Transição A (cobra 1/1) [checkpoint "landing"]
-→ Pouso lunar (falha = repete só o pouso) → Transição B (cobra 1/1 e confere a reserva 3/3)
+→ Pouso lunar (falha = repete só o pouso) → Superfície lunar → Transição B (cobra 1/1 e confere a reserva 3/3)
 → Cartela do Dia 4 → Cabine Dias 4–5 (volta): correção de trajetória, M04 e M03
 → Console do Dia 5 → Transição C (cobra 1/1) [checkpoint "reentry"]
 → Reentrada com janela dos paraquedas (falha = repete só a reentrada) → Relatório final
@@ -251,3 +251,18 @@ reais do menu ao relatório, inclusive voltar da transição A, falha e repetiç
 - Vídeos `.ogv`, trilha musical, vozes e efeitos sonoros (os barramentos já existem).
 - Música de exploração e redução de volume durante as falas.
 - O renderizador ainda é Forward Plus. O documento de design sugere testar o Compatibility.
+
+## Atividade na superfície lunar
+
+Após confirmar o pouso, ande com WASD, mire com o mouse e interaja com E no ponto sinalizado.
+A missão ativa apenas a atividade do instrumento selecionado. A amostra é guardada na
+maleta, o retrorrefletor permanece no solo e recebe um pulso verde da direção da Terra,
+ou a câmera registra o terreno com um único som de obturador. Em seguida, a bandeira
+é fincada, com o tecido imóvel. Enter conclui a sequência animada na pose final.
+Volte à escada do módulo para abrir a transição B. A ciência e a bandeira são gravadas
+como marcos separados no checkpoint da superfície.
+
+O Blender editável e o gerador estão em `assets/source/lunar_surface/`. O gerador exporta
+o terreno e as luvas em `assets/models/lunar_surface/`. Use
+`blender --background --python assets/source/lunar_surface/build_lunar_surface.py`
+para regenerar os GLBs.

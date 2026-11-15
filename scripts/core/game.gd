@@ -1,6 +1,8 @@
 extends Node
 ## Fluxo entre etapas, controles e tema visual (autoload "Game").
 
+const LOCALE_CATALOG := preload("res://scripts/core/locale_catalog.gd")
+
 const SCENES := {
 	"menu": "res://scenes/menu/main_menu.tscn",
 	"planning": "res://scenes/planning/planning.tscn",
@@ -8,6 +10,7 @@ const SCENES := {
 	"separation": "res://scenes/minigames/separation.tscn",
 	"cabin": "res://scenes/spacecraft/cabin_game.tscn",
 	"landing": "res://scenes/lunar_module/landing.tscn",
+	"lunar_surface": "res://scenes/lunar_module/lunar_surface.tscn",
 	"transition": "res://scenes/transition/transition.tscn",
 	"reentry": "res://scenes/reentry/reentry.tscn",
 	"report": "res://scenes/report/report.tscn",
@@ -52,6 +55,8 @@ var transition_id := ""
 var cutscene_entries: Array = []
 var cutscene_next := "menu"
 var cutscene_id := ""
+const LOCALE_FILE := "user://language.cfg"
+var language := "en"
 var ui_theme: Theme
 ## Tremor de tela nas manobras. Pode ser desligado em CONFIGURAÇÕES e vale para a sessão.
 var screen_shake := true
@@ -59,6 +64,12 @@ var screen_shake := true
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	LOCALE_CATALOG.register()
+	var preferences := ConfigFile.new()
+	if preferences.load(LOCALE_FILE) == OK and preferences.get_value("display", "locale", "en") == "pt_BR":
+		language = "pt_BR"
+	TranslationServer.set_locale(language)
+	MissionState.refresh_catalog_language()
 	_setup_inputs()
 	ui_theme = _build_theme()
 	get_tree().root.theme = ui_theme
@@ -69,6 +80,15 @@ func _ready() -> void:
 func _on_node_added(node: Node) -> void:
 	if node is Control and node.theme == null and not (node.get_parent() is Control):
 		node.theme = ui_theme
+
+
+func set_language(locale: String) -> void:
+	language = "pt_BR" if locale == "pt_BR" else "en"
+	TranslationServer.set_locale(language)
+	MissionState.refresh_catalog_language()
+	var preferences := ConfigFile.new()
+	preferences.set_value("display", "locale", language)
+	preferences.save(LOCALE_FILE)
 
 
 func go(scene_key: String) -> void:
@@ -148,7 +168,7 @@ func confirm_jump(id: String) -> Dictionary:
 	if id == "B" and not ms.tasks_done.has("tei"):
 		ms.tasks_done["tei"] = true
 		ms.sps_fuel = maxf(ms.sps_fuel - 20.0, 0.0)
-		ms.add_event("tei", "Queima de partida rumo à Terra", "O motor do módulo de serviço gastou 20%% do propelente. Restam %.0f%%." % ms.sps_fuel)
+		ms.add_event("tei", str(TranslationServer.translate("Queima de partida rumo à Terra")), str(TranslationServer.translate("O motor do módulo de serviço gastou 20%% do propelente. Restam %.0f%%.")) % ms.sps_fuel)
 	if id == "B":
 		var reserve := ms.check_departure()
 		if not reserve["ok"]:
@@ -174,7 +194,8 @@ func landing_failed() -> void:
 func landing_success() -> void:
 	MissionState.stage = "lunar_ops"
 	transition_id = "B"
-	play_cutscene("landing_success", "transition")
+	MissionState.save_checkpoint("lunar_surface")
+	play_cutscene("landing_success", "lunar_surface")
 
 
 func begin_return() -> void:

@@ -51,6 +51,9 @@ func fly(sep: Node, steering: bool) -> void:
 
 
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	ms = root.get_node("MissionState")
 	decisions = load("res://scripts/mission/mission_decisions.gd")
 	await guided_burn_is_flyable()

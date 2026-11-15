@@ -507,7 +507,7 @@ func _build_map(mask: ImageTexture) -> void:
 	orbit_ring.mesh = orbit
 	orbit_ring.material_override = _mat(Color(0.5, 0.6, 0.7), true)
 	_map.add_child(orbit_ring)
-	for entry in [["TERRA", Vector3(0, 4.2, 0)], ["LUA · DESTINO", MAP_MOON + Vector3(0, 2.6, 0)]]:
+	for entry in [[str(TranslationServer.translate("TERRA")), Vector3(0, 4.2, 0)], [str(TranslationServer.translate("LUA · DESTINO")), MAP_MOON + Vector3(0, 2.6, 0)]]:
 		var label := Label3D.new()
 		label.text = entry[0]
 		label.position = entry[1]

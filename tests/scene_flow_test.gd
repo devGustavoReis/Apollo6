@@ -52,6 +52,9 @@ func consume_day(ms: Node) -> void:
 
 
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	var game := root.get_node("Game")
 	var ms := root.get_node("MissionState")
 	change_scene_to_file(game.SCENES["menu"])
@@ -124,14 +127,25 @@ func run() -> void:
 		landing.step(1.0 / 60.0, 0.0, Vector2.ZERO)
 	check(landing.state == "landed", "Pouso suave aceito")
 	await skip_cutscene()
+	var surface: Node = await wait_scene("LunarSurface")
+	while not surface._initialized:
+		await physics_frame
+	check(ms.landing_result.get("success", false) and not ms.science_completed, "Pouso seguro abre a superfície e aguarda a atividade")
+	surface.player.position = surface.site + Vector3(0, 0.03, 1.4)
+	await physics_frame
+	surface.camera.look_at(surface.focus)
+	check(surface._can_interact(), "O retrorrefletor pode ser instalado ao chegar à área")
+	surface._interact()
+	surface._action_tween.custom_step(5.0)
+	check(ms.science_completed and surface.stage == surface.Stage.FLAG, "A atividade no terreno registra a evidência e inicia a bandeira")
+	surface._finish_flag()
+	surface.player.position = surface.board_position + Vector3(0, 0.03, 1.4)
+	await physics_frame
+	surface.camera.look_at(surface.board_position + Vector3.UP * 0.9)
+	check(surface._can_interact(), "O astronauta pode reembarcar após fincar a bandeira")
+	surface._interact()
 	transition = await wait_scene("Transition")
-	check(transition.id == "B" and ms.landing_result.get("success", false), "Pouso seguro leva à transição B, não ao relatório")
-	check(transition._title.text.contains("Atividade científica"), "Atividade científica oferecida após pouso")
-	await press_first(transition)
-	check(not ms.science_completed, "Preparar instrumento ainda não concede ciência")
-	await press_first(transition)
-	check(ms.science_completed, "Ciência registrada pela ação do jogador")
-	await press_first(transition)
+	check(transition.id == "B", "O embarque na Lua leva à transição B")
 	check(transition._body.text.contains("21 h e 36 min") and transition._body.text.contains("3 de cada"), "Transição B resume a Lua e a reserva de 3")
 	await press_first(transition)
 	check(transition._title.text == "Dia 4 · Volta à Terra" and ms.day == 3, "Cartela do Dia 4 aparece antes de abrir o dia")

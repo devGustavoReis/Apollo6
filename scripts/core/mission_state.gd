@@ -83,6 +83,7 @@ signal critical_wake_started
 
 var objective := ""
 var science_completed := false
+var lunar_flag_planted := false
 var nourishment := NEED_MAX
 var hydration := NEED_MAX
 ## Queda crítica em andamento, por necessidade: {"start": valor inicial, "elapsed": segundos}.
@@ -97,7 +98,7 @@ var next_supply_token := 1
 
 ## Campos salvos nos checkpoints. Contadores de tentativas ficam de fora de propósito.
 const SAVED_FIELDS := [
-	"supply_tokens", "next_supply_token", "decision_seed", "objective", "science_completed", "nourishment", "hydration", "slept_days",
+	"supply_tokens", "next_supply_token", "decision_seed", "objective", "science_completed", "lunar_flag_planted", "landing_result", "nourishment", "hydration", "slept_days",
 	"need_critical", "need_warned", "critical_wake_pending",
 	"difficulty", "cargo", "food_days", "water_days", "food_eaten", "water_drunk",
 	"power_capacity", "instruments_active", "spare_parts", "battery_used",
@@ -177,16 +178,23 @@ func _ready() -> void:
 	reset("normal")
 
 
+func refresh_catalog_language() -> void:
+	_load_catalog()
+
+
 func _load_catalog() -> void:
 	var file := FileAccess.open(EQUIPMENT_PATH, FileAccess.READ)
 	if file == null:
-		push_error("Catálogo de equipamentos não encontrado: " + EQUIPMENT_PATH)
+		push_error(str(TranslationServer.translate("Catálogo de equipamentos não encontrado: ")) + EQUIPMENT_PATH)
 		return
 	var data: Variant = JSON.parse_string(file.get_as_text())
 	catalog = data["items"]
 	items.clear()
 	_minigame_tools.clear()
 	for item in catalog:
+		for field in ["name", "description", "source"]:
+			if item.has(field):
+				item[field] = tr(item[field])
 		items[item["id"]] = item
 		for task_id: String in item.get("minigames", []):
 			_minigame_tools[task_id] = item["id"]
@@ -197,6 +205,7 @@ func reset(new_difficulty: String) -> void:
 	cargo = {"food_day": MISSION_DAYS, "water_day": MISSION_DAYS}
 	objective = ""
 	science_completed = false
+	lunar_flag_planted = false
 	nourishment = NEED_MAX
 	hydration = NEED_MAX
 	need_critical = {}
@@ -271,7 +280,10 @@ func day_two_decision_order() -> Array[String]:
 
 
 func settings() -> Dictionary:
-	return DIFFICULTIES[difficulty]
+	var values: Dictionary = DIFFICULTIES[difficulty].duplicate()
+	values["name"] = tr(values["name"])
+	values["summary"] = tr(values["summary"])
+	return values
 
 
 # ---------- Planejamento ----------
@@ -344,28 +356,28 @@ func validate_plan() -> Dictionary:
 	if plan_items() > int(s["storage"]):
 		errors.append("Armazenamento excedido em %d itens." % (plan_items() - int(s["storage"])))
 	if plan_mass() > s["mass_limit"] + 0.001:
-		errors.append("Massa acima do limite do foguete em %.0f kg." % (plan_mass() - s["mass_limit"]))
+		errors.append(str(TranslationServer.translate("Massa acima do limite do foguete em %.0f kg.")) % (plan_mass() - s["mass_limit"]))
 	if qty("food_day") < MISSION_DAYS:
-		errors.append("Comida insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos)." % [qty("food_day"), MISSION_DAYS])
+		errors.append(str(TranslationServer.translate("Comida insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos).")) % [qty("food_day"), MISSION_DAYS])
 	if qty("water_day") < MISSION_DAYS:
-		errors.append("Água insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos)." % [qty("water_day"), MISSION_DAYS])
+		errors.append(str(TranslationServer.translate("Água insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos).")) % [qty("water_day"), MISSION_DAYS])
 	if not OBJECTIVES.has(objective):
-		errors.append("Escolha o objetivo científico antes de lançar.")
+		errors.append(str(TranslationServer.translate("Escolha o objetivo científico antes de lançar.")))
 	elif qty(objective) != 1:
-		errors.append("Inclua o instrumento do objetivo escolhido.")
+		errors.append(str(TranslationServer.translate("Inclua o instrumento do objetivo escolhido.")))
 	for id in cargo:
 		if not items.has(id) or (items[id]["category"] == "science" and id != objective and qty(id) > 0):
-			errors.append("Carga incompatível. Revise o planejamento.")
+			errors.append(str(TranslationServer.translate("Carga incompatível. Revise o planejamento.")))
 	if plan_science() <= 0:
-		errors.append("Leve ao menos um instrumento científico: é o objetivo da missão.")
+		errors.append(str(TranslationServer.translate("Leve ao menos um instrumento científico: é o objetivo da missão.")))
 	if qty("food_day") == MISSION_DAYS:
-		warnings.append("Comida exata: margem zero para consumo extra ou perda.")
+		warnings.append(str(TranslationServer.translate("Comida exata: margem zero para consumo extra ou perda.")))
 	if qty("water_day") == MISSION_DAYS:
-		warnings.append("Água exata: margem zero. Um vazamento impediria a volta.")
+		warnings.append(str(TranslationServer.translate("Água exata: margem zero. Um vazamento impediria a volta.")))
 	if plan_power() > plan_power_capacity():
-		errors.append("Instrumentos consomem %.0f W, acima dos %.0f W disponíveis." % [plan_power(), plan_power_capacity()])
+		errors.append(str(TranslationServer.translate("Instrumentos consomem %.0f W, acima dos %.0f W disponíveis.")) % [plan_power(), plan_power_capacity()])
 	if qty("propellant_reserve") == 0:
-		warnings.append("Sem reserva de propelente do LM: o pouso terá menos margem.")
+		warnings.append(str(TranslationServer.translate("Sem reserva de propelente do LM: o pouso terá menos margem.")))
 	return {"ok": errors.is_empty(), "errors": errors, "warnings": warnings}
 
 
@@ -401,13 +413,13 @@ func cabin_minigame_report() -> Dictionary:
 	var total := 0
 	for id: String in CABIN_MINIGAMES:
 		var result: Dictionary = minigame_completions.get(id, {})
-		var status := "Pendente"
+		var status := str(TranslationServer.translate("Pendente"))
 		var points := 0
 		if not result.is_empty():
 			points = CABIN_MINIGAME_POINTS
-			status = "Concluída"
+			status = str(TranslationServer.translate("Concluída"))
 			if result["assisted"]:
-				status = "Concluída com ajuda — %s" % items[result["tool_id"]]["name"]
+				status = str(TranslationServer.translate("Concluída com ajuda — %s")) % items[result["tool_id"]]["name"]
 		rows.append({"title": CABIN_MINIGAMES[id]["title"], "status": status, "points": points})
 		total += points
 	return {"rows": rows, "points": total, "possible": rows.size() * CABIN_MINIGAME_POINTS}
@@ -417,7 +429,7 @@ func cabin_minigame_report() -> Dictionary:
 ## a cada repetição legítima. O mesmo ID sempre devolve o resultado já resolvido.
 func resolve_minigame_attempt(task_id: String, attempt_id: int, played_well: bool) -> Dictionary:
 	if not _minigame_tools.has(task_id) or attempt_id < 1:
-		push_error("Tentativa de minigame inválida: %s, tentativa %d." % [task_id, attempt_id])
+		push_error(str(TranslationServer.translate("Tentativa de minigame inválida: %s, tentativa %d.")) % [task_id, attempt_id])
 		return {}
 
 	var attempts: Dictionary = minigame_attempts.get(task_id, {})
@@ -433,16 +445,16 @@ func resolve_minigame_attempt(task_id: String, attempt_id: int, played_well: boo
 	var assisted := has_tool and randf() < MINIGAME_ASSIST_CHANCE
 	var completed := played_well or assisted
 	var tool_name: String = items[tool_id]["name"]
-	var title := "Tarefa concluída"
-	var message := "Você concluiu a tarefa no minigame."
+	var title := str(TranslationServer.translate("Tarefa concluída"))
+	var message := str(TranslationServer.translate("Você concluiu a tarefa no minigame."))
 	if assisted:
-		title = "Tarefa concluída com ajuda"
-		message = "Você errou o minigame. A tarefa foi concluída graças a: %s." % tool_name
+		title = str(TranslationServer.translate("Tarefa concluída com ajuda"))
+		message = str(TranslationServer.translate("Você errou o minigame. A tarefa foi concluída graças a: %s.")) % tool_name
 	elif not played_well:
 		title = "Tarefa pendente"
-		message = "Você errou o minigame. Tente novamente."
+		message = str(TranslationServer.translate("Você errou o minigame. Tente novamente."))
 		if has_tool:
-			message = "Você errou o minigame. A ferramenta %s não recuperou esta tentativa. Tente novamente." % tool_name
+			message = str(TranslationServer.translate("Você errou o minigame. A ferramenta %s não recuperou esta tentativa. Tente novamente.")) % tool_name
 
 	var result := {
 		"completed": completed, "played_well": played_well, "assisted": assisted,
@@ -483,7 +495,7 @@ func sample() -> float:
 
 
 func phase_title() -> String:
-	return PHASE_TITLES.get(phase, "")
+	return tr(PHASE_TITLES.get(phase, ""))
 
 
 func stock(kind: String) -> float:
@@ -509,8 +521,8 @@ func amount_text(value: float) -> String:
 
 func kind_name(kind: String, value: float) -> String:
 	if kind == "food":
-		return "comida" if absf(value - 1.0) < 0.01 else "comidas"
-	return "água" if absf(value - 1.0) < 0.01 else "águas"
+		return str(TranslationServer.translate("comida")) if absf(value - 1.0) < 0.01 else str(TranslationServer.translate("comidas"))
+	return str(TranslationServer.translate("água")) if absf(value - 1.0) < 0.01 else str(TranslationServer.translate("águas"))
 
 
 func intake_on(day_number: int, kind: String) -> int:
@@ -602,12 +614,12 @@ func pay_jump(id: String) -> Dictionary:
 func jump_text(id: String) -> String:
 	var j: Dictionary = jumps[id]
 	if j["ok"]:
-		return "1 comida e 1 água cobradas. Saldo: %s comida · %s água." % [amount_text(j["food_after"]), amount_text(j["water_after"])]
+		return str(TranslationServer.translate("1 comida e 1 água cobradas. Saldo: %s comida · %s água.")) % [amount_text(j["food_after"]), amount_text(j["water_after"])]
 	var parts := []
 	for kind: String in j["deficits"]:
 		var missing: float = j["deficits"][kind]
-		parts.append("%s cota de %s" % [amount_text(missing), "comida" if kind == "food" else "água"])
-	return "Faltou %s para avançar." % " e ".join(PackedStringArray(parts))
+		parts.append("%s cota de %s" % [amount_text(missing), str(TranslationServer.translate("comida")) if kind == "food" else str(TranslationServer.translate("água"))])
+	return str(TranslationServer.translate("Faltou %s para avançar.")) % " e ".join(PackedStringArray(parts))
 
 
 func check_departure() -> Dictionary:
@@ -651,13 +663,13 @@ func day_issues() -> Array:
 			continue
 		var s: Dictionary = sealed[key]
 		for kind: String in s["missing"]:
-			var noun := "comida" if kind == "food" else "água"
+			var noun := str(TranslationServer.translate("comida")) if kind == "food" else str(TranslationServer.translate("água"))
 			if kind in s["no_stock"]:
-				issues.append("Dia %d · Faltou %s para o consumo diário." % [d, noun])
+				issues.append(str(TranslationServer.translate("Dia %d · Faltou %s para o consumo diário.")) % [d, noun])
 			elif kind == "food":
-				issues.append("Dia %d · Nenhuma ração foi consumida, apesar de haver estoque." % d)
+				issues.append(str(TranslationServer.translate("Dia %d · Nenhuma ração foi consumida, apesar de haver estoque.")) % d)
 			else:
-				issues.append("Dia %d · Nenhuma água foi consumida, apesar de haver estoque." % d)
+				issues.append(str(TranslationServer.translate("Dia %d · Nenhuma água foi consumida, apesar de haver estoque.")) % d)
 	return issues
 
 
@@ -668,32 +680,32 @@ func verdict() -> Dictionary:
 	if ended.get("stage", "") == "survival":
 		causes.append(ended["reason"])
 	if splashdown and not science_completed:
-		causes.append("Objetivo científico não concluído.")
+		causes.append(str(TranslationServer.translate("Objetivo científico não concluído.")))
 	for id: String in ["A", "B", "C"]:
 		if jumps.has(id) and not jumps[id]["ok"]:
 			causes.append("%s · %s" % [JUMPS[id]["title"], jump_text(id)])
 	if not departure.is_empty() and not departure["ok"]:
-		causes.append("Partida para a Terra · " + departure_text())
+		causes.append(str(TranslationServer.translate("Partida para a Terra · ")) + departure_text())
 	if ended.get("stage", "") == "reentry":
-		causes.append("Reentrada · Janela de abertura dos paraquedas perdida.")
+		causes.append(str(TranslationServer.translate("Reentrada · Janela de abertura dos paraquedas perdida.")))
 	var landed: bool = landing_result.get("success", false)
 	var all_sealed := sealed.size() == PLAY_DAYS
 	var all_paid: bool = jumps.size() == 3 and jumps.values().all(func(j): return j["ok"])
 	var success: bool = landed and splashdown and all_sealed and all_paid and bool(departure.get("ok", false)) and causes.is_empty()
 	if not success and causes.is_empty():
-		causes.append("Missão incompleta · Nem todas as etapas da missão foram cumpridas.")
+		causes.append(str(TranslationServer.translate("Missão incompleta · Nem todas as etapas da missão foram cumpridas.")))
 	var summary := ""
 	if success:
-		summary = "Pouso lunar seguro e tripulação de volta à Terra."
+		summary = str(TranslationServer.translate("Pouso lunar seguro e tripulação de volta à Terra."))
 	elif landed and splashdown:
-		summary = "Amerissagem confirmada. Missão falhou: %s" % causes[0]
+		summary = str(TranslationServer.translate("Amerissagem confirmada. Missão falhou: %s")) % causes[0]
 	elif landed and not causes.is_empty():
-		summary = "Pouso lunar confirmado. %s" % causes[0]
+		summary = str(TranslationServer.translate("Pouso lunar confirmado. %s")) % causes[0]
 	elif not causes.is_empty():
 		summary = causes[0]
 	else:
-		summary = "A missão não chegou ao fim."
-	return {"success": success, "title": "Missão concluída" if success else "Missão falhou",
+		summary = str(TranslationServer.translate("A missão não chegou ao fim."))
+	return {"success": success, "title": str(TranslationServer.translate("Missão concluída")) if success else str(TranslationServer.translate("Missão falhou")),
 		"summary": summary, "causes": causes, "landed": landed}
 
 
@@ -758,6 +770,10 @@ func select_objective(id: String) -> void:
 			cargo.erase(old)
 	objective = id
 	changed.emit()
+
+
+func can_start_surface() -> bool:
+	return landing_result.get("success", false) and OBJECTIVES.has(objective) and qty(objective) == 1 and ended.is_empty()
 
 
 func complete_science() -> bool:
@@ -831,14 +847,14 @@ func _check_needs() -> void:
 			empty.append(kind)
 	if empty.is_empty() or not ended.is_empty():
 		return
-	var what := "A fome chegou a zero"
+	var what := str(TranslationServer.translate("A fome chegou a zero"))
 	if empty.size() == 2:
-		what = "A fome e a sede chegaram a zero juntas"
+		what = str(TranslationServer.translate("A fome e a sede chegaram a zero juntas"))
 	elif empty[0] == "water":
-		what = "A sede chegou a zero"
+		what = str(TranslationServer.translate("A sede chegou a zero"))
 	if not need_critical.is_empty():
-		what += " depois de acordar em estado crítico sem comer e beber água a tempo"
-	end_mission("survival", "Dia %d · %s. Saldo: %s comida e %s água." % [day, what, amount_text(food_days), amount_text(water_days)])
+		what += str(TranslationServer.translate(" depois de acordar em estado crítico sem comer e beber água a tempo"))
+	end_mission("survival", str(TranslationServer.translate("Dia %d · %s. Saldo: %s comida e %s água.")) % [day, what, amount_text(food_days), amount_text(water_days)])
 	ended["day"] = day
 	ended["needs"] = empty
 	ended["nourishment"] = nourishment

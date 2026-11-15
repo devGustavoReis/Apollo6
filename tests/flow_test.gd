@@ -111,6 +111,9 @@ func do_tasks(cabin: Node, day: int, skip: Array) -> void:
 
 
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	var game := root.get_node("Game")
 	await process_frame
 	# 1. Todas as cenas carregam e rodam alguns quadros.

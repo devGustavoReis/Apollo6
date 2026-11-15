@@ -73,6 +73,9 @@ func finish(cabin: Node, success: bool) -> void:
 
 
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	var ms := root.get_node("MissionState")
 	var game := root.get_node("Game")
 	var scene := load(game.SCENES["cabin"]) as PackedScene

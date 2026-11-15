@@ -28,6 +28,9 @@ func fresh(level := "normal") -> void:
 
 
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	ms = root.get_node("MissionState")
 	ms.need_warning.connect(func(kind): warnings.append(kind))
 	drain_and_day()

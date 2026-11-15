@@ -38,7 +38,7 @@ func _ready() -> void:
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_card.add_child(_title)
 	_card.add_child(_caption)
-	var hint := Game.make_label("ESPAÇO · pular", 16, Color(0.6, 0.6, 0.55))
+	var hint := Game.make_label(str(TranslationServer.translate("ESPAÇO · pular")), 16, Color(0.6, 0.6, 0.55))
 	hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	hint.position = Vector2(-200, -40)
 	add_child(hint)

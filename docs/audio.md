@@ -41,3 +41,6 @@ A geração foi feita localmente com [Kokoro-82M v1.0](https://huggingface.co/he
 Os clipes ficam em assets/audio/voice. Use Houston.say_recorded com o identificador do arquivo sem extensão e forneça a fala em inglês e a legenda em português. O sistema aceita falas sem arquivo e exibe o texto nesses casos. ENTER pula a fala atual. A autorização para descida, o aviso de propelente baixo e a confirmação de pouso integram-se aos estados já existentes. O aviso de combustível é falado uma vez por tentativa de pouso. As confirmações de separação e pouso têm tempo para concluir antes da próxima cena.
 
 Na descida lunar, a música começa no segundo 48 a cada tentativa. A cabine pulsa uma luz vermelha e toca um alarme de cinco segundos após uma escolha arriscada. A pausa suspende ambos.
+
+As operações na superfície usam os clipes ingleses `surface_*.wav` e um efeito de obturador separado no barramento SFX.
+Os avisos do astronauta têm clipes ingleses próprios, com o sufixo `_en`. A legenda de rádio segue apenas o idioma selecionado.

@@ -29,17 +29,17 @@ func _ready():
 	angulo = (pontos[1] - pontos[0]).angle()
 	for i in range(60):
 		estrelas.append(Vector2(randf() * 956, 62 + randf() * 434))
-	var titulo = Game.make_label("COMPUTADOR DE NAVEGAÇÃO · CORREÇÃO DE ROTA", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("COMPUTADOR DE NAVEGAÇÃO · CORREÇÃO DE ROTA")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
-	contador = Game.make_label("DESVIOS: 0", 20, Color.WHITE)
+	contador = Game.make_label(str(TranslationServer.translate("DESVIOS: 0")), 20, Color.WHITE)
 	contador.position = Vector2(812, 6)
 	contador.modulate = Game.GOOD
 	add_child(contador)
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("Cada desvio da rota gasta mais propelente do CSM.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("Cada desvio da rota gasta mais propelente do CSM.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	atualizar_textos()
@@ -121,17 +121,17 @@ func mover(pos):
 
 
 func atualizar_textos():
-	contador.text = "DESVIOS: " + str(erros)
+	contador.text = str(TranslationServer.translate("DESVIOS: ")) + str(erros)
 	if erros > 0:
 		contador.modulate = Game.WARN
 	if acabou:
-		aviso.text = "Rota corrigida. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Rota corrigida. Voltando à cabine..."))
 		aviso.modulate = Game.GOOD
 	elif alerta > 0:
-		aviso.text = "FORA DA ROTA! A nave voltou ao último ponto. Clique nela de novo."
+		aviso.text = str(TranslationServer.translate("FORA DA ROTA! A nave voltou ao último ponto. Clique nela de novo."))
 		aviso.modulate = Game.BAD
 	else:
-		aviso.text = "Clique na nave e arraste pela linha tracejada até a %s. Sem mouse: use as SETAS." % ("Terra" if destino == "terra" else "Lua")
+		aviso.text = str(TranslationServer.translate("Clique na nave e arraste pela linha tracejada até a %s. Sem mouse: use as SETAS.")) % (str(TranslationServer.translate("Terra")) if destino == "terra" else str(TranslationServer.translate("Lua")))
 		aviso.modulate = Game.CREAM
 
 

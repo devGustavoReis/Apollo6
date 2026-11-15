@@ -36,7 +36,7 @@ func _ready():
 			velcros.append(janelas[j] + Vector2(76, 0).rotated(deg_to_rad(45 + 360.0 / total * k)))
 			donos.append(j)
 			presos.append(false)
-	var titulo = Game.make_label("DESCANSO · ESCURECER A CABINE", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("DESCANSO · ESCURECER A CABINE")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
 	contador = Game.make_label("", 20, Color.WHITE)
@@ -45,7 +45,7 @@ func _ready():
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("Com Sol o tempo todo lá fora, sem cortinas ninguém dorme.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("Com Sol o tempo todo lá fora, sem cortinas ninguém dorme.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	atualizar_textos()
@@ -136,16 +136,16 @@ func atualizar_textos():
 	if luz() < 35:
 		contador.modulate = Game.GOOD
 	if acabou and acertou:
-		aviso.text = "Cabine escura e pronta para o descanso. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Cabine escura e pronta para o descanso. Voltando à cabine..."))
 		aviso.modulate = Game.GOOD
 	elif acabou:
-		aviso.text = "Ainda entra luz e o tempo acabou. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Ainda entra luz e o tempo acabou. Voltando à cabine..."))
 		aviso.modulate = Game.BAD
 	elif alerta > 0:
-		aviso.text = "Uma ponta de velcro soltou e a luz voltou a entrar!"
+		aviso.text = str(TranslationServer.translate("Uma ponta de velcro soltou e a luz voltou a entrar!"))
 		aviso.modulate = Game.BAD
 	else:
-		aviso.text = "Clique nos pontos de velcro que brilham em volta das janelas e apague as três lâmpadas."
+		aviso.text = str(TranslationServer.translate("Clique nos pontos de velcro que brilham em volta das janelas e apague as três lâmpadas."))
 		aviso.modulate = Game.CREAM
 
 
@@ -181,7 +181,7 @@ func _draw():
 		else:
 			draw_circle(luzes[i], 20, Color(0.12, 0.12, 0.11))
 		draw_arc(luzes[i], 20, 0, TAU, 24, Game.AMBER, 2)
-		draw_string(fonte, luzes[i] + Vector2(-50, 44), "LÂMPADA", HORIZONTAL_ALIGNMENT_CENTER, 100, 12, Game.CREAM)
+		draw_string(fonte, luzes[i] + Vector2(-50, 44), str(TranslationServer.translate("LÂMPADA")), HORIZONTAL_ALIGNMENT_CENTER, 100, 12, Game.CREAM)
 	for i in range(velcros.size()):
 		if presos[i]:
 			draw_rect(Rect2(velcros[i] - Vector2(7, 7), Vector2(14, 14)), Color(0.42, 0.42, 0.38))

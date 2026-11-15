@@ -308,25 +308,25 @@ func _build_hud() -> void:
 	layer.add_child(panel)
 	var box := VBoxContainer.new()
 	panel.add_child(box)
-	box.add_child(Game.make_label("MÓDULO LUNAR · DESCIDA", 18, Game.AMBER))
+	box.add_child(Game.make_label(str(TranslationServer.translate("MÓDULO LUNAR · DESCIDA")), 18, Game.AMBER))
 	for key in ["alt", "vy", "vh", "tilt", "throttle", "fuel", "dist"]:
 		var label := Game.make_label("", 18)
 		box.add_child(label)
 		_readouts[key] = label
-	var limits_label := Game.make_label("Limites para tocar o solo:\nV.vert ≤ %.1f · V.horiz ≤ %.1f m/s · Incl. ≤ %.0f°" % [limits["land_vy"], limits["land_vh"], limits["land_tilt"]], 14, Color(0.7, 0.7, 0.65))
+	var limits_label := Game.make_label(str(TranslationServer.translate("Limites para tocar o solo:\nV.vert ≤ %.1f · V.horiz ≤ %.1f m/s · Incl. ≤ %.0f°")) % [limits["land_vy"], limits["land_vh"], limits["land_tilt"]], 14, Color(0.7, 0.7, 0.65))
 	box.add_child(limits_label)
-	box.add_child(Game.make_label("ESPAÇO segurado = motor sobe aos poucos\nsoltar ESPAÇO = motor cai aos poucos\nW/S inclinam frente/trás · A/D esquerda/direita\nsoltar WASD = o módulo se nivela", 14, Color(0.8, 0.8, 0.72)))
+	box.add_child(Game.make_label(str(TranslationServer.translate("ESPAÇO segurado = motor sobe aos poucos\nsoltar ESPAÇO = motor cai aos poucos\nW/S inclinam frente/trás · A/D esquerda/direita\nsoltar WASD = o módulo se nivela")), 14, Color(0.8, 0.8, 0.72)))
 	var radar_panel := PanelContainer.new()
 	radar_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	radar_panel.position = Vector2(-206, 16)
 	layer.add_child(radar_panel)
 	var radar_box := VBoxContainer.new()
 	radar_panel.add_child(radar_box)
-	radar_box.add_child(Game.make_label("MAPA · FRENTE ↑", 14, Game.AMBER))
+	radar_box.add_child(Game.make_label(str(TranslationServer.translate("MAPA · FRENTE ↑")), 14, Game.AMBER))
 	radar = Control.new()
 	radar.set_script(RADAR_SCRIPT)
 	radar_box.add_child(radar)
-	radar_box.add_child(Game.make_label("centro = área de pouso\ntriângulo = módulo\nseta = deslizamento\nanéis: 20 m e 40 m", 13, Color(0.7, 0.7, 0.65)))
+	radar_box.add_child(Game.make_label(str(TranslationServer.translate("centro = área de pouso\ntriângulo = módulo\nseta = deslizamento\nanéis: 20 m e 40 m")), 13, Color(0.7, 0.7, 0.65)))
 	_message = Game.make_label("", 22, Game.AMBER)
 	_message.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -364,15 +364,15 @@ func _show_panel(title: String, text: String, button_text: String, callback: Cal
 
 
 func _show_intro() -> void:
-	_show_panel("POUSO LUNAR",
-		"Leve o módulo lunar até o solo com segurança.\n\n" +
-		"• Segure ESPAÇO para acelerar o motor aos poucos. Solte e ele perde força aos poucos até desligar. Cerca de 48% equilibra a gravidade lunar.\n" +
-		"• W e S inclinam para frente e para trás. A e D inclinam para a esquerda e a direita. O motor empurra para o lado inclinado.\n" +
-		"• Soltando WASD, o módulo volta a ficar nivelado, mas o deslizamento continua até você corrigir.\n" +
-		"• O mapa mostra a área de pouso no centro, o módulo como triângulo e a seta do deslizamento. Frente é para cima.\n" +
-		"• Toque o solo devagar, sem deslizar e nivelado. Verde = seguro, amarelo = atenção, vermelho = perigo.\n\n" +
-		"Propelente: %.0f s de motor a 100%%. Se falhar, você repete só o pouso." % MissionState.lm_fuel_max,
-		"INICIAR DESCIDA", _start)
+	_show_panel(str(TranslationServer.translate("POUSO LUNAR")),
+		str(TranslationServer.translate("Leve o módulo lunar até o solo com segurança.\n\n")) +
+		str(TranslationServer.translate("• Segure ESPAÇO para acelerar o motor aos poucos. Solte e ele perde força aos poucos até desligar. Cerca de 48% equilibra a gravidade lunar.\n")) +
+		str(TranslationServer.translate("• W e S inclinam para frente e para trás. A e D inclinam para a esquerda e a direita. O motor empurra para o lado inclinado.\n")) +
+		str(TranslationServer.translate("• Soltando WASD, o módulo volta a ficar nivelado, mas o deslizamento continua até você corrigir.\n")) +
+		str(TranslationServer.translate("• O mapa mostra a área de pouso no centro, o módulo como triângulo e a seta do deslizamento. Frente é para cima.\n")) +
+		str(TranslationServer.translate("• Toque o solo devagar, sem deslizar e nivelado. Verde = seguro, amarelo = atenção, vermelho = perigo.\n\n")) +
+		str(TranslationServer.translate("Propelente: %.0f s de motor a 100%%. Se falhar, você repete só o pouso.")) % MissionState.lm_fuel_max,
+		str(TranslationServer.translate("INICIAR DESCIDA")), _start)
 
 
 func _show_failure() -> void:
@@ -383,8 +383,8 @@ func _show_failure() -> void:
 	text += "\nComo melhorar:\n"
 	for tip in f.get("tips", []):
 		text += "• " + tip + "\n"
-	text += "\nTentativas até agora: %d" % MissionState.landing_attempts
-	_show_panel(f.get("title", "POUSO MALSUCEDIDO"), text, "REPETIR POUSO", func():
+	text += str(TranslationServer.translate("\nTentativas até agora: %d")) % MissionState.landing_attempts
+	_show_panel(f.get("title", str(TranslationServer.translate("POUSO MALSUCEDIDO"))), text, str(TranslationServer.translate("REPETIR POUSO")), func():
 		Game.retry_from_checkpoint("landing", "landing"))
 
 
@@ -429,7 +429,7 @@ func step(delta: float, throttle_input: float, tilt_input: Vector2) -> void:
 		_low_fuel_announced = true
 		Houston.clear()
 		Houston.say_recorded("low_fuel", "Eagle, Houston. Low fuel. Watch your descent rate.",
-			"Eagle, aqui é Houston. Propelente baixo. Atenção à velocidade de descida.")
+			str(TranslationServer.translate("Eagle, aqui é Houston. Propelente baixo. Atenção à velocidade de descida.")))
 	if MissionState.lm_fuel <= 0.0 and fuel_out_alt < 0.0 and pos.y > 0.5:
 		fuel_out_alt = pos.y
 	var accel := thrust_direction() * power * MAX_ACCEL + Vector3.DOWN * MOON_G
@@ -484,33 +484,33 @@ func _update_readouts() -> void:
 	_set_readout("alt", "ALTITUDE      %6.1f m" % pos.y, 0.0 if pos.y > 15.0 else 0.4)
 	_set_readout("vy", "V. VERTICAL   %6.1f m/s %s" % [-vy, "↑" if vy < -0.05 else ("↓" if vy > 0.05 else "·")], vy_ratio)
 	_set_readout("vh", "V. HORIZONTAL %6.1f m/s" % horizontal_speed(), horizontal_speed() / limits["land_vh"])
-	_set_readout("tilt", "INCLINAÇÃO    %6.1f°" % tilt_angle(), tilt_angle() / limits["land_tilt"])
+	_set_readout("tilt", str(TranslationServer.translate("INCLINAÇÃO    %6.1f°")) % tilt_angle(), tilt_angle() / limits["land_tilt"])
 	var bars := int(roundf(throttle * 10.0))
 	# Só ASCII: a fonte do HUD não tem os blocos ▮▯ e eles viravam quadrados vazios.
 	_set_readout("throttle", "MOTOR  [%s] %3.0f%%" % ["=".repeat(bars) + "-".repeat(10 - bars), throttle * 100.0], 0.0)
 	var fuel_ratio := MissionState.lm_fuel / MissionState.lm_fuel_max
 	_set_readout("fuel", "PROPELENTE    %6.1f s" % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
-	_set_readout("dist", "DIST. DO ALVO %6.0f m" % Vector2(pos.x, pos.z).length(), 0.0)
+	_set_readout("dist", str(TranslationServer.translate("DIST. DO ALVO %6.0f m")) % Vector2(pos.x, pos.z).length(), 0.0)
 	radar.modulo = map_point(pos)
 	radar.velocidade = map_point(vel)
 	radar.cor_velocidade = Game.level_color(horizontal_speed() / limits["land_vh"])
 	radar.queue_redraw()
 	if state == "flying":
 		if MissionState.lm_fuel <= 0.0:
-			_message.text = "SEM PROPELENTE!"
+			_message.text = str(TranslationServer.translate("SEM PROPELENTE!"))
 		elif MissionState.lm_fuel < MissionState.lm_fuel_max * 0.2:
-			_message.text = "PROPELENTE BAIXO"
+			_message.text = str(TranslationServer.translate("PROPELENTE BAIXO"))
 		elif pos.y < 20.0 and vy > limits["land_vy"]:
-			_message.text = "DESCIDA RÁPIDA DEMAIS · SEGURE ESPAÇO"
+			_message.text = str(TranslationServer.translate("DESCIDA RÁPIDA DEMAIS · SEGURE ESPAÇO"))
 		elif pos.y < 30.0 and horizontal_speed() > limits["land_vh"]:
-			_message.text = "DESLIZANDO · INCLINE PARA O LADO OPOSTO"
+			_message.text = str(TranslationServer.translate("DESLIZANDO · INCLINE PARA O LADO OPOSTO"))
 		else:
 			if pos.y > 65.0:
-				_message.text = "APROXIMAÇÃO · Observe o vetor de deslizamento no radar"
+				_message.text = str(TranslationServer.translate("APROXIMAÇÃO · Observe o vetor de deslizamento no radar"))
 			elif pos.y > 18.0:
 				_message.text = "ALINHAMENTO · Centralize o alvo e reduza a velocidade lateral"
 			else:
-				_message.text = "TOQUE · Controle a descida e nivele o módulo"
+				_message.text = str(TranslationServer.translate("TOQUE · Controle a descida e nivele o módulo"))
 
 
 func _set_readout(key: String, text: String, ratio: float) -> void:
@@ -527,13 +527,13 @@ static func map_point(v: Vector3) -> Vector2:
 static func direction_name(v: Vector2) -> String:
 	var names := []
 	if v.y < -0.35 * v.length():
-		names.append("para a frente")
+		names.append(str(TranslationServer.translate("para a frente")))
 	elif v.y > 0.35 * v.length():
-		names.append("para trás")
+		names.append(str(TranslationServer.translate("para trás")))
 	if v.x > 0.35 * v.length():
-		names.append("para a direita")
+		names.append(str(TranslationServer.translate("para a direita")))
 	elif v.x < -0.35 * v.length():
-		names.append("para a esquerda")
+		names.append(str(TranslationServer.translate("para a esquerda")))
 	return " e ".join(PackedStringArray(names))
 
 
@@ -562,20 +562,20 @@ func evaluate_values(values: Dictionary, causes: Array) -> Dictionary:
 	for code in ordered:
 		match code:
 			"vertical":
-				reasons.append("Impacto vertical: %.1f m/s, acima do limite de %.1f m/s. O trem de pouso não absorveria o choque." % [values["vy"], limits["land_vy"]])
-				tips.append("Segure ESPAÇO mais cedo, por volta de 30 m, até a velocidade vertical ficar verde. O motor demora para ganhar força.")
+				reasons.append(str(TranslationServer.translate("Impacto vertical: %.1f m/s, acima do limite de %.1f m/s. O trem de pouso não absorveria o choque.")) % [values["vy"], limits["land_vy"]])
+				tips.append(str(TranslationServer.translate("Segure ESPAÇO mais cedo, por volta de 30 m, até a velocidade vertical ficar verde. O motor demora para ganhar força.")))
 			"lateral":
-				reasons.append("Deslizamento lateral: %.1f m/s, acima do limite de %.1f m/s. O módulo tombaria ao tocar o solo." % [values["vh"], limits["land_vh"]])
-				tips.append("O módulo deslizava %s. Incline para o lado oposto (seta do mapa) ainda no alto e solte WASD quando a seta encolher." % direction_name(slide))
+				reasons.append(str(TranslationServer.translate("Deslizamento lateral: %.1f m/s, acima do limite de %.1f m/s. O módulo tombaria ao tocar o solo.")) % [values["vh"], limits["land_vh"]])
+				tips.append(str(TranslationServer.translate("O módulo deslizava %s. Incline para o lado oposto (seta do mapa) ainda no alto e solte WASD quando a seta encolher.")) % direction_name(slide))
 			"tilt":
-				reasons.append("Inclinação excessiva: %.1f°, acima do limite de %.0f°. O módulo tocaria o solo com uma perna só." % [values["tilt"], limits["land_tilt"]])
-				tips.append("Solte WASD alguns metros antes do solo para o módulo se nivelar a tempo.")
+				reasons.append(str(TranslationServer.translate("Inclinação excessiva: %.1f°, acima do limite de %.0f°. O módulo tocaria o solo com uma perna só.")) % [values["tilt"], limits["land_tilt"]])
+				tips.append(str(TranslationServer.translate("Solte WASD alguns metros antes do solo para o módulo se nivelar a tempo.")))
 			"area":
-				reasons.append("Saída da área: o módulo ficou a %.0f m do alvo, além do limite de %.0f m." % [values["distance"], AREA_LIMIT])
-				tips.append("O alvo estava %s, a %.0f m. Siga o centro do mapa e corrija o deslizamento logo no começo." % [direction_name(back), values["distance"]])
+				reasons.append(str(TranslationServer.translate("Saída da área: o módulo ficou a %.0f m do alvo, além do limite de %.0f m.")) % [values["distance"], AREA_LIMIT])
+				tips.append(str(TranslationServer.translate("O alvo estava %s, a %.0f m. Siga o centro do mapa e corrija o deslizamento logo no começo.")) % [direction_name(back), values["distance"]])
 			"fuel":
-				reasons.append("Esgotamento de propelente: o motor parou a %.1f m de altura, antes do contato com o solo." % values["fuel_out_alt"])
-				tips.append("Use o motor só quando precisar frear e deixe a queda livre no alto. Levar a reserva de propelente também ajuda.")
+				reasons.append(str(TranslationServer.translate("Esgotamento de propelente: o motor parou a %.1f m de altura, antes do contato com o solo.")) % values["fuel_out_alt"])
+				tips.append(str(TranslationServer.translate("Use o motor só quando precisar frear e deixe a queda livre no alto. Levar a reserva de propelente também ajuda.")))
 	return {"success": ordered.is_empty(), "causes": ordered, "primary": ordered[0] if not ordered.is_empty() else "",
 		"reasons": reasons, "tips": tips, "values": values, "limits": {"vy": limits["land_vy"], "vh": limits["land_vh"], "tilt": limits["land_tilt"], "area": AREA_LIMIT}}
 
@@ -606,13 +606,13 @@ func _success(vy: float, vh: float, angle: float) -> void:
 		"fuel_left": MissionState.lm_fuel, "distance": Vector2(pos.x, pos.z).length(),
 	}
 	MissionState.science_collected = 0.0
-	MissionState.add_event("landing", "Pouso lunar", "Sucesso na tentativa %d, com %.0f s de propelente sobrando." % [MissionState.landing_attempts, MissionState.lm_fuel])
-	_message.text = "CONTATO! POUSO CONFIRMADO"
+	MissionState.add_event("landing", str(TranslationServer.translate("Pouso lunar")), str(TranslationServer.translate("Sucesso na tentativa %d, com %.0f s de propelente sobrando.")) % [MissionState.landing_attempts, MissionState.lm_fuel])
+	_message.text = str(TranslationServer.translate("CONTATO! POUSO CONFIRMADO"))
 	Houston.clear()
 	Houston.say_recorded("crew_touchdown", "Houston, Eagle. Contact. Engine stop.",
-		"Houston, aqui é Eagle. Contato. Motor desligado.", "EAGLE")
+		str(TranslationServer.translate("Houston, aqui é Eagle. Contato. Motor desligado.")), "EAGLE")
 	Houston.say_recorded("landing_confirmed", "We copy you down. You've got a lot of people smiling down here.",
-		"Confirmamos o pouso. Tem muita gente sorrindo aqui embaixo.")
+		str(TranslationServer.translate("Confirmamos o pouso. Tem muita gente sorrindo aqui embaixo.")))
 	get_tree().create_timer(maxf(4.0, Houston.radio_time_remaining()), false).timeout.connect(
 		func(): Game.landing_success())
 
@@ -625,9 +625,9 @@ func _fail(reasons: Array, tips: Array) -> void:
 	Sound.end_maneuver()
 	Sound.play_cue("impact", "Voice", true)
 	MissionState.landing_attempts += 1
-	MissionState.set_failure("landing", "POUSO MALSUCEDIDO", reasons, tips)
+	MissionState.set_failure("landing", str(TranslationServer.translate("POUSO MALSUCEDIDO")), reasons, tips)
 	MissionState.last_failure["attempt"] = attempt
-	_message.text = "FALHA NO POUSO"
+	_message.text = str(TranslationServer.translate("FALHA NO POUSO"))
 	get_tree().create_timer(1.5).timeout.connect(Game.landing_failed)
 
 

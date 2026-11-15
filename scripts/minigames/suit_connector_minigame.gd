@@ -33,7 +33,7 @@ func _ready():
 	size = Vector2(960, 540)
 	tempo = tempos[nivel] + folga * 10
 	sortear()
-	var titulo = Game.make_label("TRAJE · ENCAIXAR AS MANGUEIRAS", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("TRAJE · ENCAIXAR AS MANGUEIRAS")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
 	contador = Game.make_label("", 20, Color.WHITE)
@@ -42,7 +42,7 @@ func _ready():
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("Empurrar o conector desalinhado desgasta a vedação.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("Empurrar o conector desalinhado desgasta a vedação.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	atualizar_textos()
@@ -140,19 +140,19 @@ func atualizar_textos():
 	if erros > 0 or tempo < 10:
 		contador.modulate = Game.WARN
 	if acabou and acertou:
-		aviso.text = "As duas mangueiras estão travadas. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("As duas mangueiras estão travadas. Voltando à cabine..."))
 		aviso.modulate = Game.GOOD
 	elif acabou:
-		aviso.text = "O encaixe não ficou seguro. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("O encaixe não ficou seguro. Voltando à cabine..."))
 		aviso.modulate = Game.BAD
 	elif alerta > 0:
-		aviso.text = "Desalinhado! O conector não entrou."
+		aviso.text = str(TranslationServer.translate("Desalinhado! O conector não entrou."))
 		aviso.modulate = Game.BAD
 	elif alinhado():
-		aviso.text = "ALINHADO! Empurre agora: ESPAÇO ou clique."
+		aviso.text = str(TranslationServer.translate("ALINHADO! Empurre agora: ESPAÇO ou clique."))
 		aviso.modulate = Game.GOOD
 	else:
-		aviso.text = "Gire o conector com A/D, SETAS ou a roda do mouse até as travas ficarem sobre os encaixes."
+		aviso.text = str(TranslationServer.translate("Gire o conector com A/D, SETAS ou a roda do mouse até as travas ficarem sobre os encaixes."))
 		aviso.modulate = Game.CREAM
 
 
@@ -183,7 +183,7 @@ func _draw():
 		var ponta = centro + Vector2(118, 0).rotated(deg_to_rad(angulo + k * 120))
 		draw_line(centro + Vector2(70, 0).rotated(deg_to_rad(angulo + k * 120)), ponta, Color(0.62, 0.63, 0.62), 14)
 		draw_circle(ponta, 13, cor_trava)
-	draw_string(fonte, Vector2(690, 110), "MANGUEIRAS", HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Game.AMBER)
+	draw_string(fonte, Vector2(690, 110), str(TranslationServer.translate("MANGUEIRAS")), HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Game.AMBER)
 	for i in range(2):
 		var marca = "[ ]"
 		var cor_texto = Game.CREAM
@@ -195,14 +195,14 @@ func _draw():
 		draw_rect(Rect2(690, 128 + i * 52, 14, 14), cores[i])
 		draw_string(fonte, Vector2(712, 141 + i * 52), marca + " " + nomes[i], HORIZONTAL_ALIGNMENT_LEFT, 240, 14, cor_texto)
 		draw_string(fonte, Vector2(712, 159 + i * 52), funcoes[i], HORIZONTAL_ALIGNMENT_LEFT, 240, 12, cor_texto)
-	draw_string(fonte, Vector2(690, 270), "DESVIO", HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Game.AMBER)
+	draw_string(fonte, Vector2(690, 270), str(TranslationServer.translate("DESVIO")), HORIZONTAL_ALIGNMENT_LEFT, 250, 16, Game.AMBER)
 	draw_rect(Rect2(690, 282, 240, 22), Color(0.07, 0.08, 0.08))
 	var limite = tolerancias[nivel] + folga * 3
 	draw_rect(Rect2(810 - limite * 2, 282, limite * 4, 22), Color(0.45, 0.9, 0.45, 0.35))
 	draw_rect(Rect2(810 + desvio() * 2 - 3, 278, 6, 30), cor_trava)
 	draw_rect(Rect2(690, 282, 240, 22), Game.AMBER, false, 2)
 	draw_string(fonte, Vector2(690, 350), "A / D ou ← / →   girar", HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.CREAM)
-	draw_string(fonte, Vector2(690, 372), "ESPAÇO ou clique  empurrar", HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.CREAM)
+	draw_string(fonte, Vector2(690, 372), str(TranslationServer.translate("ESPAÇO ou clique  empurrar")), HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.CREAM)
 	draw_string(fonte, Vector2(690, 394), "Azul entra, vermelho sai.", HORIZONTAL_ALIGNMENT_LEFT, 250, 13, Game.AMBER)
 	draw_rect(Rect2(0, 0, 960, 60), Color(0.06, 0.07, 0.065))
 	draw_rect(Rect2(0, 500, 960, 40), Color(0.06, 0.07, 0.065))

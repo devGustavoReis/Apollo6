@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## Comunicações de rádio (autoload "Houston").
-## Fala em inglês com legenda em português. Os diálogos são fictícios.
+## A legenda segue o idioma selecionado. Os diálogos são fictícios.
 ## As falas gravadas são WAVs locais; mensagens novas podem usar só legenda.
 
 const RADIO_AUDIO := "res://assets/audio/voice/"
@@ -13,7 +13,6 @@ var _current: Dictionary = {}
 var _time_left := 0.0
 var _panel: PanelContainer
 var _speaker: Label
-var _english: Label
 var _subtitle: Label
 var _voice: AudioStreamPlayer
 var _tone: AudioStreamPlayer
@@ -38,9 +37,8 @@ func _ready() -> void:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(box)
 	_speaker = _label(15, Color(0.96, 0.74, 0.36))
-	_english = _label(19, Color(0.93, 0.89, 0.78))
 	_subtitle = _label(17, Color(0.75, 0.85, 0.75))
-	for node in [_speaker, _english, _subtitle]:
+	for node in [_speaker, _subtitle]:
 		box.add_child(node)
 	_panel.visible = false
 	_voice = AudioStreamPlayer.new()
@@ -82,22 +80,25 @@ func say_recorded(id: String, english: String, portuguese: String, speaker := "H
 	say(english, portuguese, speaker, RADIO_AUDIO + id + ".wav")
 
 
-func say(english: String, portuguese: String, speaker := "HOUSTON", voice_path := "", channel := "RÁDIO") -> void:
+func say(english: String, portuguese: String, speaker := "HOUSTON", voice_path := "", channel := "RADIO") -> void:
 	var stream: AudioStream
 	if not voice_path.is_empty() and ResourceLoader.exists(voice_path, "AudioStream"):
 		stream = load(voice_path) as AudioStream
-	var duration := 2.5 + (english.length() + portuguese.length()) * 0.035
+	var caption := portuguese if Game.language == "pt_BR" else english
+	var duration := 2.5 + caption.length() * 0.035
 	if stream != null:
-		duration = maxf(2.0, maxf(portuguese.length() * 0.038, stream.get_length() + 0.35))
+		duration = maxf(2.0, maxf(caption.length() * 0.038, stream.get_length() + 0.35))
 	_queue.append({"en": english, "pt": portuguese, "speaker": speaker, "stream": stream, "duration": duration, "channel": channel})
 	if _current.is_empty():
 		_next()
 
 
-## Fala do astronauta dentro da cabine, em português, pelo mesmo painel e fila do rádio.
+## Fala do astronauta pelo mesmo painel e fila do rádio.
 ## Usa assets/audio/voice/<id>.wav quando existir; sem o arquivo, mostra só a legenda.
 func astronaut_say(id: String, portuguese: String) -> void:
-	say("", portuguese, "THOMAS WALKER", RADIO_AUDIO + id + ".wav", "CABINE")
+	var english := "I’m hungry." if id == "thomas_hungry" else "I’m thirsty."
+	var voice_id := id if Game.language == "pt_BR" else id + "_en"
+	say(english, portuguese, "THOMAS WALKER", RADIO_AUDIO + voice_id + ".wav", "CABIN")
 
 
 func is_busy() -> bool:
@@ -133,10 +134,9 @@ func _next() -> void:
 		queue_empty.emit()
 		return
 	_current = _queue.pop_front()
-	_speaker.text = "▌ %s — %s" % [_current["speaker"], _current.get("channel", "RÁDIO")]
-	_english.text = _current["en"]
-	_english.visible = _current["en"] != ""
-	_subtitle.text = _current["pt"]
+	var channel: String = _current.get("channel", "RADIO")
+	_speaker.text = "▌ %s — %s" % [_current["speaker"], tr(channel)]
+	_subtitle.text = _current["pt"] if Game.language == "pt_BR" and not str(_current["pt"]).is_empty() else _current["en"]
 	_panel.visible = true
 	_time_left = _current["duration"]
 	_voice.stream = _current["stream"]

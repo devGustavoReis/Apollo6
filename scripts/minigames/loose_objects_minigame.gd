@@ -37,7 +37,7 @@ func _ready():
 		direcoes.append(Vector2(velocidade, 0).rotated(randf() * TAU))
 		presos.append(false)
 		alvos.append(Vector2(480 + (i - (total - 1) / 2.0) * 150, 452))
-	var titulo = Game.make_label("ARMÁRIO DE CARGA · PRENDER OBJETOS SOLTOS", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("ARMÁRIO DE CARGA · PRENDER OBJETOS SOLTOS")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
 	contador = Game.make_label("", 20, Color.WHITE)
@@ -46,7 +46,7 @@ func _ready():
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("Cada batida no painel de interruptores é um risco para a nave.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("Cada batida no painel de interruptores é um risco para a nave.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	atualizar_textos()
@@ -147,16 +147,16 @@ func atualizar_textos():
 	if batidas > 0 or tempo < 10:
 		contador.modulate = Game.WARN
 	if acabou and acertou:
-		aviso.text = "Tudo preso. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Tudo preso. Voltando à cabine..."))
 		aviso.modulate = Game.GOOD
 	elif acabou:
-		aviso.text = "Não deu tempo de prender tudo. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Não deu tempo de prender tudo. Voltando à cabine..."))
 		aviso.modulate = Game.BAD
 	elif alerta > 0:
-		aviso.text = "Um objeto bateu no painel de interruptores!"
+		aviso.text = str(TranslationServer.translate("Um objeto bateu no painel de interruptores!"))
 		aviso.modulate = Game.BAD
 	else:
-		aviso.text = "Clique em um objeto, arraste até o velcro da mesma cor e solte."
+		aviso.text = str(TranslationServer.translate("Clique em um objeto, arraste até o velcro da mesma cor e solte."))
 		aviso.modulate = Game.CREAM
 
 
@@ -199,7 +199,7 @@ func _draw():
 	draw_rect(painel, Game.AMBER, false, 2)
 	for x in range(8):
 		draw_rect(Rect2(painel.position + Vector2(22 + x * 34, 14), Vector2(8, 20)), Game.CREAM)
-	draw_string(fonte, Vector2(330, 128), "PAINEL DE INTERRUPTORES", HORIZONTAL_ALIGNMENT_CENTER, 300, 13, Game.AMBER)
+	draw_string(fonte, Vector2(330, 128), str(TranslationServer.translate("PAINEL DE INTERRUPTORES")), HORIZONTAL_ALIGNMENT_CENTER, 300, 13, Game.AMBER)
 	for i in range(alvos.size()):
 		var caixa = Rect2(alvos[i] - Vector2(36, 34), Vector2(72, 68))
 		draw_rect(caixa, Color(0.07, 0.08, 0.08))

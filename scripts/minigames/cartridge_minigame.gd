@@ -90,8 +90,8 @@ func _draw_cartridge(view: Control) -> void:
 		for y in [housing.position.y + 12, housing.end.y - 12]:
 			view.draw_circle(Vector2(x, y), 4.0, Color("#a9aaa0"), true, -1.0, true)
 	var font := view.get_theme_default_font()
-	view.draw_string(font, Vector2(center - 210, 113), "FILTRO", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Game.CREAM)
-	view.draw_string(font, Vector2(center + 157, 113), "RESERVA", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Game.CREAM)
+	view.draw_string(font, Vector2(center - 210, 113), str(TranslationServer.translate("FILTRO")), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Game.CREAM)
+	view.draw_string(font, Vector2(center + 157, 113), str(TranslationServer.translate("RESERVA")), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Game.CREAM)
 
 	var new_filter := step >= ALIGN_STEP
 	var rotation := deg_to_rad(angle) if step == ALIGN_STEP else 0.0
@@ -104,7 +104,7 @@ func _draw_cartridge(view: Control) -> void:
 	view.draw_rect(body, Color("#17262d"), false, 3.0)
 	view.draw_rect(Rect2(-29, -21, 58, 47), Color("#38545b"))
 	view.draw_string(font, Vector2(-22, 0), "LiOH", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Game.CREAM)
-	view.draw_string(font, Vector2(-22, 17), "NOVO" if new_filter else "USADO", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Game.CREAM)
+	view.draw_string(font, Vector2(-22, 17), str(TranslationServer.translate("NOVO")) if new_filter else str(TranslationServer.translate("USADO")), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Game.CREAM)
 	view.draw_line(Vector2(-25, -44), Vector2(25, -44), guide, 4.0, true)
 	view.draw_set_transform(Vector2.ZERO)
 	if step == ALIGN_STEP:
@@ -140,15 +140,15 @@ func _alignment_input(event: InputEvent) -> void:
 func _refresh_alignment() -> void:
 	var ready := _aligned()
 	action.disabled = not ready or _motion != null
-	var status := "Guias alinhadas · Enter para confirmar" if ready else "Ajuste até as duas guias ficarem paralelas"
-	_alignment.text = "Ângulo %+.0f°  ·  %s" % [angle, status]
+	var status := str(TranslationServer.translate("Guias alinhadas · Enter para confirmar")) if ready else str(TranslationServer.translate("Ajuste até as duas guias ficarem paralelas"))
+	_alignment.text = str(TranslationServer.translate("Ângulo %+.0f°  ·  %s")) % [angle, status]
 	_alignment.add_theme_color_override("font_color", Game.GOOD if ready else Game.AMBER)
 
 
 func _refresh() -> void:
 	title.text = "%d/%d   %s" % [step + 1, STEPS.size(), STEPS[step]]
 	description.text = INSTRUCTIONS[step]
-	action.text = ("CONFIRMAR ALINHAMENTO" if step == ALIGN_STEP else STEPS[step].to_upper())
+	action.text = (str(TranslationServer.translate("CONFIRMAR ALINHAMENTO")) if step == ALIGN_STEP else STEPS[step].to_upper())
 	pointer.visible = step == ALIGN_STEP
 	_alignment.visible = pointer.visible
 	action.disabled = false

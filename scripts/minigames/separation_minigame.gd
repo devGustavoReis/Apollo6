@@ -241,7 +241,7 @@ func _build_info() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
 	info.add_child(box)
-	_title = Game.make_label("PAINEL DE MANOBRA · INJEÇÃO TRANSLUNAR", 21, Game.AMBER)
+	_title = Game.make_label(str(TranslationServer.translate("PAINEL DE MANOBRA · INJEÇÃO TRANSLUNAR")), 21, Game.AMBER)
 	box.add_child(_title)
 	_lamps = Control.new()
 	_lamps.custom_minimum_size = Vector2(LAMP_SIZE.x * 4 + 24, LAMP_SIZE.y)
@@ -271,7 +271,7 @@ func _build_map_panel() -> void:
 	_map_panel.add_child(box)
 	var head := HBoxContainer.new()
 	box.add_child(head)
-	var title := Game.make_label("TRAJETÓRIA PREVISTA", 14, Game.AMBER)
+	var title := Game.make_label(str(TranslationServer.translate("TRAJETÓRIA PREVISTA")), 14, Game.AMBER)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
 	_clock_label = Game.make_label("T+ 00:00", 14, Game.CREAM)
@@ -379,7 +379,7 @@ func _build_flight_caption() -> void:
 	_flight_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flight_box.visible = false
 	add_child(_flight_box)
-	var title := Game.make_label("INJEÇÃO TRANSLUNAR CONCLUÍDA · RUMO À LUA", 22, Game.AMBER)
+	var title := Game.make_label(str(TranslationServer.translate("INJEÇÃO TRANSLUNAR CONCLUÍDA · RUMO À LUA")), 22, Game.AMBER)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 6)
@@ -418,14 +418,14 @@ func _panel_button(text: String, callback: Callable) -> void:
 
 
 func _show_intro() -> void:
-	_make_panel("PROCEDIMENTO CRÍTICO",
-		"A nave está em órbita da Terra. O terceiro estágio (S-IVB) vai acelerar a nave rumo à Lua: é a injeção translunar.\n\n" +
-		"1. Durante a queima, mantenha o nariz da nave dentro do ANEL VERDE com WASD ou SETAS: o empuxo precisa apontar na direção certa.\n" +
-		"2. Acompanhe a TRAJETÓRIA PREVISTA: ela se estica conforme a nave acelera. Quando ela alcançar a Lua com o nariz no anel, o painel avisa ALINHAMENTO CONFIRMADO: pressione ESPAÇO.\n" +
-		"3. Depois do corte, escolha cada alavanca na ordem do checklist (teclas 1, 2, 3 ou clique) e execute o procedimento: pressione as teclas mostradas no painel antes de o tempo de cada passo acabar.\n\n" +
-		"Um corte fora do ponto ou o nariz longe do anel ainda podem funcionar, mas exigem correções de rota que gastam combustível.")
-	_panel_button("ARMAR IGNIÇÃO", _begin_countdown)
-	_body.text = "Checkpoint salvo. Em caso de falha você recomeça aqui, sem refazer o planejamento."
+	_make_panel(str(TranslationServer.translate("PROCEDIMENTO CRÍTICO")),
+		str(TranslationServer.translate("A nave está em órbita da Terra. O terceiro estágio (S-IVB) vai acelerar a nave rumo à Lua: é a injeção translunar.\n\n")) +
+		str(TranslationServer.translate("1. Durante a queima, mantenha o nariz da nave dentro do ANEL VERDE com WASD ou SETAS: o empuxo precisa apontar na direção certa.\n")) +
+		str(TranslationServer.translate("2. Acompanhe a TRAJETÓRIA PREVISTA: ela se estica conforme a nave acelera. Quando ela alcançar a Lua com o nariz no anel, o painel avisa ALINHAMENTO CONFIRMADO: pressione ESPAÇO.\n")) +
+		str(TranslationServer.translate("3. Depois do corte, escolha cada alavanca na ordem do checklist (teclas 1, 2, 3 ou clique) e execute o procedimento: pressione as teclas mostradas no painel antes de o tempo de cada passo acabar.\n\n")) +
+		str(TranslationServer.translate("Um corte fora do ponto ou o nariz longe do anel ainda podem funcionar, mas exigem correções de rota que gastam combustível.")))
+	_panel_button(str(TranslationServer.translate("ARMAR IGNIÇÃO")), _begin_countdown)
+	_body.text = str(TranslationServer.translate("Checkpoint salvo. Em caso de falha você recomeça aqui, sem refazer o planejamento."))
 
 
 func _show_failure() -> void:
@@ -436,8 +436,8 @@ func _show_failure() -> void:
 	text += "\nDica:\n"
 	for tip in failure.get("tips", []):
 		text += "• " + tip + "\n"
-	_make_panel(failure.get("title", "FALHA"), text)
-	_panel_button("REPETIR ETAPA", func():
+	_make_panel(failure.get("title", str(TranslationServer.translate("FALHA"))), text)
+	_panel_button(str(TranslationServer.translate("REPETIR ETAPA")), func():
 		MissionState.last_failure = {}
 		Game.retry_from_checkpoint("separation", "separation"))
 
@@ -451,9 +451,9 @@ func _begin_countdown() -> void:
 	_countdown = COUNTDOWN
 	_go_said = true
 	_view.show_guide = true
-	_body.text = "Sistemas armados. Mãos nos controles: WASD ou SETAS mantêm o nariz no anel, ESPAÇO corta o motor."
+	_body.text = str(TranslationServer.translate("Sistemas armados. Mãos nos controles: WASD ou SETAS mantêm o nariz no anel, ESPAÇO corta o motor."))
 	Houston.say_recorded("go_for_tli", "Apollo, Houston. You are go for TLI. Watch for cutoff.",
-		"Apollo, aqui é Houston. Autorizados para a TLI. Atenção ao corte do motor.")
+		str(TranslationServer.translate("Apollo, aqui é Houston. Autorizados para a TLI. Atenção ao corte do motor.")))
 
 
 func _start_tli() -> void:
@@ -469,11 +469,11 @@ func _start_tli() -> void:
 	_view.ignite()
 	Sound.play_cue("ignition")
 	Sound.set_motor(0.6)
-	_body.text = "Motor do S-IVB aceso. Tempo acelerado para o jogo (a queima real durou cerca de 6 minutos)."
+	_body.text = str(TranslationServer.translate("Motor do S-IVB aceso. Tempo acelerado para o jogo (a queima real durou cerca de 6 minutos)."))
 	if not _go_said:
 		_go_said = true
 		Houston.say_recorded("go_for_tli", "Apollo, Houston. You are go for TLI. Watch for cutoff.",
-			"Apollo, aqui é Houston. Autorizados para a TLI. Atenção ao corte do motor.")
+			str(TranslationServer.translate("Apollo, aqui é Houston. Autorizados para a TLI. Atenção ao corte do motor.")))
 
 
 ## Fração da queima concluída: 0 na ignição, 1 na velocidade alvo.
@@ -538,15 +538,15 @@ func _update_incident(delta: float) -> void:
 		_beep = 0.0
 		match incident:
 			"alarm":
-				_body.text = "MASTER ALARM! Pressione R ou clique na luz para silenciar. Enquanto ele toca, a nave deriva mais."
+				_body.text = str(TranslationServer.translate("MASTER ALARM! Pressione R ou clique na luz para silenciar. Enquanto ele toca, a nave deriva mais."))
 			"pogo":
 				Sound.play_cue("warning", "Voice", true)
-				_body.text = "Oscilação do motor! Segure o nariz no anel: ela passa em alguns segundos."
+				_body.text = str(TranslationServer.translate("Oscilação do motor! Segure o nariz no anel: ela passa em alguns segundos."))
 			"static":
 				Sound.play_cue("radio")
-				_body.text = "Ruído na telemetria: o mapa e o mostrador digital falham. Confie no ponteiro de velocidade."
+				_body.text = str(TranslationServer.translate("Ruído na telemetria: o mapa e o mostrador digital falham. Confie no ponteiro de velocidade."))
 				Houston.say("...llo, Hous... ...ading you bro... stand b...",
-					"...lo, aqui é Hous... sinal ...ortado... aguard...")
+					str(TranslationServer.translate("...lo, aqui é Hous... sinal ...ortado... aguard...")))
 	elif incident == "alarm":
 		_beep -= delta
 		if _beep <= 0.0:
@@ -562,7 +562,7 @@ func _end_incident() -> void:
 	incident = ""
 	incident_done = true
 	if phase == "tli":
-		_body.text = "Motor do S-IVB aceso. Tempo acelerado para o jogo (a queima real durou cerca de 6 minutos)."
+		_body.text = str(TranslationServer.translate("Motor do S-IVB aceso. Tempo acelerado para o jogo (a queima real durou cerca de 6 minutos)."))
 
 
 func _reset_alarm() -> void:
@@ -575,7 +575,7 @@ func _callouts() -> void:
 	if progress() >= 0.4 and not _called.has("thrust") and incident != "static":
 		_called["thrust"] = true
 		Houston.say("Apollo, Houston. Thrust is good. You are looking good.",
-			"Apollo, aqui é Houston. Empuxo normal. Tudo certo por aqui.")
+			str(TranslationServer.translate("Apollo, aqui é Houston. Empuxo normal. Tudo certo por aqui.")))
 	if velocity_kms >= target - 0.5 and not _called.has("standby"):
 		_called["standby"] = true
 		Houston.say("Stand by for cutoff.", "Preparar para o corte do motor.")
@@ -593,7 +593,7 @@ func _process(delta: float) -> void:
 		_countdown -= delta
 		if ceili(_countdown) != before and _countdown > 0.0:
 			Sound.play_cue("switch")
-		_status.text = "IGNIÇÃO EM %d" % maxi(ceili(_countdown), 0)
+		_status.text = str(TranslationServer.translate("IGNIÇÃO EM %d")) % maxi(ceili(_countdown), 0)
 		if _countdown <= 0.0:
 			_start_tli()
 	elif phase == "tli":
@@ -601,9 +601,9 @@ func _process(delta: float) -> void:
 		steer += Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		step(delta, steer)
 		if phase == "tli":
-			_status.text = "[WASD/SETAS] NARIZ NO ANEL   ·   [ESPAÇO] CORTE"
+			_status.text = str(TranslationServer.translate("[WASD/SETAS] NARIZ NO ANEL   ·   [ESPAÇO] CORTE"))
 			if velocity_kms >= target - tol * 2.5:
-				_status.text = "NA JANELA · [ESPAÇO] DESLIGAR MOTOR"
+				_status.text = str(TranslationServer.translate("NA JANELA · [ESPAÇO] DESLIGAR MOTOR"))
 	elif phase == "sep":
 		if _silence > 0.0:
 			_silence -= delta
@@ -612,7 +612,7 @@ func _process(delta: float) -> void:
 		else:
 			sep_time_left -= delta
 		_update_qte(delta)
-		_status.text = "JANELA DE SEPARAÇÃO: %.0f s" % maxf(sep_time_left, 0.0)
+		_status.text = str(TranslationServer.translate("JANELA DE SEPARAÇÃO: %.0f s")) % maxf(sep_time_left, 0.0)
 		if sep_time_left <= 0.0 and phase == "sep":
 			_fail_sep()
 	_animate_levers(delta)
@@ -643,8 +643,8 @@ func _flight_caption(u: float) -> String:
 	var km := int(6556.0 + 377844.0 * share)
 	var cells := 24
 	var filled := clampi(int(round(share * cells)), 1, cells)
-	var line := "TERRA " + "━".repeat(filled) + "▶" + "┄".repeat(cells - filled) + " LUA"
-	return "T+ %d h %02d min · %s km da Terra\n%s\nChegada à órbita lunar em cerca de 3 dias · [ESPAÇO] pular" % [
+	var line := str(TranslationServer.translate("TERRA ")) + "━".repeat(filled) + "▶" + "┄".repeat(cells - filled) + str(TranslationServer.translate(" LUA"))
+	return str(TranslationServer.translate("T+ %d h %02d min · %s km da Terra\n%s\nChegada à órbita lunar em cerca de 3 dias · [ESPAÇO] pular")) % [
 		int(hours), int(fmod(hours, 1.0) * 60.0), _thousands(km), line]
 
 
@@ -677,7 +677,7 @@ func _update_banner(delta: float) -> void:
 	var pulse := 1.0
 	match state:
 		"go":
-			text = "ALINHAMENTO CONFIRMADO — PRESSIONE ESPAÇO!"
+			text = str(TranslationServer.translate("ALINHAMENTO CONFIRMADO — PRESSIONE ESPAÇO!"))
 			color = Game.GOOD if blink else Game.CREAM
 			pulse = 1.0 + 0.045 * sin(_clock * 14.0)
 			_banner_beep -= delta
@@ -685,14 +685,14 @@ func _update_banner(delta: float) -> void:
 				_banner_beep = BANNER_BEEP
 				Sound.play_cue("add")
 		"steer":
-			text = "TRAJETÓRIA NA LUA — VOLTE O NARIZ AO ANEL!"
+			text = str(TranslationServer.translate("TRAJETÓRIA NA LUA — VOLTE O NARIZ AO ANEL!"))
 			color = Game.WARN
 		"late":
-			text = "PASSOU DO PONTO — CORTE JÁ!"
+			text = str(TranslationServer.translate("PASSOU DO PONTO — CORTE JÁ!"))
 			color = Game.BAD if blink else Game.WARN
 			pulse = 1.0 + 0.03 * sin(_clock * 22.0)
 		"soon":
-			text = "QUASE LÁ · AGUARDE A TRAJETÓRIA FICAR VERDE"
+			text = str(TranslationServer.translate("QUASE LÁ · AGUARDE A TRAJETÓRIA FICAR VERDE"))
 			color = Game.AMBER.darkened(0.15)
 		"cut":
 			text = _cut_text
@@ -774,7 +774,7 @@ func _cutoff() -> void:
 	# Resposta imediata ao ESPAÇO: o alerta vira a confirmação, a tela pisca e soa o sinal.
 	var aligned := absf(delta_v) <= tol and attitude.length() < ATT_GOOD
 	_cut_feedback = 1.0
-	_cut_text = "CORTE CONFIRMADO — MOTOR DESLIGADO" if aligned else "CORTE ACEITO — CORREÇÃO DE ROTA DEPOIS"
+	_cut_text = str(TranslationServer.translate("CORTE CONFIRMADO — MOTOR DESLIGADO")) if aligned else str(TranslationServer.translate("CORTE ACEITO — CORREÇÃO DE ROTA DEPOIS"))
 	_cut_color = Game.GOOD if aligned else Game.WARN
 	_flash_rect.color = Color(_cut_color.r, _cut_color.g, _cut_color.b, 0.28)
 	Sound.play_cue("confirm")
@@ -786,7 +786,7 @@ func _say_cut_line() -> void:
 		Houston.say_recorded("cutoff_precise", "Good cutoff. You are on your way.", "Corte perfeito. Vocês estão a caminho.")
 	else:
 		Houston.say_recorded("cutoff_correction", "Cutoff confirmed. We'll need a small course correction later.",
-			"Corte confirmado. Vamos precisar de uma pequena correção de rota depois.")
+			str(TranslationServer.translate("Corte confirmado. Vamos precisar de uma pequena correção de rota depois.")))
 
 
 # ---------- Separação ----------
@@ -804,13 +804,13 @@ func _start_sep() -> void:
 	# Na separação só importam as instruções e as alavancas: o resto sai da tela.
 	_map_panel.visible = false
 	_cluster_panel.visible = false
-	_title.text = "PAINEL DE MANOBRA · SEPARAÇÃO DO CSM"
-	_body.text = "Motor desligado. Siga as instruções grandes à direita para acionar as três alavancas."
+	_title.text = str(TranslationServer.translate("PAINEL DE MANOBRA · SEPARAÇÃO DO CSM"))
+	_body.text = str(TranslationServer.translate("Motor desligado. Siga as instruções grandes à direita para acionar as três alavancas."))
 	_update_checklist()
 
 
 func _update_checklist() -> void:
-	var text := "CHECKLIST DE SEPARAÇÃO\n"
+	var text := str(TranslationServer.translate("CHECKLIST DE SEPARAÇÃO\n"))
 	for i in SWITCHES.size():
 		var mark := "[x]" if i < sep_step else ("[>]" if i == sep_step and phase == "sep" else "[ ]")
 		text += " %s %d. %s\n" % [mark, i + 1, SWITCHES[i][0]]
@@ -838,9 +838,9 @@ func _press_switch(position_index: int) -> void:
 		MissionState.separation_mistakes += 1
 		_cell_error[position_index] = 1.0
 		_qte_error = 1.0
-		_qte_alert = "ALAVANCA ERRADA!"
+		_qte_alert = str(TranslationServer.translate("ALAVANCA ERRADA!"))
 		_kick = Vector2(rng.randf_range(-5.0, 5.0), 5.0)
-		_body.text = "Fora de ordem! %s não pode vir agora. Siga o checklist: o próximo é %s." % [SWITCHES[index][0], SWITCHES[sep_step][0]]
+		_body.text = str(TranslationServer.translate("Fora de ordem! %s não pode vir agora. Siga o checklist: o próximo é %s.")) % [SWITCHES[index][0], SWITCHES[sep_step][0]]
 		return
 	qte_index = index
 	_key_bounce = 0.14
@@ -851,7 +851,7 @@ func _press_switch(position_index: int) -> void:
 	qte_time_left = _qte_time() + 0.6
 	_lever_target[position_index] = 0.08
 	Sound.play_cue("switch")
-	_body.text = "Procedimento %s: siga as teclas grandes à direita." % SWITCHES[index][0]
+	_body.text = str(TranslationServer.translate("Procedimento %s: siga as teclas grandes à direita.")) % SWITCHES[index][0]
 
 
 ## Tecla durante um procedimento. `pressed` falso é a soltura, usada nos passos de segurar.
@@ -864,7 +864,7 @@ func qte_key(keycode: int, pressed: bool) -> void:
 		if keycode == expected and qte_holding:
 			qte_holding = false
 			qte_hold = 0.0
-			_body.text = "Soltou cedo: segure %s até a barra encher." % OS.get_keycode_string(expected)
+			_body.text = str(TranslationServer.translate("Soltou cedo: segure %s até a barra encher.")) % OS.get_keycode_string(expected)
 		return
 	if keycode == expected:
 		if step[2] == "hold":
@@ -874,7 +874,7 @@ func qte_key(keycode: int, pressed: bool) -> void:
 		else:
 			_qte_advance()
 	elif keycode >= KEY_A and keycode <= KEY_Z:
-		_qte_fail("Tecla errada: %s em vez de %s." % [OS.get_keycode_string(keycode), OS.get_keycode_string(expected)])
+		_qte_fail(str(TranslationServer.translate("Tecla errada: %s em vez de %s.")) % [OS.get_keycode_string(keycode), OS.get_keycode_string(expected)])
 
 
 func _update_qte(delta: float) -> void:
@@ -891,7 +891,7 @@ func _update_qte(delta: float) -> void:
 		return
 	qte_time_left -= delta
 	if qte_time_left <= 0.0:
-		_qte_fail("Tempo esgotado em %s." % step[0])
+		_qte_fail(str(TranslationServer.translate("Tempo esgotado em %s.")) % step[0])
 
 
 func _qte_advance() -> void:
@@ -921,14 +921,14 @@ func _qte_fail(reason: String) -> void:
 	var position_index := _order.find(qte_index)
 	_cell_error[position_index] = 1.0
 	_qte_error = 1.0
-	_qte_alert = "TEMPO ESGOTADO!" if reason.begins_with("Tempo") else "TECLA ERRADA!"
+	_qte_alert = str(TranslationServer.translate("TEMPO ESGOTADO!")) if reason.begins_with(str(TranslationServer.translate("Tempo"))) else str(TranslationServer.translate("TECLA ERRADA!"))
 	_kick = Vector2(rng.randf_range(-6.0, 6.0), 6.0)
 	_lever_target[position_index] = 0.0
 	qte_step = 0
 	qte_hold = 0.0
 	qte_holding = false
 	qte_time_left = _qte_time() + 0.8
-	_body.text = "%s O procedimento %s recomeça do primeiro passo." % [reason, SWITCHES[qte_index][0]]
+	_body.text = str(TranslationServer.translate("%s O procedimento %s recomeça do primeiro passo.")) % [reason, SWITCHES[qte_index][0]]
 
 
 func _animate_levers(delta: float) -> void:
@@ -951,7 +951,7 @@ func _on_switch(index: int) -> void:
 	if index != sep_step:
 		Sound.play_cue("warning", "Voice", true)
 		MissionState.separation_mistakes += 1
-		_body.text = "Fora de ordem! %s não pode vir agora. Siga o checklist." % SWITCHES[index][0]
+		_body.text = str(TranslationServer.translate("Fora de ordem! %s não pode vir agora. Siga o checklist.")) % SWITCHES[index][0]
 		return
 	var position_index := _order.find(index)
 	_lever_target[position_index] = 1.0
@@ -961,7 +961,7 @@ func _on_switch(index: int) -> void:
 	_view.separation_step(sep_step)
 	_update_checklist()
 	if sep_step < SWITCHES.size():
-		_body.text = "%s acionada. Próximo item do checklist: %s." % [SWITCHES[index][0], SWITCHES[sep_step][0]]
+		_body.text = str(TranslationServer.translate("%s acionada. Próximo item do checklist: %s.")) % [SWITCHES[index][0], SWITCHES[sep_step][0]]
 	else:
 		_finish()
 
@@ -970,14 +970,14 @@ func _finish() -> void:
 	phase = "done"
 	_kick = Vector2(rng.randf_range(-4.0, 4.0), -9.0)
 	Sound.play_cue("dock")
-	_status.text = "SEPARAÇÃO CONFIRMADA"
-	_body.text = "Pirotécnicos disparados: os painéis do adaptador se abrem e o CSM se afasta do S-IVB."
+	_status.text = str(TranslationServer.translate("SEPARAÇÃO CONFIRMADA"))
+	_body.text = str(TranslationServer.translate("Pirotécnicos disparados: os painéis do adaptador se abrem e o CSM se afasta do S-IVB."))
 	_update_checklist()
-	MissionState.add_event("separation", "Injeção translunar e separação",
-		"Concluída com desvio de trajetória de %.0f%% e %d erro(s) de ordem." % [MissionState.trajectory_error * 100.0, MissionState.separation_mistakes])
+	MissionState.add_event("separation", str(TranslationServer.translate("Injeção translunar e separação")),
+		str(TranslationServer.translate("Concluída com desvio de trajetória de %.0f%% e %d erro(s) de ordem.")) % [MissionState.trajectory_error * 100.0, MissionState.separation_mistakes])
 	Houston.clear()
 	Houston.say_recorded("separation_confirmed", "We confirm separation. Proceed with transposition and docking.",
-		"Separação confirmada. Prossigam com a transposição e o acoplamento.")
+		str(TranslationServer.translate("Separação confirmada. Prossigam com a transposição e o acoplamento.")))
 	_flight_timer.start()
 
 
@@ -1008,17 +1008,17 @@ func _show_telemetry() -> void:
 	_flight_box.visible = false
 	var ms := MissionState
 	var delta_v := velocity_kms - target
-	var cut_grade := "no ponto certo" if absf(delta_v) <= tol else "fora do ponto ideal"
+	var cut_grade := str(TranslationServer.translate("no ponto certo")) if absf(delta_v) <= tol else str(TranslationServer.translate("fora do ponto ideal"))
 	var att_grade := "firme" if attitude_error() <= 0.0 else "solta"
-	var arrival := "A rota chega à Lua." if ms.trajectory_error < MissionDecisions.SMALL_ERROR else "A rota passa ao lado da Lua: será preciso corrigir."
-	_make_panel("TELEMETRIA DA MANOBRA",
-		"Corte do motor: %.2f km/s (alvo %.2f) · %s\n" % [velocity_kms, target, cut_grade] +
-		"Atitude: desvio médio de %.1f° durante a queima · %s\n" % [mean_deviation(), att_grade] +
-		"Erros na separação (ordem ou procedimento): %d\n\n" % ms.separation_mistakes +
-		"Desvio de trajetória: %.0f%% (corte %.0f%% + atitude %.0f%%). %s\n" % [ms.trajectory_error * 100.0, cut_error * 100.0, attitude_error() * 100.0, arrival] +
-		"Correção de rota prevista na cabine: cerca de %.0f%% do propelente do CSM.\n" % MissionDecisions.midcourse_cost() +
-		"Travessia até a Lua: cerca de 3 dias, vividos na cabine a partir do Dia 1.")
-	_panel_button("CONTINUAR ▶", _advance)
+	var arrival := str(TranslationServer.translate("A rota chega à Lua.")) if ms.trajectory_error < MissionDecisions.SMALL_ERROR else str(TranslationServer.translate("A rota passa ao lado da Lua: será preciso corrigir."))
+	_make_panel(str(TranslationServer.translate("TELEMETRIA DA MANOBRA")),
+		str(TranslationServer.translate("Corte do motor: %.2f km/s (alvo %.2f) · %s\n")) % [velocity_kms, target, cut_grade] +
+		str(TranslationServer.translate("Atitude: desvio médio de %.1f° durante a queima · %s\n")) % [mean_deviation(), att_grade] +
+		str(TranslationServer.translate("Erros na separação (ordem ou procedimento): %d\n\n")) % ms.separation_mistakes +
+		str(TranslationServer.translate("Desvio de trajetória: %.0f%% (corte %.0f%% + atitude %.0f%%). %s\n")) % [ms.trajectory_error * 100.0, cut_error * 100.0, attitude_error() * 100.0, arrival] +
+		str(TranslationServer.translate("Correção de rota prevista na cabine: cerca de %.0f%% do propelente do CSM.\n")) % MissionDecisions.midcourse_cost() +
+		str(TranslationServer.translate("Travessia até a Lua: cerca de 3 dias, vividos na cabine a partir do Dia 1.")))
+	_panel_button(str(TranslationServer.translate("CONTINUAR ▶")), _advance)
 	_advance_timer.start()
 
 
@@ -1037,35 +1037,35 @@ func _abort() -> void:
 	_view.abort()
 	Sound.end_maneuver()
 	Sound.play_cue("abort", "Voice", true)
-	_status.text = "ABORTAR · ABORTAR"
+	_status.text = str(TranslationServer.translate("ABORTAR · ABORTAR"))
 	_timer(ABORT_DELAY, Game.separation_failed).start()
 
 
 func _fail_tli(too_fast: bool) -> void:
 	if too_fast:
-		MissionState.set_failure("separation", "TLI ABORTADA · VELOCIDADE EXCESSIVA",
-			["O motor ficou ligado tempo demais (%.2f km/s). A nave passaria longe da Lua." % velocity_kms],
-			["Pressione ESPAÇO quando a trajetória prevista alcançar a Lua e ficar verde.", "Um pouco antes ou depois também é aceito, mas gasta combustível em correções depois."])
+		MissionState.set_failure("separation", str(TranslationServer.translate("TLI ABORTADA · VELOCIDADE EXCESSIVA")),
+			[str(TranslationServer.translate("O motor ficou ligado tempo demais (%.2f km/s). A nave passaria longe da Lua.")) % velocity_kms],
+			[str(TranslationServer.translate("Pressione ESPAÇO quando a trajetória prevista alcançar a Lua e ficar verde.")), str(TranslationServer.translate("Um pouco antes ou depois também é aceito, mas gasta combustível em correções depois."))])
 	else:
-		MissionState.set_failure("separation", "TLI ABORTADA · CORTE PREMATURO",
-			["O motor foi desligado cedo demais (%.2f km/s). A nave não teria energia para chegar à Lua." % velocity_kms],
-			["Espere a trajetória prevista alcançar a Lua, perto de %.2f km/s." % target])
+		MissionState.set_failure("separation", str(TranslationServer.translate("TLI ABORTADA · CORTE PREMATURO")),
+			[str(TranslationServer.translate("O motor foi desligado cedo demais (%.2f km/s). A nave não teria energia para chegar à Lua.")) % velocity_kms],
+			[str(TranslationServer.translate("Espere a trajetória prevista alcançar a Lua, perto de %.2f km/s.")) % target])
 	_abort()
 
 
 func _fail_attitude() -> void:
-	MissionState.set_failure("separation", "TLI ABORTADA · ATITUDE FORA DE CONTROLE",
-		["A nave desviou %.0f° da direção da queima. Com o empuxo apontado para o lado errado, a trajetória não chegaria à Lua." % attitude.length()],
-		["Mantenha o nariz da nave dentro do anel com WASD ou SETAS durante toda a queima.",
-			"Toques curtos funcionam melhor do que segurar a tecla.",
-			"Se o MASTER ALARM acender, pressione R: enquanto ele toca, a nave deriva mais."])
+	MissionState.set_failure("separation", str(TranslationServer.translate("TLI ABORTADA · ATITUDE FORA DE CONTROLE")),
+		[str(TranslationServer.translate("A nave desviou %.0f° da direção da queima. Com o empuxo apontado para o lado errado, a trajetória não chegaria à Lua.")) % attitude.length()],
+		[str(TranslationServer.translate("Mantenha o nariz da nave dentro do anel com WASD ou SETAS durante toda a queima.")),
+			str(TranslationServer.translate("Toques curtos funcionam melhor do que segurar a tecla.")),
+			str(TranslationServer.translate("Se o MASTER ALARM acender, pressione R: enquanto ele toca, a nave deriva mais."))])
 	_abort()
 
 
 func _fail_sep() -> void:
-	MissionState.set_failure("separation", "SEPARAÇÃO NÃO CONCLUÍDA",
-		["A janela de separação terminou antes de completar o checklist."],
-		["Leia o checklist: o item marcado com [>] é o próximo.", "Escolha a alavanca com 1, 2, 3 ou clique e pressione as teclas do procedimento assim que elas acenderem."])
+	MissionState.set_failure("separation", str(TranslationServer.translate("SEPARAÇÃO NÃO CONCLUÍDA")),
+		[str(TranslationServer.translate("A janela de separação terminou antes de completar o checklist."))],
+		[str(TranslationServer.translate("Leia o checklist: o item marcado com [>] é o próximo.")), str(TranslationServer.translate("Escolha a alavanca com 1, 2, 3 ou clique e pressione as teclas do procedimento assim que elas acenderem."))])
 	phase = "failed"
 	Sound.play_cue("abort", "Voice", true)
 	_timer(ABORT_DELAY, Game.separation_failed).start()
@@ -1137,7 +1137,7 @@ func _draw_map() -> void:
 	_map.draw_circle(MAP_MOON, 7.0, Color(0.72, 0.71, 0.68))
 	_map.draw_circle(MAP_EARTH, 13.0, Color(0.16, 0.36, 0.78))
 	_map.draw_circle(MAP_EARTH + Vector2(-4, -3), 5.0, Color(0.3, 0.55, 0.3))
-	_map.draw_string(font, MAP_MOON + Vector2(-20, -22), "LUA", HORIZONTAL_ALIGNMENT_CENTER, 40, 12, Game.CREAM)
+	_map.draw_string(font, MAP_MOON + Vector2(-20, -22), str(TranslationServer.translate("LUA")), HORIZONTAL_ALIGNMENT_CENTER, 40, 12, Game.CREAM)
 	# Órbita prevista: foco na Terra, apogeu na direção da mira.
 	var a := (MAP_PARK + apogee) * 0.5
 	var c := a - MAP_PARK
@@ -1160,13 +1160,13 @@ func _draw_map() -> void:
 	# A nave fica no perigeu, do lado oposto ao da Lua.
 	var ship := MAP_EARTH - dir * MAP_PARK
 	_map.draw_colored_polygon(PackedVector2Array([ship + across * 5.0, ship - across * 5.0, ship - dir * 6.0]), Game.CREAM)
-	var label := "APOGEU "
+	var label := str(TranslationServer.translate("APOGEU "))
 	if escaped:
 		label += "ESCAPE"
 	else:
 		label += "%s km" % _thousands(int(6556.0 + 377844.0 * frac))
 	if noisy:
-		label = "SEM TELEMETRIA"
+		label = str(TranslationServer.translate("SEM TELEMETRIA"))
 		for i in 70:
 			_map.draw_rect(Rect2(Vector2(rng.randf() * MAP_SIZE.x, rng.randf() * MAP_SIZE.y), Vector2(2, 2)), Color(0.7, 0.9, 0.75, 0.5))
 	_map.draw_string(font, Vector2(6, MAP_SIZE.y - 8), label, HORIZONTAL_ALIGNMENT_LEFT, MAP_SIZE.x - 12, 13, Game.WARN if noisy else color)
@@ -1204,12 +1204,12 @@ func _draw_cluster() -> void:
 	var done := clampf(progress(), 0.0, 1.0)
 	var blink := fmod(_clock, 0.5) < 0.25
 	var g := lerpf(G_START, G_END, done) if burning else 0.0
-	_dial(Vector2(52, 52), g / 2.0, "ACELERAÇÃO", "%.1f g" % g, Game.AMBER)
+	_dial(Vector2(52, 52), g / 2.0, str(TranslationServer.translate("ACELERAÇÃO")), "%.1f g" % g, Game.AMBER)
 	var shown_velocity := velocity_kms + (sin(_clock * 37.0) * 0.03 if incident == "static" else 0.0)
 	var speed_color := Game.GOOD if absf(velocity_kms - target) <= tol else Game.CREAM
-	_dial(Vector2(160, 52), (shown_velocity - 7.0) / 5.0, "VELOCIDADE", "km/s", speed_color)
+	_dial(Vector2(160, 52), (shown_velocity - 7.0) / 5.0, str(TranslationServer.translate("VELOCIDADE")), "km/s", speed_color)
 	var fuel := clampf(1.0 - 0.92 * progress(), 0.0, 1.0)
-	_dial(Vector2(268, 52), fuel, "PROPELENTE S-IVB", "%d%%" % roundi(fuel * 100.0), Game.GOOD if fuel > 0.15 else Game.WARN)
+	_dial(Vector2(268, 52), fuel, str(TranslationServer.translate("PROPELENTE S-IVB")), "%d%%" % roundi(fuel * 100.0), Game.GOOD if fuel > 0.15 else Game.WARN)
 	var x := 330.0
 	var width := CLUSTER_SIZE.x - x
 	var digits := "--.-- km/s" if incident == "static" else "%.2f km/s" % velocity_kms
@@ -1217,29 +1217,29 @@ func _draw_cluster() -> void:
 	_cluster.draw_string(font, Vector2(x, 54), "ALVO %.2f km/s" % target, HORIZONTAL_ALIGNMENT_CENTER, width, 13, Game.AMBER)
 	var deviation := attitude.length()
 	var guidance := _guidance_color() if burning else Color(0.5, 0.5, 0.48)
-	_cluster.draw_string(font, Vector2(x, 80), "NARIZ FORA DO ANEL  %.1f°" % deviation, HORIZONTAL_ALIGNMENT_CENTER, width, 14, guidance)
+	_cluster.draw_string(font, Vector2(x, 80), str(TranslationServer.translate("NARIZ FORA DO ANEL  %.1f°")) % deviation, HORIZONTAL_ALIGNMENT_CENTER, width, 14, guidance)
 	var notice := ""
 	var notice_color := Game.CREAM
 	if incident == "alarm":
-		notice = "MASTER ALARM · [R] SILENCIAR"
+		notice = str(TranslationServer.translate("MASTER ALARM · [R] SILENCIAR"))
 		notice_color = Game.BAD if blink else Game.WARN
 	elif incident == "pogo":
-		notice = "OSCILAÇÃO DO MOTOR"
+		notice = str(TranslationServer.translate("OSCILAÇÃO DO MOTOR"))
 		notice_color = Game.WARN
 	elif incident == "static":
-		notice = "TELEMETRIA COM RUÍDO"
+		notice = str(TranslationServer.translate("TELEMETRIA COM RUÍDO"))
 		notice_color = Game.WARN
 	elif burning and deviation >= ATT_WARN:
-		notice = "ATITUDE! VOLTE AO ANEL"
+		notice = str(TranslationServer.translate("ATITUDE! VOLTE AO ANEL"))
 		notice_color = Game.BAD if blink else Game.WARN
 	elif burning and velocity_kms >= target - 0.5 and velocity_kms < target - tol * 2.5:
-		notice = "PREPARAR CORTE"
+		notice = str(TranslationServer.translate("PREPARAR CORTE"))
 		notice_color = Game.AMBER
 	elif burning and absf(velocity_kms - target) <= tol:
-		notice = "TRAJETÓRIA NA LUA · CORTE AGORA"
+		notice = str(TranslationServer.translate("TRAJETÓRIA NA LUA · CORTE AGORA"))
 		notice_color = Game.GOOD if blink else Game.CREAM
 	elif phase == "sep" and _silence > 0.0:
-		notice = "MOTOR DESLIGADO"
+		notice = str(TranslationServer.translate("MOTOR DESLIGADO"))
 		notice_color = Game.GOOD
 	_cluster.draw_string(font, Vector2(x, 112), notice, HORIZONTAL_ALIGNMENT_CENTER, width, 15, notice_color)
 
@@ -1294,13 +1294,13 @@ func _draw_switch(button: Button, position_index: int) -> void:
 	var hint := ""
 	if thrown:
 		lamp = Game.GOOD
-		hint = "ACIONADA"
+		hint = str(TranslationServer.translate("ACIONADA"))
 	elif active:
 		lamp = Game.AMBER if blink else Color(0.3, 0.2, 0.05)
-		hint = "EM CURSO"
+		hint = str(TranslationServer.translate("EM CURSO"))
 	elif next:
 		lamp = Game.AMBER.darkened(0.3)
-		hint = "PRESSIONE %d" % (position_index + 1) if blink else ""
+		hint = str(TranslationServer.translate("PRESSIONE %d")) % (position_index + 1) if blink else ""
 	button.draw_circle(Vector2(14, button.size.y - 12), 5.0, lamp)
 	button.draw_string(font, Vector2(22, button.size.y - 7), hint, HORIZONTAL_ALIGNMENT_CENTER, width - 30, 12, Game.AMBER if not thrown else Game.GOOD)
 
@@ -1316,7 +1316,7 @@ func _draw_qte() -> void:
 	_qte.draw_rect(Rect2(Vector2.ZERO, size), Color(0.03, 0.035, 0.04).lerp(Color(0.35, 0.04, 0.03), _qte_error * 0.8))
 	# Cabeçalho: qual alavanca e quanto falta da janela de separação.
 	var lever_number := mini(sep_step + 1, SWITCHES.size())
-	_qte.draw_string(font, Vector2(6, 22), "SEPARAÇÃO · ALAVANCA %d DE 3" % lever_number, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Game.AMBER)
+	_qte.draw_string(font, Vector2(6, 22), str(TranslationServer.translate("SEPARAÇÃO · ALAVANCA %d DE 3")) % lever_number, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Game.AMBER)
 	if phase == "sep" and _silence <= 0.0:
 		var window_color := Game.CREAM if sep_time_left > 8.0 else (Game.BAD if blink else Game.WARN)
 		_qte.draw_string(font, Vector2(0, 22), "%d s" % ceili(maxf(sep_time_left, 0.0)), HORIZONTAL_ALIGNMENT_RIGHT, size.x - 6, 17, window_color)
@@ -1324,23 +1324,23 @@ func _draw_qte() -> void:
 
 	# Alavanca acabou de ser acionada (ou a separação terminou): confirmação em verde.
 	if _qte_done_time > 0.0 and qte_index < 0:
-		var done_text := "SEPARAÇÃO CONFIRMADA!" if phase == "done" else "%s ACIONADA!" % _qte_done_name
+		var done_text := str(TranslationServer.translate("SEPARAÇÃO CONFIRMADA!")) if phase == "done" else "%s ACIONADA!" % _qte_done_name
 		_big_text(Vector2(0, 86), done_text, 30, Game.GOOD)
 		_qte.draw_circle(key_center, 66.0, Color(0.06, 0.22, 0.08))
 		_qte.draw_arc(key_center, 66.0, 0.0, TAU, 48, Game.GOOD, 6.0)
 		_qte.draw_polyline(PackedVector2Array([key_center + Vector2(-32, 2), key_center + Vector2(-8, 26), key_center + Vector2(36, -24)]), Game.GOOD, 12.0)
 		if phase == "sep" and sep_step < SWITCHES.size():
-			_big_text(Vector2(0, 312), "Próxima: %s" % SWITCHES[sep_step][0], 20, Game.CREAM)
+			_big_text(Vector2(0, 312), str(TranslationServer.translate("Próxima: %s")) % SWITCHES[sep_step][0], 20, Game.CREAM)
 		return
 	if phase != "sep":
 		return
 
 	# Silêncio logo depois do corte: só uma contagem para o jogador se preparar.
 	if _silence > 0.0:
-		_big_text(Vector2(0, 86), "MOTOR DESLIGADO", 30, Game.GOOD)
+		_big_text(Vector2(0, 86), str(TranslationServer.translate("MOTOR DESLIGADO")), 30, Game.GOOD)
 		_qte.draw_arc(key_center, 70.0, 0.0, TAU, 48, Game.AMBER.darkened(0.4), 4.0)
 		_big_text(Vector2(0, key_center.y + 26), "%d" % ceili(_silence), 72, Game.CREAM)
-		_big_text(Vector2(0, 312), "Prepare-se: as alavancas vêm a seguir.", 20, Game.CREAM)
+		_big_text(Vector2(0, 312), str(TranslationServer.translate("Prepare-se: as alavancas vêm a seguir.")), 20, Game.CREAM)
 		return
 
 	var instruction := ""
@@ -1353,7 +1353,7 @@ func _draw_qte() -> void:
 		# Escolher a alavanca: a tecla é o número da posição dela no painel.
 		var position_index := _order.find(sep_step)
 		key_label = str(position_index + 1)
-		instruction = "PRESSIONE A TECLA %s AGORA!" % key_label
+		instruction = str(TranslationServer.translate("PRESSIONE A TECLA %s AGORA!")) % key_label
 		subtitle = "Abre a alavanca %s" % SWITCHES[sep_step][0]
 		fraction = clampf(sep_time_left / _sep_window, 0.0, 1.0)
 	else:
@@ -1364,7 +1364,7 @@ func _draw_qte() -> void:
 			instruction = "CONTINUE SEGURANDO %s..." % key_label if qte_holding else "SEGURE A TECLA %s!" % key_label
 			fill = clampf(qte_hold / HOLD_TIME, 0.0, 1.0)
 		else:
-			instruction = "PRESSIONE A TECLA %s AGORA!" % key_label
+			instruction = str(TranslationServer.translate("PRESSIONE A TECLA %s AGORA!")) % key_label
 		subtitle = "Passo %d de %d · %s" % [qte_step + 1, PROCEDURES[qte_index].size(), step[0]]
 		fraction = fill if holding_step and qte_holding else clampf(qte_time_left / _qte_time(), 0.0, 1.0)
 	var alert := _qte_error > 0.35
@@ -1398,11 +1398,11 @@ func _draw_qte() -> void:
 	_qte.draw_rect(cap, border, false, 4.0)
 	_qte.draw_string(font, Vector2(cap.position.x, cap.position.y + 76), key_label, HORIZONTAL_ALIGNMENT_CENTER, cap.size.x, 70, Game.CREAM)
 	if holding_step:
-		_qte.draw_string(font, Vector2(cap.position.x, cap.end.y - 8), "SEGURE", HORIZONTAL_ALIGNMENT_CENTER, cap.size.x, 14, Game.AMBER)
+		_qte.draw_string(font, Vector2(cap.position.x, cap.end.y - 8), str(TranslationServer.translate("SEGURE")), HORIZONTAL_ALIGNMENT_CENTER, cap.size.x, 14, Game.AMBER)
 	# Passo atual e o caminho do procedimento: blocos verdes para os passos feitos.
 	_big_text(Vector2(0, 318), subtitle, 20, Game.CREAM)
 	if qte_index < 0:
-		_big_text(Vector2(0, 348), "(ou clique na alavanca)", 16, Color(0.7, 0.7, 0.65))
+		_big_text(Vector2(0, 348), str(TranslationServer.translate("(ou clique na alavanca)")), 16, Color(0.7, 0.7, 0.65))
 	if qte_index >= 0:
 		var total: int = PROCEDURES[qte_index].size()
 		var width := 56.0

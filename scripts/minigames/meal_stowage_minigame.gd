@@ -37,7 +37,7 @@ func _ready():
 	tamanhos = conjuntos[nivel]
 	for i in range(tamanhos.size()):
 		casas.append(Vector2(-1, -1))
-	var titulo = Game.make_label("COMIDA · GUARDAR AS EMBALAGENS", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("COMIDA · GUARDAR AS EMBALAGENS")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
 	contador = Game.make_label("", 20, Color.WHITE)
@@ -46,7 +46,7 @@ func _ready():
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("Resto de comida solto estraga, cheira mal e produz gás.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("Resto de comida solto estraga, cheira mal e produz gás.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	atualizar_textos()
@@ -157,16 +157,16 @@ func atualizar_textos():
 	if tempo < 15:
 		contador.modulate = Game.WARN
 	if acabou and acertou:
-		aviso.text = "Tudo coube e a bolsa foi fechada. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("Tudo coube e a bolsa foi fechada. Voltando à cabine..."))
 		aviso.modulate = Game.GOOD
 	elif acabou:
-		aviso.text = "O tempo acabou com embalagens de fora. Voltando à cabine..."
+		aviso.text = str(TranslationServer.translate("O tempo acabou com embalagens de fora. Voltando à cabine..."))
 		aviso.modulate = Game.BAD
 	elif alerta > 0:
-		aviso.text = "Não cabe aí. Procure outro espaço na bolsa."
+		aviso.text = str(TranslationServer.translate("Não cabe aí. Procure outro espaço na bolsa."))
 		aviso.modulate = Game.BAD
 	else:
-		aviso.text = "Arraste cada embalagem vazia para a bolsa. Todas precisam caber sem ficar uma sobre a outra."
+		aviso.text = str(TranslationServer.translate("Arraste cada embalagem vazia para a bolsa. Todas precisam caber sem ficar uma sobre a outra."))
 		aviso.modulate = Game.CREAM
 
 
@@ -185,7 +185,7 @@ func _draw():
 	draw_rect(Rect2(0, 0, 960, 540), Color(0.1, 0.11, 0.12))
 	draw_rect(Rect2(24, 80, 500, 400), Color(0.14, 0.15, 0.15))
 	draw_rect(Rect2(24, 80, 500, 400), Color(0.3, 0.31, 0.3), false, 2)
-	draw_string(fonte, Vector2(24, 76), "EMBALAGENS VAZIAS", HORIZONTAL_ALIGNMENT_LEFT, 300, 13, Game.AMBER)
+	draw_string(fonte, Vector2(24, 76), str(TranslationServer.translate("EMBALAGENS VAZIAS")), HORIZONTAL_ALIGNMENT_LEFT, 300, 13, Game.AMBER)
 	var bolsa = Rect2(origem, Vector2(colunas, linhas) * celula)
 	draw_rect(bolsa.grow(12), Color(0.55, 0.53, 0.46))
 	draw_rect(bolsa, Color(0.07, 0.08, 0.08))
@@ -193,7 +193,7 @@ func _draw():
 		draw_line(origem + Vector2(x * celula, 0), origem + Vector2(x * celula, linhas * celula), Color(1, 1, 1, 0.12), 1)
 	for y in range(linhas + 1):
 		draw_line(origem + Vector2(0, y * celula), origem + Vector2(colunas * celula, y * celula), Color(1, 1, 1, 0.12), 1)
-	draw_string(fonte, Vector2(origem.x, origem.y - 22), "BOLSA DE LIXO", HORIZONTAL_ALIGNMENT_LEFT, 320, 13, Game.AMBER)
+	draw_string(fonte, Vector2(origem.x, origem.y - 22), str(TranslationServer.translate("BOLSA DE LIXO")), HORIZONTAL_ALIGNMENT_LEFT, 320, 13, Game.AMBER)
 	for i in range(tamanhos.size()):
 		if i != na_mao:
 			desenhar_embalagem(i, caixa(i).position, 1.0)

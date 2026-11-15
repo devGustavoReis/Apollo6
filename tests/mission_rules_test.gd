@@ -37,6 +37,9 @@ func play_day(day: int, food: int, water: int) -> void:
 
 
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	supplies()
 	jumps()
 	departure()

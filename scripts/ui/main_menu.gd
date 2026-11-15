@@ -103,10 +103,10 @@ func _layout() -> void:
 # ---------- Interface ----------
 
 func _build_interface() -> void:
-	var tagline := _text("PLANEJE  •  EXPLORE  •  SOBREVIVA", 3, GRAY)
+	var tagline := _text(str(TranslationServer.translate("PLANEJE  •  EXPLORE  •  SOBREVIVA")), 3, GRAY)
 	tagline.add_theme_font_override("font", _spaced(3))
 	_pin(tagline, Vector2(0.5, 0.338))
-	_pin(_text("UMA MISSÃO LUNAR FICTÍCIA · 1969", 2, Color(0.55, 0.56, 0.62)), Vector2(0.5, 0.385))
+	_pin(_text(str(TranslationServer.translate("UMA MISSÃO LUNAR FICTÍCIA · 1969")), 2, Color(0.55, 0.56, 0.62)), Vector2(0.5, 0.385))
 
 	var menu := VBoxContainer.new()
 	menu.add_theme_constant_override("separation", 6)
@@ -117,21 +117,21 @@ func _build_interface() -> void:
 	menu.anchor_bottom = 0.468
 	menu.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	add_child(menu)
-	var start := _menu_item(menu, "INICIAR MISSÃO", 50)
+	var start := _menu_item(menu, str(TranslationServer.translate("INICIAR MISSÃO")), 50)
 	start.pressed.connect(_on_start)
 	_diff_item = _menu_item(menu, "", 34, 2)
 	_diff_item.gui_input.connect(_on_diff_input)
-	var settings := _menu_item(menu, "CONFIGURAÇÕES")
+	var settings := _menu_item(menu, str(TranslationServer.translate("CONFIGURAÇÕES")))
 	settings.pressed.connect(_on_settings)
-	var credits := _menu_item(menu, "CRÉDITOS")
+	var credits := _menu_item(menu, str(TranslationServer.translate("CRÉDITOS")))
 	credits.pressed.connect(_on_credits)
-	var quit := _menu_item(menu, "SAIR")
+	var quit := _menu_item(menu, str(TranslationServer.translate("SAIR")))
 	quit.pressed.connect(func(): get_tree().quit())
 	start.focus_neighbor_top = start.get_path_to(quit)
 	quit.focus_neighbor_bottom = quit.get_path_to(start)
-	_hints[settings] = "VOLUME, TELA CHEIA E FILTRO DE TV"
-	_hints[credits] = "QUEM FEZ O APOLLO6"
-	_hints[quit] = "ENCERRAR O JOGO"
+	_hints[settings] = str(TranslationServer.translate("VOLUME, TELA CHEIA E FILTRO DE TV"))
+	_hints[credits] = str(TranslationServer.translate("QUEM FEZ O APOLLO6"))
+	_hints[quit] = str(TranslationServer.translate("ENCERRAR O JOGO"))
 
 	# Faixa de ajuda do item em foco, sobre uma placa escura para destacar do solo.
 	var band := CenterContainer.new()
@@ -266,8 +266,8 @@ func _on_diff_input(event: InputEvent) -> void:
 func _on_difficulty(index: int) -> void:
 	_difficulty = index
 	var s: Dictionary = MissionState.DIFFICULTIES[DIFF_KEYS[index]]
-	_diff_item.get_meta("label").text = "DIFICULDADE  ◀ %s ▶" % s["name"]
-	var info := "%s\nARMAZENAMENTO: %d ITENS · CARGA MÁX.: %.0f KG" % [s["summary"], int(s["storage"]), s["mass_limit"]]
+	_diff_item.get_meta("label").text = str(TranslationServer.translate("DIFICULDADE  ◀ %s ▶")) % tr(s["name"])
+	var info := str(TranslationServer.translate("%s\nARMAZENAMENTO: %d ITENS · CARGA MÁX.: %.0f KG")) % [tr(s["summary"]), int(s["storage"]), s["mass_limit"]]
 	_hints[_items[0]] = info
 	_hints[_diff_item] = info
 	if _last_item == _items[0] or _last_item == _diff_item:
@@ -339,12 +339,12 @@ static func is_fullscreen(mode: int) -> bool:
 func _fullscreen_toggle(parent: Node) -> void:
 	var button := _button(parent, "", Callable())
 	if Engine.is_embedded_in_editor():
-		button.text = "TELA CHEIA: INDISPONÍVEL NO EDITOR"
-		button.tooltip_text = "Rode o jogo fora da aba Game do editor para usar tela cheia."
+		button.text = str(TranslationServer.translate("TELA CHEIA: INDISPONÍVEL NO EDITOR"))
+		button.tooltip_text = str(TranslationServer.translate("Rode o jogo fora da aba Game do editor para usar tela cheia."))
 		button.disabled = true
 		return
 	var window := get_window()
-	var refresh := func(): button.text = "TELA CHEIA: %s" % ("SIM" if is_fullscreen(window.mode) else "NÃO")
+	var refresh := func(): button.text = "TELA CHEIA: %s" % (str(TranslationServer.translate("SIM")) if is_fullscreen(window.mode) else str(TranslationServer.translate("NÃO")))
 	button.pressed.connect(func():
 		if is_fullscreen(window.mode):
 			window.mode = Window.MODE_WINDOWED
@@ -366,7 +366,7 @@ func _fullscreen_toggle(parent: Node) -> void:
 func _toggle(parent: Node, text: String, on: bool, callback: Callable) -> void:
 	var state := [on]
 	var button := _button(parent, "", Callable())
-	var refresh := func(): button.text = "%s: %s" % [text, "SIM" if state[0] else "NÃO"]
+	var refresh := func(): button.text = "%s: %s" % [text, str(TranslationServer.translate("SIM")) if state[0] else str(TranslationServer.translate("NÃO"))]
 	button.pressed.connect(func():
 		state[0] = not state[0]
 		refresh.call()
@@ -375,7 +375,20 @@ func _toggle(parent: Node, text: String, on: bool, callback: Callable) -> void:
 
 
 func _on_settings() -> void:
-	var box := _open_panel("CONFIGURAÇÕES")
+	var box := _open_panel(str(TranslationServer.translate("CONFIGURAÇÕES")))
+	var language_row := HBoxContainer.new()
+	box.add_child(language_row)
+	var language_label := _text(tr("Language"), 2, Game.CREAM)
+	language_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	language_row.add_child(language_label)
+	var choice := OptionButton.new()
+	choice.add_item(tr("English"))
+	choice.add_item(tr("Brazilian Portuguese"))
+	choice.select(1 if Game.language == "pt_BR" else 0)
+	choice.item_selected.connect(func(index: int):
+		Game.set_language("pt_BR" if index == 1 else "en")
+		Game.go("menu"))
+	language_row.add_child(choice)
 	for bus_name in ["Master", "Music", "Voice", "SFX", "Ambience"]:
 		var bus := AudioServer.get_bus_index(bus_name)
 		if bus < 0:
@@ -397,27 +410,27 @@ func _on_settings() -> void:
 		row.add_child(slider)
 		box.add_child(row)
 	_fullscreen_toggle(box)
-	_toggle(box, "FILTRO DE TV", crt_enabled, func(on):
+	_toggle(box, str(TranslationServer.translate("FILTRO DE TV")), crt_enabled, func(on):
 		crt_enabled = on
 		_crt.visible = on)
-	_toggle(box, "TREMOR DE TELA", Game.screen_shake, func(on): Game.screen_shake = on)
-	_button(box, "FECHAR", _close_panel).grab_focus()
+	_toggle(box, str(TranslationServer.translate("TREMOR DE TELA")), Game.screen_shake, func(on): Game.screen_shake = on)
+	_button(box, str(TranslationServer.translate("FECHAR")), _close_panel).grab_focus()
 
 
 func _on_credits() -> void:
-	var box := _open_panel("CRÉDITOS")
+	var box := _open_panel(str(TranslationServer.translate("CRÉDITOS")))
 	var text := _text(
-		"APOLLO6 — Equipe Apollo 6\nCiência da Computação · UNIFAGOC · Ubá, MG\n\n" +
+		str(TranslationServer.translate("APOLLO6 — Equipe Apollo 6\nCiência da Computação · UNIFAGOC · Ubá, MG\n\n")) +
 		"Gustavo Raymundo Reis\nRamon Elias Fernandes Siqueira\nPedro da Silva Palma\nPedro Gonçalves de Freitas\nGuilherme Vieira\nIsaque Bahia\n\n" +
-		"Missão, personagens e diálogos fictícios, inspirados no programa Apollo da NASA.\n" +
-		"Thomas Walker não é um astronauta real.\n" +
-		"Dados de referência: NASA (ver docs/nasa_sources.md).\n" +
-		"Feito em Godot 4, com auxílio de ferramentas de IA.", 2, Game.CREAM)
+		str(TranslationServer.translate("Missão, personagens e diálogos fictícios, inspirados no programa Apollo da NASA.\n")) +
+		str(TranslationServer.translate("Thomas Walker não é um astronauta real.\n")) +
+		str(TranslationServer.translate("Dados de referência: NASA (ver docs/nasa_sources.md).\n")) +
+		str(TranslationServer.translate("Feito em Godot 4, com auxílio de ferramentas de IA.")), 2, Game.CREAM)
 	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.add_theme_constant_override("line_spacing", 8)
 	box.add_child(text)
-	_button(box, "FECHAR", _close_panel).grab_focus()
+	_button(box, str(TranslationServer.translate("FECHAR")), _close_panel).grab_focus()
 
 
 # ---------- Tela, tema e som ----------

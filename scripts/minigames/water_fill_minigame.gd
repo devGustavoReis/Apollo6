@@ -35,7 +35,7 @@ func _ready():
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	size = Vector2(960, 540)
 	tempo = tempos[nivel] + folga * 10
-	var titulo = Game.make_label("ÁGUA · ABASTECER A BOLSA", 20, Game.AMBER)
+	var titulo = Game.make_label(str(TranslationServer.translate("ÁGUA · ABASTECER A BOLSA")), 20, Game.AMBER)
 	titulo.position = Vector2(16, 6)
 	add_child(titulo)
 	contador = Game.make_label("", 20, Color.WHITE)
@@ -44,7 +44,7 @@ func _ready():
 	aviso = Game.make_label("", 15, Color.WHITE)
 	aviso.position = Vector2(16, 33)
 	add_child(aviso)
-	var rodape = Game.make_label("Água fora da bolsa vira gotas flutuando pela cabine.", 15)
+	var rodape = Game.make_label(str(TranslationServer.translate("Água fora da bolsa vira gotas flutuando pela cabine.")), 15)
 	rodape.position = Vector2(16, 510)
 	add_child(rodape)
 	atualizar_textos()
@@ -99,13 +99,13 @@ func passo(delta, aberto):
 	elif agua >= alvo - faixas[nivel]:
 		parado += delta
 	if agua > alvo + faixas[nivel]:
-		encerrar(false, "A bolsa passou do limite e vazou. Voltando à cabine...")
+		encerrar(false, str(TranslationServer.translate("A bolsa passou do limite e vazou. Voltando à cabine...")))
 	elif perdido >= limite_perda:
-		encerrar(false, "Muita água escapou pela cabine. Voltando à cabine...")
+		encerrar(false, str(TranslationServer.translate("Muita água escapou pela cabine. Voltando à cabine...")))
 	elif tempo <= 0:
-		encerrar(false, "O tempo acabou. Voltando à cabine...")
+		encerrar(false, str(TranslationServer.translate("O tempo acabou. Voltando à cabine...")))
 	elif parado >= 1.0:
-		encerrar(true, "Bolsa cheia na medida certa. Voltando à cabine...")
+		encerrar(true, str(TranslationServer.translate("Bolsa cheia na medida certa. Voltando à cabine...")))
 
 
 func _process(delta):
@@ -128,7 +128,7 @@ func _process(delta):
 
 
 func atualizar_textos():
-	contador.text = "TEMPO %d · PERDA %d%%" % [ceil(max(tempo, 0)), perdido / limite_perda * 100]
+	contador.text = str(TranslationServer.translate("TEMPO %d · PERDA %d%%")) % [ceil(max(tempo, 0)), perdido / limite_perda * 100]
 	contador.modulate = Game.GOOD
 	if perdido > 0 or tempo < 10:
 		contador.modulate = Game.WARN
@@ -138,10 +138,10 @@ func atualizar_textos():
 		if acertou:
 			aviso.modulate = Game.GOOD
 	elif alerta > 0:
-		aviso.text = "O bico está fora da válvula! A água está escapando."
+		aviso.text = str(TranslationServer.translate("O bico está fora da válvula! A água está escapando."))
 		aviso.modulate = Game.BAD
 	else:
-		aviso.text = "Bico na válvula (mouse ou SETAS). Segure o clique ou ESPAÇO para encher. Solte na faixa verde."
+		aviso.text = str(TranslationServer.translate("Bico na válvula (mouse ou SETAS). Segure o clique ou ESPAÇO para encher. Solte na faixa verde."))
 		aviso.modulate = Game.CREAM
 
 
@@ -167,7 +167,7 @@ func _draw():
 		cor_valvula = Game.GOOD
 	draw_rect(Rect2(valvula - 14, topo - 16, 28, 16), cor_valvula)
 	draw_arc(Vector2(valvula, topo - 8), encaixes[nivel] + folga * 4, 0, TAU, 32, Color(1, 1, 1, 0.25), 1.5)
-	draw_string(fonte, Vector2(valvula - 75, topo + altura + 18), "BOLSA DE ÁGUA", HORIZONTAL_ALIGNMENT_CENTER, 150, 13, Game.CREAM)
+	draw_string(fonte, Vector2(valvula - 75, topo + altura + 18), str(TranslationServer.translate("BOLSA DE ÁGUA")), HORIZONTAL_ALIGNMENT_CENTER, 150, 13, Game.CREAM)
 	draw_line(Vector2(bico, 60), Vector2(bico, 150), Color(0.35, 0.36, 0.36), 10)
 	draw_rect(Rect2(bico - 22, 140, 44, 60), Color(0.62, 0.63, 0.6))
 	draw_rect(Rect2(bico - 22, 140, 44, 60), Color(0.25, 0.26, 0.25), false, 2)
@@ -182,13 +182,13 @@ func _draw():
 	var medidor_cima = 110 + 340 - 340 * (alvo + faixas[nivel]) / 100
 	draw_rect(Rect2(850, medidor_cima, 44, medidor_baixo - medidor_cima), Color(0.45, 0.9, 0.45, 0.35))
 	draw_rect(Rect2(850, 110, 44, 340), Game.AMBER, false, 2)
-	draw_string(fonte, Vector2(812, 100), "NÍVEL %d%%" % agua, HORIZONTAL_ALIGNMENT_CENTER, 120, 14, Game.CREAM)
-	draw_string(fonte, Vector2(812, 470), "FAIXA VERDE", HORIZONTAL_ALIGNMENT_CENTER, 120, 12, Game.GOOD)
+	draw_string(fonte, Vector2(812, 100), str(TranslationServer.translate("NÍVEL %d%%")) % agua, HORIZONTAL_ALIGNMENT_CENTER, 120, 14, Game.CREAM)
+	draw_string(fonte, Vector2(812, 470), str(TranslationServer.translate("FAIXA VERDE")), HORIZONTAL_ALIGNMENT_CENTER, 120, 12, Game.GOOD)
 	draw_rect(Rect2(66, 110, 44, 340), Color(0.07, 0.08, 0.08))
 	var perda = 340 * min(perdido / limite_perda, 1.0)
 	draw_rect(Rect2(66, 110 + 340 - perda, 44, perda), Game.BAD)
 	draw_rect(Rect2(66, 110, 44, 340), Game.AMBER, false, 2)
-	draw_string(fonte, Vector2(28, 100), "ÁGUA PERDIDA", HORIZONTAL_ALIGNMENT_CENTER, 120, 14, Game.CREAM)
+	draw_string(fonte, Vector2(28, 100), str(TranslationServer.translate("ÁGUA PERDIDA")), HORIZONTAL_ALIGNMENT_CENTER, 120, 14, Game.CREAM)
 	draw_rect(Rect2(0, 0, 960, 60), Color(0.06, 0.07, 0.065))
 	draw_rect(Rect2(0, 500, 960, 40), Color(0.06, 0.07, 0.065))
 	var borda = Game.AMBER

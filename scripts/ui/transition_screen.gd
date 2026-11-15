@@ -28,11 +28,6 @@ var _title: Label
 var _body: RichTextLabel
 var _buttons: HBoxContainer
 var _busy := false
-const SCIENCE_TASKS := {
-	"sample_kit": ["Escolha a amostra que preserva o contexto da coleta.", "Rocha solta fora da trilha", "Material preso na sapata", "A sapata pode misturar resíduos. Colete uma rocha fora da trilha e registre o local."],
-	"retroreflector": ["O retorno do laser deve apontar para a estação emissora.", "Orientar o painel para a Terra", "Orientar o painel para o Sol", "Os prismas devolvem a luz em direção à sua origem. A estação emissora está na Terra."],
-	"camera": ["Escolha o enquadramento para medir o relevo do solo.", "Duas vistas próximas do mesmo trecho", "Uma foto ampla do horizonte", "A visão estéreo usa duas perspectivas do mesmo trecho para revelar profundidade."],
-}
 var _wait := 0.0
 var _locked: Array = []
 
@@ -72,10 +67,13 @@ func _ready() -> void:
 	if not TEXTS.has(id):
 		_show_end("Etapa desconhecida.")
 		return
-	if id == "B" and not MissionState.science_completed:
-		_show_science()
-	else:
-		_show_offer()
+	if id == "B" and (not MissionState.science_completed or not MissionState.lunar_flag_planted):
+		if MissionState.can_start_surface():
+			Game.go("lunar_surface")
+		else:
+			_show_end(tr("The lunar activity is unavailable. Check the science instrument and landing result."))
+		return
+	_show_offer()
 
 
 func _process(delta: float) -> void:
@@ -115,23 +113,23 @@ func _lock(seconds: float) -> void:
 func cost_text() -> String:
 	var ms := MissionState
 	var p := ms.jump_preview(id)
-	var t := "\n[color=#f5bd5c]SUPRIMENTOS[/color]\nEste salto consome [b]1 comida e 1 água[/b].\n"
-	t += "Saldo agora: [b]%s comida · %s água[/b]\n" % [ms.amount_text(ms.food_days), ms.amount_text(ms.water_days)]
+	var t := str(TranslationServer.translate("\n[color=#f5bd5c]SUPRIMENTOS[/color]\nEste salto consome [b]1 comida e 1 água[/b].\n"))
+	t += str(TranslationServer.translate("Saldo agora: [b]%s comida · %s água[/b]\n")) % [ms.amount_text(ms.food_days), ms.amount_text(ms.water_days)]
 	if p["ok"]:
-		t += "Depois do salto: [b]%s comida · %s água[/b]\n" % [ms.amount_text(p["food_after"]), ms.amount_text(p["water_after"])]
+		t += str(TranslationServer.translate("Depois do salto: [b]%s comida · %s água[/b]\n")) % [ms.amount_text(p["food_after"]), ms.amount_text(p["water_after"])]
 	else:
-		t += "[color=#ff8866]Saldo insuficiente para este salto.[/color]\n"
+		t += str(TranslationServer.translate("[color=#ff8866]Saldo insuficiente para este salto.[/color]\n"))
 	if id == "B":
 		var ok: bool = p["ok"] and p["food_after"] >= ms.DEPARTURE_RESERVE - 0.0001 and p["water_after"] >= ms.DEPARTURE_RESERVE - 0.0001
-		t += "Para partir rumo à Terra, devem sobrar [b]%d de cada[/b] depois deste salto: 2 para os dias de volta e 1 para a aproximação da Terra.\n" % ms.DEPARTURE_RESERVE
-		t += "[color=#77ee77]Reserva suficiente.[/color]" if ok else "[color=#ff8866]A reserva não basta para voltar.[/color]"
+		t += str(TranslationServer.translate("Para partir rumo à Terra, devem sobrar [b]%d de cada[/b] depois deste salto: 2 para os dias de volta e 1 para a aproximação da Terra.\n")) % ms.DEPARTURE_RESERVE
+		t += "[color=#77ee77]Reserva suficiente.[/color]" if ok else str(TranslationServer.translate("[color=#ff8866]A reserva não basta para voltar.[/color]"))
 	return t
 
 
 func _show_offer() -> void:
 	var data: Dictionary = TEXTS[id]
 	_title.text = data["title"]
-	var body: String = data["body"]
+	var body: String = tr(data["body"])
 	if id == "B":
 		body = body % ("%.0f" % MissionState.science_collected)
 	_body.text = body + "\n" + cost_text()
@@ -157,13 +155,13 @@ func _confirm() -> void:
 	_busy = true
 	var paid := Game.confirm_jump(id)
 	if not paid["ok"]:
-		_show_end("[color=#ff8866]%s · %s[/color]\n\nA missão termina aqui. O relatório mostra o que foi alcançado e o que faltou." % [MissionState.JUMPS[id]["title"], MissionState.jump_text(id)])
+		_show_end(str(TranslationServer.translate("[color=#ff8866]%s · %s[/color]\n\nA missão termina aqui. O relatório mostra o que foi alcançado e o que faltou.")) % [MissionState.JUMPS[id]["title"], MissionState.jump_text(id)])
 		return
 	if id == "A":
 		Game.start_descent()
 	elif id == "B":
 		if not MissionState.departure["ok"]:
-			_show_end("[color=#77ee77]Pouso lunar confirmado.[/color]\n[color=#ff8866]Partida para a Terra · %s[/color]\n\nSem a reserva mínima, a volta não pode começar. A missão termina aqui." % MissionState.departure_text())
+			_show_end(str(TranslationServer.translate("[color=#77ee77]Pouso lunar confirmado.[/color]\n[color=#ff8866]Partida para a Terra · %s[/color]\n\nSem a reserva mínima, a volta não pode começar. A missão termina aqui.")) % MissionState.departure_text())
 			return
 		_show_day_four()
 	else:
@@ -171,12 +169,12 @@ func _confirm() -> void:
 
 
 func _show_day_four() -> void:
-	_title.text = "Dia 4 · Volta à Terra"
-	_body.text = "Primeiro dia jogável da volta.\nA Lua fica para trás e a Terra se aproxima pela janela.\n\nReserva verificada na partida: [b]%s comida · %s água[/b]." % [
+	_title.text = str(TranslationServer.translate("Dia 4 · Volta à Terra"))
+	_body.text = str(TranslationServer.translate("Primeiro dia jogável da volta.\nA Lua fica para trás e a Terra se aproxima pela janela.\n\nReserva verificada na partida: [b]%s comida · %s água[/b].")) % [
 		MissionState.amount_text(MissionState.departure["food"]), MissionState.amount_text(MissionState.departure["water"])]
 	_clear_buttons()
 	_busy = false
-	_button("COMEÇAR O DIA 4", func():
+	_button(str(TranslationServer.translate("COMEÇAR O DIA 4")), func():
 		if _busy:
 			return
 		_busy = true
@@ -185,49 +183,13 @@ func _show_day_four() -> void:
 
 
 func _show_end(text: String) -> void:
-	_title.text = "Missão interrompida"
+	_title.text = str(TranslationServer.translate("Missão interrompida"))
 	_body.text = text
 	_clear_buttons()
 	_busy = false
-	_button("VER RELATÓRIO", func():
+	_button(str(TranslationServer.translate("VER RELATÓRIO")), func():
 		if _busy:
 			return
 		_busy = true
 		Game.finish_mission())
 	_lock(0.6)
-
-
-func _show_science(feedback := "") -> void:
-	var ms := MissionState
-	if not ms.OBJECTIVES.has(ms.objective):
-		_show_end("Objetivo ausente. Reveja o planejamento em uma nova missão.")
-		return
-	var objective: Dictionary = ms.OBJECTIVES[ms.objective]
-	_title.text = "Pouso confirmado · Atividade científica"
-	var task: Array = SCIENCE_TASKS[ms.objective]
-	_body.text = objective["title"] + "\nInstrumento: " + ms.items[ms.objective]["name"] + "\n\n" + task[0]
-	if not feedback.is_empty():
-		_body.text += "\n\n[color=#ffcc75]" + feedback + "[/color]"
-	_clear_buttons()
-	_button(task[2], _show_science.bind(task[3]))
-	_button(task[1], _prepare_science.bind(objective["action"], task[3]))
-	_lock(MIN_READ if feedback.is_empty() else 0.4)
-
-
-func _prepare_science(action: String, explanation: String) -> void:
-	_title.text = "Instrumento preparado"
-	_body.text = explanation + "\n\nConfirme a operação para registrar a evidência."
-	_clear_buttons()
-	_button(action, _confirm_science)
-	_lock(0.5)
-
-
-func _confirm_science() -> void:
-	if not MissionState.complete_science():
-		return
-	Sound.play_cue("success", "Interface")
-	_title.text = "Atividade concluída"
-	_body.text = MissionState.OBJECTIVES[MissionState.objective]["evidence"]
-	_clear_buttons()
-	_button("CONTINUAR A MISSÃO", _show_offer)
-	_lock(MIN_READ)

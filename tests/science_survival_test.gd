@@ -7,6 +7,9 @@ func check(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 func run() -> void:
+	TranslationServer.set_locale("pt_BR")
+	root.get_node("Game").language = "pt_BR"
+	root.get_node("MissionState").refresh_catalog_language()
 	var ms := root.get_node("MissionState")
 	for difficulty in ["easy", "normal", "hard"]:
 		for id: String in ms.OBJECTIVES:
