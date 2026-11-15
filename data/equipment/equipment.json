@@ -5,26 +5,26 @@
       "id": "food_day",
       "category": "supply",
       "name": "Ração diária (3 tripulantes)",
-      "unit": "dia",
+      "unit": "cota",
       "cost": 0.3,
       "mass": 3.0,
       "power": 0,
       "science": 0,
       "max": 14,
-      "description": "Um dia de refeições para a tripulação. A missão completa dura 8 dias.",
-      "source": "Duração de 8 dias inspirada na Apollo 11 (NASA). Custo e massa por dia: simplificação de gameplay."
+      "description": "Uma cota de refeições da tripulação. São 8 cotas no mínimo: 1 por dia nos 5 dias jogáveis e 1 em cada um dos 3 saltos.",
+      "source": "A Apollo 11 durou 8 dias, 3 h e 19 min (NASA). O jogo usa 5 dias jogáveis e 3 saltos. Custo e massa por cota: simplificação de gameplay."
     },
     {
       "id": "water_day",
       "category": "supply",
       "name": "Reserva de água potável",
-      "unit": "dia",
+      "unit": "cota",
       "cost": 0.2,
       "mass": 6.0,
       "power": 0,
       "science": 0,
       "max": 14,
-      "description": "Um dia de água para beber e reidratar alimentos.",
+      "description": "Uma cota de água para beber e reidratar alimentos. São 8 cotas no mínimo, como a comida.",
       "source": "Simplificação: na Apollo real, as células de combustível produziam água como subproduto. Aqui a água é uma reserva embarcada."
     },
     {

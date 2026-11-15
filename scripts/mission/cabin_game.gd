@@ -15,6 +15,10 @@ const HELD_MODELS := {
 }
 const INTERACT_LAYER := 2
 const REACH := 2.3
+const EAT_TIME := 1.6
+const EAT_MARK := 0.9
+const HAND_POS := Vector3(0.13, -0.09, -0.3)
+const MOUTH_POS := Vector3(0.02, -0.05, -0.13)
 
 ## Marcador do slot -> [id da interação, etiqueta visível].
 const STATIONS := {
@@ -51,6 +55,9 @@ var _interacted := false
 var held := ""
 var _held_node: Node3D
 var _held_time := 0.0
+var eating := false
+var _eat_time := 0.0
+var _eat_done := false
 
 var TUTORIAL := [
 	["Mova o MOUSE para olhar ao redor.",
@@ -59,7 +66,7 @@ var TUTORIAL := [
 	["Pressione ESPAÇO para soltar o cinto e flutuar.",
 		"You are clear to unstrap. Watch your step, there is no floor up there.",
 		"Podem soltar os cintos. Cuidado: aí em cima não existe chão.", "tutorial_unstrap"],
-	["WASD movem na direção do olhar. ESPAÇO sobe, CTRL desce. Solte as teclas para parar.",
+	["Encostado numa superfície, ESPAÇO empurra você na direção do olhar e WASD dá impulsos curtos. No ar, você segue reto até tocar outra superfície.",
 		"Move slowly. In zero g, everything keeps drifting until you stop it.",
 		"Movam-se devagar. Sem gravidade, tudo continua flutuando até ser parado.", "tutorial_drift"],
 	["Pressione TAB para abrir o checklist da missão.",
@@ -68,6 +75,9 @@ var TUTORIAL := [
 	["Mire no painel LIFE SUPPORT (direita, embaixo) e pressione E.",
 		"First item: swap the lithium hydroxide canister at LIFE SUPPORT.",
 		"Primeiro item: trocar o cartucho de hidróxido de lítio no LIFE SUPPORT.", "tutorial_life_support"],
+	["Consuma uma cota de comida e uma de água por dia. Cada salto também gasta suprimentos. Na partida para a Terra, guarde três de cada.",
+		"One ration of food and one of water every day. Each phase change uses supplies too. Keep three of each for the trip home.",
+		"Uma cota de comida e uma de água por dia. Cada salto também gasta suprimentos. Guardem três de cada para a volta.", ""],
 ]
 
 
@@ -166,7 +176,7 @@ func _add_zone(marker: Node3D, id: String, text: String, size: Vector3) -> void:
 	marker.add_child(body)
 	var label := Label3D.new()
 	label.text = text
-	var important := id in ["food", "water"]
+	var important := id in ["food", "water", "rest"]
 	label.font_size = 64 if important else 40
 	label.pixel_size = 0.0028 if important else 0.0024
 	label.modulate = Color(1, 0.85, 0.45) if important else Color(0.85, 0.82, 0.72, 0.75)
@@ -222,12 +232,19 @@ func _build_backdrop() -> void:
 
 
 func _update_supplies() -> void:
-	_show_supplies("FoodStorage/FoodRack/Packs", MissionState.food_days - (1.0 if held == "food" else 0.0))
-	_show_supplies("WaterStorage/WaterRack/Pouches", MissionState.water_days - (1.0 if held == "water" else 0.0))
+	var ms := MissionState
+	var reserved := held != "" and not _eat_done
+	_show_supplies("FoodStorage/FoodRack/Packs", floorf(ms.food_days + 0.0001) - (1.0 if reserved and held == "food" else 0.0))
+	_show_supplies("WaterStorage/WaterRack/Pouches", floorf(ms.water_days + 0.0001) - (1.0 if reserved and held == "water" else 0.0))
+	if _labels.has("food"):
+		_labels["food"].text = "FOOD · %s" % ms.amount_text(ms.food_days)
+		_labels["water"].text = "WATER · %s" % ms.amount_text(ms.water_days)
 
 
 func _hold(id: String) -> void:
 	held = id
+	_eat_done = false
+	eating = false
 	var slot := "FoodStorage" if id == "food" else "WaterStorage"
 	var marker: Node3D = cabin.get_node_or_null("EquipmentSlots/" + slot)
 	if marker != null:
@@ -245,27 +262,49 @@ func _hold(id: String) -> void:
 
 
 func _consume() -> void:
-	var ms := MissionState
+	if eating or held == "":
+		return
+	eating = true
+	_eat_time = 0.0
+	_eat_done = false
+	Sound.play_cue(held)
+
+
+func _put_back() -> void:
+	if held == "" or _eat_done:
+		return
 	var id := held
-	Sound.play_cue(id)
+	_drop_item()
+	hud.show_note("%s devolvida ao compartimento. Nenhuma cota foi gasta." % ("Ração" if id == "food" else "Bolsa de água"))
+
+
+func _drop_item() -> void:
 	held = ""
+	eating = false
+	_eat_done = false
 	if _held_node != null:
 		_held_node.queue_free()
 		_held_node = null
-	if id == "food":
-		ms.eat()
-		_complete("food")
-		var ok := ms.food_days >= ms.days_still_needed()
-		_modal("FOOD · REFEIÇÃO", "A tripulação reidratou e comeu as rações do dia.\n\nReserva: [b]%.1f dias[/b] · Necessários até o fim da missão: [b]%d dias[/b]\n%s" % [
-			ms.food_days, ms.days_still_needed(),
-			"[color=#77ee77]Suprimento suficiente.[/color]" if ok else "[color=#ff8866]Atenção: a comida não cobre o resto da missão. Será preciso racionar.[/color]"])
-	else:
-		ms.drink()
-		_complete("water")
-		var enough := ms.water_days >= ms.days_still_needed()
-		_modal("WATER · ÁGUA", "Água consumida para beber e reidratar alimentos.\n\nReserva: [b]%.1f dias[/b] · Necessários até o fim: [b]%d dias[/b]\n%s" % [
-			ms.water_days, ms.days_still_needed(),
-			"[color=#77ee77]Suprimento suficiente.[/color]" if enough else "[color=#ff8866]A água não cobre o resto da missão. A tripulação terá de racionar.[/color]"])
+	_update_supplies()
+
+
+func _eat_marker() -> void:
+	var ms := MissionState
+	var id := held
+	_eat_done = true
+	if not ms.consume(id):
+		_drop_item()
+		hud.show_note("Não há uma cota inteira de %s. Saldo: %s." % ["comida" if id == "food" else "água", ms.amount_text(ms.stock(id))], 4.0)
+		return
+	_update_supplies()
+
+
+func _finish_eating() -> void:
+	var ms := MissionState
+	var id := held
+	_drop_item()
+	var noun := "Ração consumida" if id == "food" else "Água consumida"
+	hud.show_note("%s · hoje: %d · saldo: %s %s" % [noun, ms.intake_on(ms.day, id), ms.amount_text(ms.stock(id)), "comida" if id == "food" else "água"])
 
 
 func _show_supplies(path: String, days: float) -> void:
@@ -294,10 +333,9 @@ func _sphere(color: Color, radius: float) -> MeshInstance3D:
 
 
 func _update_backdrop() -> void:
-	## A Terra encolhe e a Lua cresce a cada dia de viagem.
-	var d := MissionState.day
-	_moon.scale = Vector3.ONE * [2.0, 3.5, 9.0][clampi(d - 1, 0, 2)]
-	_earth.scale = Vector3.ONE * [10.0, 6.0, 3.5][clampi(d - 1, 0, 2)]
+	var d := clampi(MissionState.day - 1, 0, 4)
+	_moon.scale = Vector3.ONE * [2.0, 3.5, 9.0, 4.0, 2.2][d]
+	_earth.scale = Vector3.ONE * [10.0, 6.0, 3.5, 6.0, 12.0][d]
 
 
 # ---------- Tarefas ----------
@@ -308,21 +346,26 @@ func day_tasks() -> Array:
 	match ms.day:
 		1:
 			list = [["lifesupport", "Trocar o cartucho de LiOH (remove o CO₂)"],
-				["nav", "Verificar a trajetória"],
-				["food", "Refeição do dia"], ["water", "Água do dia"],
+				["nav", "Verificar a trajetória de ida"],
 				["rest", "Descansar e encerrar o dia"]]
 		2:
 			list = [["power", "Resolver o alerta de energia"],
-				["radio", "Falha no rádio: restabelecer contato" if ms.random_event == "comm_dropout" else "Enviar o relatório diário a Houston"],
-				["food", "Refeição do dia"],
-				["water", "Vazamento! Resolver e beber a água do dia" if ms.random_event == "water_leak" else "Água do dia"],
+				["radio", "Enviar o relatório diário a Houston"],
 				["rest", "Descansar e encerrar o dia"]]
 			if ms.random_event == "ptc":
 				list.insert(1, ["console", "Resolver o controle térmico da nave"])
-		_:
-			list = [["food", "Refeição do dia"], ["water", "Água do dia"],
-				["console", "Checklist de aproximação lunar"],
+			if ms.random_event == "water_leak":
+				list.insert(1, ["water", "Vazamento no reservatório de água"])
+		3:
+			list = [["console", "Checklist de aproximação lunar"],
 				["hatch", "Entrar no módulo lunar"]]
+		4:
+			list = [["nav", "Corrigir a rota rumo à Terra"],
+				["lifesupport", "Trocar o cartucho de LiOH (remove o CO₂)"],
+				["rest", "Descansar e encerrar o dia"]]
+		_:
+			list = [["radio", "Falha no rádio: restabelecer contato" if ms.random_event == "comm_dropout" else "Enviar o status da cápsula para a reentrada"],
+				["console", "Preparar reentrada"]]
 	var result := []
 	for entry in list:
 		result.append({"id": entry[0], "station": LABELS[entry[0]], "text": entry[1], "done": _done(entry[0])})
@@ -368,7 +411,7 @@ func _pending(except_id := "") -> Array:
 func _refresh_objective() -> void:
 	if hud == null:
 		return
-	var title := "DIA %d DE %d · VIAGEM À LUA" % [MissionState.day, MissionState.TRAVEL_DAYS]
+	var title := "DIA %d DE %d · %s" % [MissionState.day, MissionState.PLAY_DAYS, MissionState.phase_title()]
 	if player.seated:
 		hud.set_objective(title, "Solte o cinto com ESPAÇO.")
 		return
@@ -399,6 +442,7 @@ func _check_tutorial() -> void:
 		2: passed = player.moved_distance > 1.2
 		3: passed = hud.checklist_visible()
 		4: passed = _done("lifesupport")
+		5: passed = MissionState.intake_on(1, "food") > 0 and MissionState.intake_on(1, "water") > 0
 	if passed:
 		_set_tutorial(tutorial_step + 1)
 		if tutorial_step == -1:
@@ -414,9 +458,6 @@ func _start_day_briefing() -> void:
 			Houston.say_recorded("day_two_power", "Good morning, Apollo. We see a power problem on your main bus. Check the POWER panel.",
 				"Bom dia, Apollo. Vemos um problema de energia no barramento principal. Verifiquem o painel POWER.")
 			match MissionState.random_event:
-				"comm_dropout":
-					Houston.say_recorded("day_two_radio", "Your signal is breaking up... high gain antenna... check RADIO...",
-						"Seu sinal está falhando... antena de alto ganho... verifiquem o RADIO...")
 				"water_leak":
 					Houston.say_recorded("day_two_water", "We also show a pressure drop in the water system. Take a look at WATER.",
 						"Também vemos queda de pressão no sistema de água. Verifiquem o WATER.")
@@ -426,15 +467,40 @@ func _start_day_briefing() -> void:
 		3:
 			Houston.say_recorded("day_three_approach", "Apollo, the Moon is close. Run the approach checklist on the COMMAND CONSOLE.",
 				"Apollo, a Lua está próxima. Executem o checklist de aproximação no COMMAND CONSOLE.")
+		4:
+			Houston.say("Columbia, Houston. Good burn, you are on your way home. Check your course at NAVIGATION.",
+				"Columbia, aqui é Houston. Boa queima, vocês estão a caminho de casa. Verifiquem a rota no NAVIGATION.")
+		5:
+			if MissionState.random_event == "comm_dropout":
+				Houston.say_recorded("day_two_radio", "Your signal is breaking up... high gain antenna... check RADIO...",
+					"Seu sinal está falhando... antena de alto ganho... verifiquem o RADIO...")
+			else:
+				Houston.say("Columbia, Houston. Last day. Send us your status on the RADIO, then prepare for entry.",
+					"Columbia, aqui é Houston. Último dia. Enviem o status pelo RADIO e preparem a reentrada.")
 
 
 # ---------- Interação ----------
 
 func _process(delta: float) -> void:
 	_check_tutorial()
-	if _held_node != null:
+	if _held_node != null and not eating:
 		_held_time += delta
-		_held_node.position.y = -0.09 + sin(_held_time * 2.0) * 0.006
+		_held_node.position = HAND_POS + Vector3(0, sin(_held_time * 2.0) * 0.006, 0)
+	if eating:
+		_eat_time += delta
+		var reach := clampf(minf(_eat_time / 0.6, (EAT_TIME - _eat_time) / 0.5), 0.0, 1.0)
+		if _held_node != null:
+			var chew := sin(_eat_time * 14.0) * 0.008 * reach
+			_held_node.position = HAND_POS.lerp(MOUTH_POS, reach) + Vector3(0, chew, 0)
+			_held_node.rotation = Vector3(0.1 + reach * 0.8, -0.3, 0.05)
+	player.hand_busy = _held_node != null
+	if _held_node != null:
+		player.right_hand.position = _held_node.position + Vector3(0.03, -0.05, 0.06)
+		player.right_hand.rotation = Vector3(_held_node.rotation.x * 0.6, 0, 0)
+		if not _eat_done and _eat_time >= EAT_MARK:
+			_eat_marker()
+		elif _eat_done and _eat_time >= EAT_TIME:
+			_finish_eating()
 
 
 func _physics_process(_delta: float) -> void:
@@ -469,8 +535,10 @@ func _physics_process(_delta: float) -> void:
 			_labels[target_id].outline_modulate = Color(0.5, 0.3, 0.0)
 	if player.seated:
 		hud.set_prompt("[ESPAÇO] Soltar o cinto")
+	elif eating:
+		hud.set_prompt("Comendo..." if held == "food" else "Bebendo...")
 	elif held != "":
-		hud.set_prompt("[E] Comer a refeição" if held == "food" else "[E] Beber a água")
+		hud.set_prompt(("[E] Comer a ração" if held == "food" else "[E] Beber a água") + " · [Q] Devolver")
 	elif target_id != "":
 		var task_id := _station_minigame(target_id)
 		var prompt := "[E] " + str(LABELS[target_id])
@@ -480,6 +548,8 @@ func _physics_process(_delta: float) -> void:
 			var station := "" if target_id == "disposal" else prompt + "\n"
 			prompt = station + "[F] " + title + status
 		hud.set_prompt(prompt)
+	elif player.needs_help():
+		hud.set_prompt("[ESPAÇO] Puxar a cinta de apoio mais próxima")
 	else:
 		hud.set_prompt("")
 
@@ -503,6 +573,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed("move_up") and player.seated:
 		player.unbuckle()
+	elif event.is_action_pressed("put_back") and held != "" and not eating:
+		_put_back()
 	elif event.is_action_pressed("checklist"):
 		hud.toggle_checklist(day_tasks())
 	elif event.is_action_pressed("advance") and tutorial_step >= 0 and not Houston.is_busy():
@@ -526,9 +598,9 @@ func _modal(title: String, body: String, buttons := ["OK"], callback := Callable
 
 func _decision(id: String, task_id: String, after := Callable()) -> void:
 	var d := MissionDecisions.get_decision(id)
-	Sound.play_cue("radio" if id == "midcourse" else "warning", "Voice", true)
+	Sound.play_cue("radio" if id in ["midcourse", "return_course"] else "warning", "Voice", true)
 	_modal(d["title"], d["body"], d["options"], func(choice):
-		if id == "midcourse" and choice == 0:
+		if id == "return_course" and choice == 0:
 			_open_trajectory(d, task_id, after)
 		elif id == "comm_dropout" and choice == 0 and not MissionState.minigame_completions.has("M03"):
 			_open_cabin_minigame("M03", func(recovered: bool):
@@ -546,7 +618,7 @@ func _station_minigame(station: String) -> String:
 
 
 func _interact_minigame(id: String) -> void:
-	if id == "M03" and MissionState.random_event == "comm_dropout" and not _done("radio"):
+	if id == "M03" and MissionState.random_event == "comm_dropout" and _has_task("radio") and not _done("radio"):
 		_decision("comm_dropout", "radio")
 	else:
 		_open_cabin_minigame(id)
@@ -616,10 +688,13 @@ func _open_trajectory(d: Dictionary, task_id: String, after: Callable) -> void:
 	player.frozen = true
 	var minigame: Control = TRAJECTORY_SCENE.instantiate()
 	minigame.tolerancia = MissionState.settings()["traj_tol"]
+	minigame.destino = "terra"
 	minigame.terminou.connect(func(errors):
+		if hud.minigame != minigame:
+			return
 		hud.close_minigame()
 		player.frozen = false
-		_decision_result("midcourse", task_id, d, 0, errors, after))
+		_decision_result("return_course", task_id, d, 0, errors, after), CONNECT_ONE_SHOT)
 	hud.open_minigame(minigame)
 	Houston.say_recorded("trajectory_correction", "Apollo, Houston. Fly the correction by hand. Keep her on the line.",
 		"Apollo, aqui é Houston. Façam a correção manualmente. Mantenham a nave na linha.")
@@ -627,9 +702,13 @@ func _open_trajectory(d: Dictionary, task_id: String, after: Callable) -> void:
 
 func _decision_result(id: String, task_id: String, d: Dictionary, choice: int, errors: int, after: Callable) -> void:
 	var result := MissionDecisions.apply(id, choice, errors)
-	var verdict := "[color=#77ee77]BOA DECISÃO[/color]" if result["correct"] else "[color=#ff8866]DECISÃO RUIM[/color]"
-	if id == "midcourse" and choice == 0:
-		verdict = "[color=#77ee77]CORREÇÃO PRECISA[/color]" if result["correct"] else "[color=#ff8866]CORREÇÃO IMPRECISA[/color]"
+	var verdict := "[color=#77ee77]BOA ESCOLHA[/color]" if result["correct"] else "[color=#ff8866]ESCOLHA ARRISCADA[/color]"
+	if result["correct"] and not result["favorable"]:
+		verdict += " · [color=#ffcc44]COMPLICAÇÃO[/color]"
+	elif not result["correct"] and result["favorable"]:
+		verdict += " · [color=#ffcc44]DEU SORTE[/color]"
+	if id == "return_course" and choice == 0:
+		verdict += " · " + ("[color=#77ee77]PILOTAGEM PRECISA[/color]" if errors <= 1 else "[color=#ff8866]PILOTAGEM IMPRECISA[/color]")
 	MissionState.add_event(id, d["title"], d["options"][choice])
 	_complete(task_id)
 	_modal(d["title"], "%s\n\n%s" % [verdict, result["explanation"]], ["CONTINUAR"], func(_i):
@@ -644,19 +723,14 @@ func interact(id: String) -> void:
 		_consume()
 		return
 	match id:
-		"food":
-			if _done("food"):
-				_modal("FOOD", "A refeição de hoje já foi feita.\nReserva: [b]%.1f dias[/b]. Necessários depois de hoje: [b]%d[/b]." % [ms.food_days, ms.days_still_needed()])
+		"food", "water":
+			if id == "water" and _has_task("water") and not _done("water"):
+				_decision("water_leak", "water")
 				return
-			_hold("food")
-		"water":
-			if ms.day == 2 and ms.random_event == "water_leak" and not ms.tasks_done.has("2:leak"):
-				_decision("water_leak", "leak")
+			if not ms.can_consume(id):
+				hud.show_note("Compartimento vazio: não há uma cota inteira de %s (saldo %s)." % ["comida" if id == "food" else "água", ms.amount_text(ms.stock(id))], 4.0)
 				return
-			if _done("water"):
-				_modal("WATER", "A água de hoje já foi consumida.\nReserva: [b]%.1f dias[/b]. Necessários depois de hoje: [b]%d[/b]." % [ms.water_days, ms.days_still_needed()])
-				return
-			_hold("water")
+			_hold(id)
 		"lifesupport":
 			var info := "Oxigênio da cabine: [b]%.0f%%[/b] do nominal\nPressão da cabine: cerca de 5 psi de oxigênio puro, como no módulo de comando Apollo\nRemoção de CO₂: cartuchos de hidróxido de lítio (LiOH)" % ms.life_support
 			if _has_task("lifesupport") and not _done("lifesupport"):
@@ -668,9 +742,11 @@ func interact(id: String) -> void:
 				_modal("LIFE SUPPORT", info)
 		"nav":
 			if _has_task("nav") and not _done("nav"):
-				_decision("midcourse", "nav")
+				_decision("midcourse" if ms.day == 1 else "return_course", "nav")
 			else:
-				_modal("NAVIGATION", "Desvio de trajetória atual: [b]%.0f%%[/b]\nPropelente do CSM: [b]%.0f%%[/b]\nO propelente do CSM é necessário para entrar em órbita lunar e voltar para casa." % [ms.trajectory_error * 100.0, ms.sps_fuel])
+				var leg := "Rota de ida" if ms.phase == "outbound" else "Rota de volta"
+				var err := ms.trajectory_error if ms.phase == "outbound" else ms.return_error
+				_modal("NAVIGATION", "%s: desvio de [b]%.0f%%[/b] (tolerância %.0f%%)\nPropelente do CSM: [b]%.0f%%[/b]" % [leg, err * 100.0, MissionDecisions.SMALL_ERROR * 100.0, ms.sps_fuel])
 		"power":
 			if _has_task("power") and not _done("power"):
 				_decision("power", "power")
@@ -681,38 +757,47 @@ func interact(id: String) -> void:
 				_modal("POWER", "Consumo dos instrumentos: [b]%.0f W[/b] de [b]%.0f W[/b]\n%s\nBateria auxiliar: %s" % [ms.power_use(), ms.power_capacity, list, "não levada" if ms.qty("battery_pack") == 0 else ("já utilizada" if ms.battery_used else "disponível")])
 		"radio":
 			if _has_task("radio") and not _done("radio"):
-				if ms.random_event == "comm_dropout":
+				if ms.day == 5 and ms.random_event == "comm_dropout":
 					_decision("comm_dropout", "radio")
 				else:
 					_complete("radio")
 					Houston.say_recorded("status_received", "Thanks for the update, Apollo. Everything looks good from here.",
 						"Obrigado pela atualização, Apollo. Tudo certo por aqui.")
-					_modal("RADIO", "Relatório enviado: suprimentos, energia e estado da tripulação.\nHouston acompanha a missão em tempo real e ajuda a planejar cada manobra.")
+					var report := "Relatório enviado: suprimentos, energia e estado da tripulação.\nHouston acompanha a missão em tempo real e ajuda a planejar cada manobra."
+					if ms.day == 5:
+						report = "Status da cápsula enviado: suprimentos, energia, ângulo de reentrada e estado da tripulação.\nHouston confirma os dados para a reentrada."
+					_modal("RADIO", report)
 			else:
 				_modal("RADIO", "Canal com Houston aberto. A comunicação é a principal fonte de dados de navegação e alertas.")
 		"console":
 			if ms.day == 2 and _has_task("console") and not _done("console"):
 				_decision("ptc", "console")
-			elif ms.day >= 3 and not _done("console"):
+			elif ms.day == 3 and not _done("console"):
 				_approach_checklist()
+			elif ms.day == 5:
+				if _has_task("radio") and not _done("radio"):
+					_modal("COMMAND CONSOLE", "Antes de preparar a reentrada, envie o status da cápsula pelo RADIO.")
+				else:
+					Game.open_transition("C")
 			else:
 				_modal("COMMAND CONSOLE", "Painel principal de comando. Nenhum procedimento pendente aqui.")
 		"hatch":
-			if ms.day < 3:
+			if ms.phase == "return":
+				_modal("LUNAR MODULE HATCH", "O túnel está fechado. O estágio de ascensão do Eagle foi descartado depois do reencontro, e a base do módulo lunar ficou na Lua.")
+			elif ms.day < 3:
 				_modal("LUNAR MODULE HATCH", "O túnel para o módulo lunar só é aberto na órbita da Lua (dia 3).")
 			elif not _done("console"):
 				_modal("LUNAR MODULE HATCH", "Complete primeiro o checklist de aproximação no COMMAND CONSOLE.")
 			else:
 				var missing := _pending("hatch")
 				var warn := "" if missing.is_empty() else "\n\n[color=#ffcc44]Tarefas pendentes serão ignoradas: %s.[/color]" % ", ".join(PackedStringArray(missing.map(func(t): return t["station"])))
-				_modal("LUNAR MODULE HATCH", "Entrar no módulo lunar e iniciar a descida?\nUm checkpoint será salvo: se o pouso falhar, você recomeça daqui." + warn, ["ENTRAR NO MÓDULO LUNAR", "AINDA NÃO"], func(i):
+				_modal("LUNAR MODULE HATCH", "Abrir o túnel e seguir para a preparação da descida?\nNa próxima tela você vê o custo de suprimentos antes de confirmar." + warn, ["ABRIR O TÚNEL", "AINDA NÃO"], func(i):
 					if i == 0:
 						Sound.play_cue("hatch", "Interface")
-						_complete("hatch")
 						Game.enter_lunar_module())
 		"rest":
 			if not _has_task("rest"):
-				_modal("REST", "Hoje não há tempo para descanso: a Lua está logo ali.")
+				_modal("REST", "Hoje não há descanso: a próxima etapa da missão começa ao fim deste dia.")
 				return
 			var missing := _pending("rest")
 			if not missing.is_empty():
@@ -752,7 +837,7 @@ func _approach_checklist() -> void:
 	var checks := [
 		["Energia", ms.power_use() <= ms.power_capacity or ms.battery_used or ms.science_multiplier < 1.0, "%.0f/%.0f W" % [ms.power_use(), ms.power_capacity]],
 		["Propelente do CSM", ms.sps_fuel >= loi + 20.0, "%.0f%% (inserção em órbita: %.0f%%)" % [ms.sps_fuel, loi]],
-		["Navegação", ms.trajectory_error < 0.5 or ms.tasks_done.has("1:nav"), "desvio corrigido" if ms.tasks_done.has("1:nav") else "verificar"],
+		["Navegação", ms.trajectory_error < MissionDecisions.SMALL_ERROR, "desvio de %.0f%% (tolerância %.0f%%)" % [ms.trajectory_error * 100.0, MissionDecisions.SMALL_ERROR * 100.0]],
 		["Sistemas", ms.integrity >= 70.0, "integridade %.0f%%" % ms.integrity],
 		["Módulo lunar", true, "propelente de descida: %.0f s" % ms.lm_fuel],
 	]
@@ -761,6 +846,8 @@ func _approach_checklist() -> void:
 		text += "%s %s: %s\n" % ["[color=#77ee77]OK[/color]" if check[1] else "[color=#ffcc44]ATENÇÃO[/color]", check[0], check[2]]
 	text += "\nConfirmar a inserção em órbita lunar? O motor do CSM vai frear a nave para que a Lua a capture."
 	_modal("CHECKLIST DE APROXIMAÇÃO", text, ["CONFIRMAR INSERÇÃO EM ÓRBITA LUNAR"], func(_i):
+		if _done("console"):
+			return
 		ms.sps_fuel -= loi
 		ms.clamp_resources()
 		ms.add_event("loi", "Inserção em órbita lunar", "Propelente do CSM restante: %.0f%%" % ms.sps_fuel)
@@ -771,13 +858,29 @@ func _approach_checklist() -> void:
 
 
 func _begin_rest() -> void:
+	if hud.modal_open() or MissionState.sealed.has(str(MissionState.day)):
+		return
 	Houston.clear()
 	player.frozen = true
+	MissionState.seal_day(MissionState.day)
+	Sound.play_cue("belt")
+	var bed: Node3D = cabin.get_node_or_null("EquipmentSlots/RestArea")
+	if bed != null and not player.seated:
+		var tween := create_tween().set_trans(Tween.TRANS_SINE)
+		var spot := bed.global_position + Vector3(0, 0.4, 0)
+		var away := Vector3(spot.x - player.global_position.x, 0, spot.z - player.global_position.z)
+		tween.tween_property(player, "global_position", spot + away.normalized() * -0.45, 0.8)
+		tween.parallel().tween_property(player.camera, "rotation:x", -0.35, 0.8)
+		tween.finished.connect(func(): player.pitch = -0.35)
+		player.velocity = Vector3.ZERO
+		player.grabbing = true
 	hud.show_night(MissionState.day + 1, player.camera, _next_day, func(): player.frozen = false)
 
 
 func _next_day() -> void:
 	var ms := MissionState
+	if not ms.sealed.has(str(ms.day)):
+		return
 	ms.day += 1
 	ms.changed.emit()
 	_update_backdrop()

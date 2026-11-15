@@ -76,7 +76,7 @@ func run() -> void:
 	var ms := root.get_node("MissionState")
 	var game := root.get_node("Game")
 	var scene := load(game.SCENES["cabin"]) as PackedScene
-	var planned := {1: ["M01", "M02"], 2: ["M03", "M05"], 3: ["M06", "M04"]}
+	var planned := {1: ["M01", "M02"], 2: ["M05"], 3: ["M06"], 4: ["M04"], 5: ["M03"]}
 	for difficulty: String in ["easy", "normal", "hard"]:
 		ms.reset(difficulty)
 		ms.apply_plan()
@@ -88,7 +88,7 @@ func run() -> void:
 		for day: int in planned:
 			ms.day = day
 			var optional: Array = cabin.day_tasks().filter(func(task): return task.get("optional", false))
-			check(optional.map(func(task): return task["id"]) == planned[day], "Duas tarefas no dia %d em %s" % [day, difficulty])
+			check(optional.map(func(task): return task["id"]) == planned[day], "Tarefas opcionais do dia %d em %s" % [day, difficulty])
 			check(not cabin._pending().any(func(task): return task.get("optional", false)), "Tarefas opcionais não bloqueiam avanço")
 			for id: String in planned[day]:
 				var data: Dictionary = ms.CABIN_MINIGAMES[id]
@@ -148,7 +148,7 @@ func run() -> void:
 	check(not ms.minigame_completions.has("M02"), "Ferramenta incompatível não recupera")
 	cabin.hud._on_modal_button(1)
 
-	ms.day = 2
+	ms.day = 5
 	station_key(cabin, "radio")
 	cabin.hud._on_modal_button(0)
 	check(cabin.hud.minigame == null and cabin.hud._modal_body.text == cabin.BRIEFINGS.TEXTOS["M03"]["instrucoes"], "Decisão leva às instruções do M03")
@@ -157,9 +157,10 @@ func run() -> void:
 	seed_for_assistance(false)
 	finish(cabin, false)
 	var fuel: float = ms.sps_fuel
+	ms.test_samples = [0.99]
 	cabin.hud._on_modal_button(1)
 	check(cabin._done("radio") and not ms.minigame_completions.has("M03"), "É possível continuar a operação sem recuperar M03")
-	check(ms.sps_fuel == fuel - 3.0 and not ms.decisions.back()["correct"], "Falha operacional aplica consequência uma vez")
+	check(ms.sps_fuel == fuel - 3.0 and ms.decisions.back()["correct"] and not ms.decisions.back()["favorable"], "Escolha boa com M03 pendente e complicação aplica consequência uma vez")
 	cabin.hud._on_modal_button(0)
 	start_minigame(cabin, "radio")
 	seed_for_assistance(true)
@@ -167,6 +168,7 @@ func run() -> void:
 	check(ms.minigame_completions.get("M03", {}).get("assisted", false) and ms.decisions.size() == 1, "Recuperação posterior pontua sem reexecutar a decisão")
 	cabin.hud._on_modal_button(0)
 
+	ms.day = 2
 	for task: Dictionary in cabin._pending("rest"):
 		ms.tasks_done[cabin._key(task["id"])] = true
 	cabin.interact("rest")
@@ -177,7 +179,7 @@ func run() -> void:
 	cabin.hud._night_tween.custom_step(1.5)
 	check(ms.day == 3 and cabin.hud._night == null and not cabin.player.frozen, "Dia 3 só começa após a cartela")
 	check(ms.cabin_minigame_report()["points"] == 200, "Quatro pendências ficam no relatório")
-	check(ms.cabin_minigame_report()["rows"][3]["status"] == "Pendente", "Descanso não completa automaticamente M05")
+	check(ms.cabin_minigame_report()["rows"].filter(func(r): return r["title"] == "Preparar a cabine para descanso")[0]["status"] == "Pendente", "Descanso não completa automaticamente M05")
 	ms.save_checkpoint("landing")
 	ms.minigame_attempts.clear()
 	ms.minigame_completions.clear()

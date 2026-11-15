@@ -8,6 +8,8 @@ const SCENES := {
 	"separation": "res://scenes/minigames/separation.tscn",
 	"cabin": "res://scenes/spacecraft/cabin_game.tscn",
 	"landing": "res://scenes/lunar_module/landing.tscn",
+	"transition": "res://scenes/transition/transition.tscn",
+	"reentry": "res://scenes/reentry/reentry.tscn",
 	"report": "res://scenes/report/report.tscn",
 }
 
@@ -46,6 +48,7 @@ const CUTSCENES := {
 	],
 }
 
+var transition_id := ""
 var cutscene_entries: Array = []
 var cutscene_next := "menu"
 var cutscene_id := ""
@@ -118,9 +121,44 @@ func separation_success() -> void:
 	play_cutscene("docking", "cabin")
 
 
+func open_transition(id: String) -> void:
+	transition_id = id
+	go("transition")
+
+
 func enter_lunar_module() -> void:
-	MissionState.stage = "landing"
-	MissionState.save_checkpoint("landing")
+	open_transition("A")
+
+
+func confirm_jump(id: String) -> Dictionary:
+	var ms := MissionState
+	if id == "A":
+		ms.seal_day(3)
+	elif id == "C":
+		ms.seal_day(5)
+	var paid := ms.pay_jump(id)
+	if not paid["ok"]:
+		ms.end_mission("jump_" + id, ms.jump_text(id))
+		return paid
+	if id == "B" and not ms.tasks_done.has("tei"):
+		ms.tasks_done["tei"] = true
+		ms.sps_fuel = maxf(ms.sps_fuel - 20.0, 0.0)
+		ms.add_event("tei", "Queima de partida rumo à Terra", "O motor do módulo de serviço gastou 20%% do propelente. Restam %.0f%%." % ms.sps_fuel)
+	if id == "B":
+		var reserve := ms.check_departure()
+		if not reserve["ok"]:
+			ms.end_mission("departure", ms.departure_text())
+	return paid
+
+
+func start_descent() -> void:
+	var ms := MissionState
+	if ms.current_checkpoint == "landing" or ms.stage == "landing":
+		return
+	ms.phase = "lunar"
+	ms.stage = "landing"
+	ms.last_failure = {}
+	ms.save_checkpoint("landing")
 	play_cutscene("undocking", "landing")
 
 
@@ -129,8 +167,43 @@ func landing_failed() -> void:
 
 
 func landing_success() -> void:
+	MissionState.stage = "lunar_ops"
+	transition_id = "B"
+	play_cutscene("landing_success", "transition")
+
+
+func begin_return() -> void:
+	var ms := MissionState
+	if ms.phase == "return":
+		return
+	ms.phase = "return"
+	ms.day = 4
+	ms.stage = "cabin"
+	ms.return_error = 0.06 + ms.sample() * 0.4
+	ms.save_checkpoint("return")
+	go("cabin")
+
+
+func start_reentry() -> void:
+	var ms := MissionState
+	if ms.stage == "reentry":
+		return
+	ms.phase = "earth"
+	ms.stage = "reentry"
+	ms.save_checkpoint("reentry")
+	go("reentry")
+
+
+func retry_reentry() -> void:
+	MissionState.reentry_attempts += 1
+	MissionState.restore_checkpoint("reentry")
+	MissionState.stage = "reentry"
+	go("reentry")
+
+
+func finish_mission() -> void:
 	MissionState.stage = "report"
-	play_cutscene("landing_success", "report")
+	go("report")
 
 
 # ---------- Controles ----------
@@ -142,9 +215,10 @@ func _setup_inputs() -> void:
 		"move_up": [KEY_SPACE], "move_down": [KEY_CTRL, KEY_C],
 		"interact": [KEY_E], "cabin_task": [KEY_F], "checklist": [KEY_TAB],
 		"advance": [KEY_ENTER, KEY_KP_ENTER], "pause": [KEY_ESCAPE],
-		"throttle_up": [KEY_W, KEY_SHIFT], "throttle_down": [KEY_S],
+		"engine": [KEY_SPACE],
 		"tilt_left": [KEY_A, KEY_LEFT], "tilt_right": [KEY_D, KEY_RIGHT],
-		"tilt_forward": [KEY_UP], "tilt_back": [KEY_DOWN],
+		"tilt_forward": [KEY_W, KEY_UP], "tilt_back": [KEY_S, KEY_DOWN],
+		"chute": [KEY_SPACE], "put_back": [KEY_Q],
 		"retry": [KEY_R],
 	}
 	for action in map:

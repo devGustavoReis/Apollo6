@@ -8,7 +8,9 @@ const MOON_G := 1.62
 const MAX_ACCEL := 3.4
 const MAX_TILT := 20.0
 const TILT_RATE := 35.0
-const THROTTLE_RATE := 0.45
+const THROTTLE_UP := 0.7
+const THROTTLE_DOWN := 1.0
+const CAUSE_ORDER := ["vertical", "lateral", "tilt", "area", "fuel"]
 const AREA_LIMIT := 260.0
 const RADAR_SCRIPT := preload("res://scripts/ui/landing_radar.gd")
 const LM_MODEL := "res://assets/models/landing/lunar_module.glb"
@@ -19,8 +21,11 @@ var state := "intro"
 var pos := Vector3.ZERO
 var vel := Vector3.ZERO
 var tilt := Vector2.ZERO  ## x = lateral (direita +), y = frente (+)
-var throttle := 0.4
+var throttle := 0.0
 var _low_fuel_announced := false
+var _engine_armed := false
+var fuel_out_alt := -1.0
+var attempt := {}
 var limits := {}
 var lm: Node3D
 var flame: MeshInstance3D
@@ -53,7 +58,9 @@ func _reset_physics() -> void:
 	pos = Vector3(-drift * 6.0, limits["land_alt"], 0)
 	vel = Vector3(drift, -8.0, drift * 0.5)
 	tilt = Vector2.ZERO
-	throttle = 0.4
+	throttle = 0.0
+	_engine_armed = false
+	fuel_out_alt = -1.0
 	_low_fuel_announced = false
 	MissionState.lm_fuel = MissionState.lm_fuel_max
 	_apply_visuals()
@@ -336,18 +343,18 @@ func _build_hud() -> void:
 		_readouts[key] = label
 	var limits_label := Game.make_label("Limites para tocar o solo:\nV.vert ≤ %.1f · V.horiz ≤ %.1f m/s · Incl. ≤ %.0f°" % [limits["land_vy"], limits["land_vh"], limits["land_tilt"]], 14, Color(0.7, 0.7, 0.65))
 	box.add_child(limits_label)
-	box.add_child(Game.make_label("W/S potência · A/D e ↑/↓ inclinam\nsoltar as teclas = nivelar", 14, Color(0.8, 0.8, 0.72)))
+	box.add_child(Game.make_label("ESPAÇO segurado = motor sobe aos poucos\nsoltar ESPAÇO = motor cai aos poucos\nW/S inclinam frente/trás · A/D esquerda/direita\nsoltar WASD = o módulo se nivela", 14, Color(0.8, 0.8, 0.72)))
 	var radar_panel := PanelContainer.new()
 	radar_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	radar_panel.position = Vector2(-206, 16)
 	layer.add_child(radar_panel)
 	var radar_box := VBoxContainer.new()
 	radar_panel.add_child(radar_box)
-	radar_box.add_child(Game.make_label("ALVO · VISTA DE CIMA", 14, Game.AMBER))
+	radar_box.add_child(Game.make_label("MAPA · FRENTE ↑", 14, Game.AMBER))
 	radar = Control.new()
 	radar.set_script(RADAR_SCRIPT)
 	radar_box.add_child(radar)
-	radar_box.add_child(Game.make_label("ponto = alvo\nlinha = deslizamento", 13, Color(0.7, 0.7, 0.65)))
+	radar_box.add_child(Game.make_label("centro = área de pouso\ntriângulo = módulo\nseta = deslizamento\nanéis: 20 m e 40 m", 13, Color(0.7, 0.7, 0.65)))
 	_message = Game.make_label("", 22, Game.AMBER)
 	_message.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -386,9 +393,10 @@ func _show_panel(title: String, text: String, button_text: String, callback: Cal
 func _show_intro() -> void:
 	_show_panel("POUSO LUNAR",
 		"Leve o módulo lunar até o solo com segurança.\n\n" +
-		"• W/S ajustam a potência do motor. Cerca de 48% equilibra a gravidade lunar.\n" +
-		"• A/D e as setas inclinam o módulo: o motor empurra para o lado inclinado e cancela o deslizamento horizontal.\n" +
-		"• Sem teclas de inclinação, o módulo se nivela sozinho.\n" +
+		"• Segure ESPAÇO para acelerar o motor aos poucos. Solte e ele perde força aos poucos até desligar. Cerca de 48% equilibra a gravidade lunar.\n" +
+		"• W e S inclinam para frente e para trás. A e D inclinam para a esquerda e a direita. O motor empurra para o lado inclinado.\n" +
+		"• Soltando WASD, o módulo volta a ficar nivelado, mas o deslizamento continua até você corrigir.\n" +
+		"• O mapa mostra a área de pouso no centro, o módulo como triângulo e a seta do deslizamento. Frente é para cima.\n" +
 		"• Toque o solo devagar, sem deslizar e nivelado. Verde = seguro, amarelo = atenção, vermelho = perigo.\n\n" +
 		"Propelente: %.0f s de motor a 100%%. Se falhar, você repete só o pouso." % MissionState.lm_fuel_max,
 		"INICIAR DESCIDA", _start)
@@ -408,8 +416,11 @@ func _show_failure() -> void:
 
 
 func _start() -> void:
+	if state == "flying":
+		return
 	_panel.visible = false
 	state = "flying"
+	_engine_armed = not Input.is_action_pressed("engine")
 	Sound.start_descent()
 	Sound.play_cue("ignition")
 	Houston.say_recorded("go_for_descent", "Eagle, Houston. You are go for powered descent.", "Módulo lunar, aqui é Houston. Autorizados para a descida motorizada.")
@@ -420,15 +431,19 @@ func _start() -> void:
 func _physics_process(delta: float) -> void:
 	if state != "flying":
 		return
-	step(delta,
-		Input.get_axis("throttle_down", "throttle_up"),
-		Vector2(Input.get_axis("tilt_left", "tilt_right"), Input.get_axis("tilt_back", "tilt_forward")))
+	if not _engine_armed and not Input.is_action_pressed("engine"):
+		_engine_armed = true
+	var engine := 1.0 if _engine_armed and Input.is_action_pressed("engine") else 0.0
+	step(delta, engine, Vector2(Input.get_axis("tilt_left", "tilt_right"), Input.get_axis("tilt_back", "tilt_forward")))
 	_apply_visuals()
 
 
 ## Avança a física. Público para permitir testes automáticos.
 func step(delta: float, throttle_input: float, tilt_input: Vector2) -> void:
-	throttle = clampf(throttle + throttle_input * THROTTLE_RATE * delta, 0.0, 1.0)
+	if throttle_input > 0.0:
+		throttle = minf(throttle + THROTTLE_UP * delta, 1.0)
+	else:
+		throttle = maxf(throttle - THROTTLE_DOWN * delta, 0.0)
 	var target := tilt_input.limit_length(1.0) * MAX_TILT
 	tilt.x = move_toward(tilt.x, target.x, TILT_RATE * delta)
 	tilt.y = move_toward(tilt.y, target.y, TILT_RATE * delta)
@@ -442,6 +457,8 @@ func step(delta: float, throttle_input: float, tilt_input: Vector2) -> void:
 		Houston.clear()
 		Houston.say_recorded("low_fuel", "Eagle, Houston. Low fuel. Watch your descent rate.",
 			"Eagle, aqui é Houston. Propelente baixo. Atenção à velocidade de descida.")
+	if MissionState.lm_fuel <= 0.0 and fuel_out_alt < 0.0 and pos.y > 0.5:
+		fuel_out_alt = pos.y
 	var accel := thrust_direction() * power * MAX_ACCEL + Vector3.DOWN * MOON_G
 	vel += accel * delta
 	pos += vel * delta
@@ -449,7 +466,7 @@ func step(delta: float, throttle_input: float, tilt_input: Vector2) -> void:
 		pos.y = 0.0
 		_touchdown()
 	elif Vector2(pos.x, pos.z).length() > AREA_LIMIT:
-		_fail(["O módulo se afastou demais da área de pouso planejada."], ["Incline para o lado oposto ao deslizamento logo no começo."])
+		_evaluate(["area"])
 
 
 func thrust_direction() -> Vector3:
@@ -492,15 +509,16 @@ func _update_readouts() -> void:
 	var vy := -vel.y
 	var vy_ratio: float = 0.0 if pos.y > 25.0 else vy / limits["land_vy"]
 	_set_readout("alt", "ALTITUDE      %6.1f m" % pos.y, 0.0 if pos.y > 15.0 else 0.4)
-	_set_readout("vy", "V. VERTICAL   %6.1f m/s" % -vy, vy_ratio)
+	_set_readout("vy", "V. VERTICAL   %6.1f m/s %s" % [-vy, "↑" if vy < -0.05 else ("↓" if vy > 0.05 else "·")], vy_ratio)
 	_set_readout("vh", "V. HORIZONTAL %6.1f m/s" % horizontal_speed(), horizontal_speed() / limits["land_vh"])
 	_set_readout("tilt", "INCLINAÇÃO    %6.1f°" % tilt_angle(), tilt_angle() / limits["land_tilt"])
-	_set_readout("throttle", "MOTOR         %6.0f%%" % (throttle * 100.0), 0.0)
+	var bars := int(roundf(throttle * 10.0))
+	_set_readout("throttle", "MOTOR %s %3.0f%%" % ["▮".repeat(bars) + "▯".repeat(10 - bars), throttle * 100.0], 0.0)
 	var fuel_ratio := MissionState.lm_fuel / MissionState.lm_fuel_max
-	_set_readout("fuel", "PROPELENTE    %6.0f s" % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
+	_set_readout("fuel", "PROPELENTE    %6.1f s" % MissionState.lm_fuel, 1.0 - fuel_ratio * 2.5)
 	_set_readout("dist", "DIST. DO ALVO %6.0f m" % Vector2(pos.x, pos.z).length(), 0.0)
-	radar.alvo = Vector2(-pos.x, -pos.z)
-	radar.velocidade = Vector2(vel.x, vel.z)
+	radar.modulo = map_point(pos)
+	radar.velocidade = map_point(vel)
 	radar.cor_velocidade = Game.level_color(horizontal_speed() / limits["land_vh"])
 	radar.queue_redraw()
 	if state == "flying":
@@ -509,7 +527,7 @@ func _update_readouts() -> void:
 		elif MissionState.lm_fuel < MissionState.lm_fuel_max * 0.2:
 			_message.text = "PROPELENTE BAIXO"
 		elif pos.y < 20.0 and vy > limits["land_vy"]:
-			_message.text = "DESCIDA RÁPIDA DEMAIS · AUMENTE A POTÊNCIA (W)"
+			_message.text = "DESCIDA RÁPIDA DEMAIS · SEGURE ESPAÇO"
 		elif pos.y < 30.0 and horizontal_speed() > limits["land_vh"]:
 			_message.text = "DESLIZANDO · INCLINE PARA O LADO OPOSTO"
 		else:
@@ -522,28 +540,80 @@ func _set_readout(key: String, text: String, ratio: float) -> void:
 	label.add_theme_color_override("font_color", Game.level_color(ratio))
 
 
+## Mundo XZ para o mapa: +X fica à direita e -Z (frente da câmera) fica para cima.
+static func map_point(v: Vector3) -> Vector2:
+	return Vector2(v.x, v.z)
+
+
+static func direction_name(v: Vector2) -> String:
+	var names := []
+	if v.y < -0.35 * v.length():
+		names.append("para a frente")
+	elif v.y > 0.35 * v.length():
+		names.append("para trás")
+	if v.x > 0.35 * v.length():
+		names.append("para a direita")
+	elif v.x < -0.35 * v.length():
+		names.append("para a esquerda")
+	return " e ".join(PackedStringArray(names))
+
+
 func _touchdown() -> void:
-	var vy := -vel.y
-	var vh := horizontal_speed()
-	var angle := tilt_angle()
-	var reasons: Array = []
-	var tips: Array = []
-	if vy > limits["land_vy"]:
-		reasons.append("Velocidade vertical de %.1f m/s, acima do limite de %.1f m/s. O trem de pouso não absorveria o impacto." % [vy, limits["land_vy"]])
-		tips.append("Perto do solo, aumente a potência (W) até a velocidade vertical ficar verde.")
-	if vh > limits["land_vh"]:
-		reasons.append("Velocidade horizontal de %.1f m/s, acima de %.1f m/s. O módulo tombaria ao tocar o solo." % [vh, limits["land_vh"]])
-		tips.append("Elimine o deslizamento ainda no alto, inclinando para o lado oposto ao movimento.")
-	if angle > limits["land_tilt"]:
-		reasons.append("Inclinação de %.0f°, acima de %.0f°. O módulo tocaria o solo com uma perna só." % [angle, limits["land_tilt"]])
-		tips.append("Solte as teclas de inclinação nos últimos metros: o módulo se nivela sozinho.")
-	if MissionState.lm_fuel <= 0.0:
-		reasons.append("O propelente acabou antes do contato com o solo.")
-		tips.append("Desça mais rápido no alto e economize motor. Levar a reserva de propelente também ajuda.")
-	if reasons.is_empty():
-		_success(vy, vh, angle)
+	var causes := []
+	if -vel.y > limits["land_vy"] + 0.001:
+		causes.append("vertical")
+	if horizontal_speed() > limits["land_vh"] + 0.001:
+		causes.append("lateral")
+	if tilt_angle() > limits["land_tilt"] + 0.001:
+		causes.append("tilt")
+	if fuel_out_alt > 0.0:
+		causes.append("fuel")
+	_evaluate(causes)
+
+
+func evaluate_values(values: Dictionary, causes: Array) -> Dictionary:
+	var ordered := []
+	for code in CAUSE_ORDER:
+		if code in causes:
+			ordered.append(code)
+	var reasons := []
+	var tips := []
+	var slide := Vector2(values["vx"], values["vz"])
+	var back := -Vector2(values["x"], values["z"])
+	for code in ordered:
+		match code:
+			"vertical":
+				reasons.append("Impacto vertical: %.1f m/s, acima do limite de %.1f m/s. O trem de pouso não absorveria o choque." % [values["vy"], limits["land_vy"]])
+				tips.append("Segure ESPAÇO mais cedo, por volta de 30 m, até a velocidade vertical ficar verde. O motor demora para ganhar força.")
+			"lateral":
+				reasons.append("Deslizamento lateral: %.1f m/s, acima do limite de %.1f m/s. O módulo tombaria ao tocar o solo." % [values["vh"], limits["land_vh"]])
+				tips.append("O módulo deslizava %s. Incline para o lado oposto (seta do mapa) ainda no alto e solte WASD quando a seta encolher." % direction_name(slide))
+			"tilt":
+				reasons.append("Inclinação excessiva: %.1f°, acima do limite de %.0f°. O módulo tocaria o solo com uma perna só." % [values["tilt"], limits["land_tilt"]])
+				tips.append("Solte WASD alguns metros antes do solo para o módulo se nivelar a tempo.")
+			"area":
+				reasons.append("Saída da área: o módulo ficou a %.0f m do alvo, além do limite de %.0f m." % [values["distance"], AREA_LIMIT])
+				tips.append("O alvo estava %s, a %.0f m. Siga o centro do mapa e corrija o deslizamento logo no começo." % [direction_name(back), values["distance"]])
+			"fuel":
+				reasons.append("Esgotamento de propelente: o motor parou a %.1f m de altura, antes do contato com o solo." % values["fuel_out_alt"])
+				tips.append("Use o motor só quando precisar frear e deixe a queda livre no alto. Levar a reserva de propelente também ajuda.")
+	return {"success": ordered.is_empty(), "causes": ordered, "primary": ordered[0] if not ordered.is_empty() else "",
+		"reasons": reasons, "tips": tips, "values": values, "limits": {"vy": limits["land_vy"], "vh": limits["land_vh"], "tilt": limits["land_tilt"], "area": AREA_LIMIT}}
+
+
+func _evaluate(causes: Array) -> void:
+	if state != "flying":
+		return
+	var values := {"vy": -vel.y, "vh": horizontal_speed(), "tilt": tilt_angle(), "fuel": MissionState.lm_fuel,
+		"fuel_out_alt": fuel_out_alt, "x": pos.x, "z": pos.z, "vx": vel.x, "vz": vel.z, "alt": pos.y,
+		"distance": Vector2(pos.x, pos.z).length()}
+	attempt = evaluate_values(values, causes)
+	attempt["attempt"] = MissionState.landing_attempts + 1
+	MissionState.landing_history.append(attempt)
+	if attempt["success"]:
+		_success(values["vy"], values["vh"], values["tilt"])
 	else:
-		_fail(reasons, tips)
+		_fail(attempt["reasons"], attempt["tips"])
 
 
 func _success(vy: float, vh: float, angle: float) -> void:
@@ -577,5 +647,6 @@ func _fail(reasons: Array, tips: Array) -> void:
 	Sound.play_cue("impact", "Voice", true)
 	MissionState.landing_attempts += 1
 	MissionState.set_failure("landing", "POUSO MALSUCEDIDO", reasons, tips)
+	MissionState.last_failure["attempt"] = attempt
 	_message.text = "FALHA NO POUSO"
 	get_tree().create_timer(1.5).timeout.connect(Game.landing_failed)

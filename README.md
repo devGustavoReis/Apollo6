@@ -27,13 +27,19 @@ Cada minigame pode ser concluído sem equipamento. Após um erro, a ferramenta c
 
 Ao adicionar ou alterar uma tarefa, chame `MissionState.resolve_minigame_attempt(task_id, attempt_id, played_well)` ao finalizar uma tentativa, com um ID positivo e único por tarefa. Use `title` e `message` para informar o desfecho de uma `new_attempt`. Use `new_completion` para registrar a conclusão uma vez e `assisted`/`played_well` para preservar a diferença entre assistência e acerto direto. A mesma tentativa reutiliza o resultado anterior, inclusive ao retomar um checkpoint que a contenha.
 
-Durante a viagem aparecem duas tarefas por dia no checklist:
+As seis tarefas ficam distribuídas pelos cinco dias jogáveis:
 
 | Dia | Estações e tarefas |
 | --- | --- |
-| 1 | Armário para prender objetos. Dispensador para abastecer a bolsa, separado do consumo de água. |
-| 2 | Rádio para recuperar o sinal. Estação de repouso para preparar as coberturas antes de dormir. |
-| 3 | Descarte para guardar embalagens. Bancada de ferramentas para encaixar o conector do traje. |
+| 1 | Armário para prender objetos (M01). Dispensador para abastecer a bolsa (M02), separado do consumo de água. |
+| 2 | Estação de repouso para preparar as coberturas antes de dormir (M05). |
+| 3 | Descarte para guardar embalagens (M06). |
+| 4 | Bancada de ferramentas para encaixar o conector do traje (M04), já na volta. |
+| 5 | Rádio para recuperar o sinal (M03), antes da reentrada. |
+
+## Missão completa e suprimentos
+
+A missão tem 5 dias jogáveis e 3 transições (A órbita lunar, B operações lunares, C aproximação da Terra). Cada dia pede 1 comida e 1 água, e cada transição cobra mais 1 de cada, então o plano mínimo é 8/8. Comer e beber são livres: pegue com E e consuma com E (Q devolve sem gastar). Para sair da Lua é preciso ter 3/3. O relatório mostra um veredito único e blocos por etapa. Detalhes em [docs/gameplay_prototype.md](docs/gameplay_prototype.md).
 
 O relatório registra 100 pontos por tarefa concluída, inclusive com assistência, em um subtotal de 600 pontos das tarefas da tripulação. Avançar sem concluir uma delas a deixa pendente.
 

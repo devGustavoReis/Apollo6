@@ -31,6 +31,70 @@ func fly_trajectory(minigame: Node, wrong_moves: int) -> void:
 		await process_frame
 
 
+func open_cabin_day() -> Node:
+	var cabin: Node = load(root.get_node("Game").SCENES["cabin"]).instantiate()
+	root.add_child(cabin)
+	await physics_frame
+	await physics_frame
+	cabin.player.unbuckle()
+	for i in 70:
+		await physics_frame
+	return cabin
+
+
+func finish_eating(cabin: Node) -> void:
+	cabin.interact(cabin.target_id)
+	for i in 40:
+		if not cabin.eating and cabin.held == "":
+			return
+		cabin._process(0.1)
+
+
+func eat(cabin: Node, kind: String) -> void:
+	cabin.interact(kind)
+	await finish_eating(cabin)
+
+
+func check_racks(cabin: Node) -> void:
+	var packs: Node = cabin.cabin.get_node_or_null("EquipmentSlots/FoodStorage/FoodRack/Packs")
+	var pouches: Node = cabin.cabin.get_node_or_null("EquipmentSlots/WaterStorage/WaterRack/Pouches")
+	check(packs != null and pouches != null and cabin.cabin.get_node_or_null("EquipmentSlots/MedicalStorage/MedicalRack/Bag") != null, "Modelos de comida, água e kit médico nos slots")
+	if packs == null or pouches == null:
+		return
+	var shown := packs.get_children().filter(func(n): return n.visible).size()
+	check(shown == mini(floori(ms().food_days + 0.0001), 8), "Pacotes visíveis acompanham as cotas inteiras (%d visíveis, %s)" % [shown, ms().amount_text(ms().food_days)])
+	shown = pouches.get_children().filter(func(n): return n.visible).size()
+	check(shown == mini(floori(ms().water_days + 0.0001), 8), "Bolsas visíveis acompanham as cotas inteiras (%d visíveis, %s)" % [shown, ms().amount_text(ms().water_days)])
+
+
+func do_tasks(cabin: Node, day: int, skip: Array) -> void:
+	var hud = cabin.hud
+	for task in cabin.day_tasks():
+		if task["id"] in skip or task.get("optional", false):
+			continue
+		var guard := 0
+		while not (cabin._done(task["id"]) or ms().day > day) and guard < 4:
+			cabin.interact(task["id"])
+			while hud.modal_open():
+				if hud.minigame != null:
+					if hud.minigame.scene_file_path.ends_with("/antenna_minigame.tscn"):
+						var antenna: Node = hud.minigame
+						for step in range(23):
+							antenna.mira = antenna.terra
+							antenna.passo(0.1, Vector2.ZERO)
+						antenna.espera = 0.0
+						await process_frame
+					else:
+						await fly_trajectory(hud.minigame, 0)
+				elif hud._night != null:
+					hud._night_tween.custom_step(3.0)
+					await process_frame
+				else:
+					hud._on_modal_button(0)
+			guard += 1
+		check(cabin._done(task["id"]) or ms().day > day, "Dia %d: tarefa %s concluída" % [day, task["id"]])
+
+
 func run() -> void:
 	var game := root.get_node("Game")
 	await process_frame
@@ -62,7 +126,7 @@ func run() -> void:
 			ms().set_qty(id, 99)
 		check(not ms().validate_plan()["ok"], "%s: levar tudo deve estourar orçamento/massa" % diff)
 
-	# 3. Missão completa na cabine (normal), com cada evento aleatório.
+	# 3. Missão completa na cabine (normal), com cada evento aleatório, nos cinco dias.
 	for event_id in ["comm_dropout", "water_leak", "ptc"]:
 		ms().reset("normal")
 		ms().set_qty("sample_kit", 1)
@@ -70,85 +134,80 @@ func run() -> void:
 		ms().apply_plan()
 		ms().random_event = event_id
 		ms().trajectory_error = 0.3
+		ms().test_samples = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 		ms().day = 1
 		ms().stage = "cabin"
-		var cabin: Node = load(game.SCENES["cabin"]).instantiate()
-		root.add_child(cabin)
-		await physics_frame
-		await physics_frame
+		var cabin: Node = await open_cabin_day()
 		check(cabin.cabin.get_node_or_null("PreviewPlayer") == null, "PreviewPlayer removido")
-		check(cabin.player.seated, "Thomas começa sentado")
-		check(cabin.player.camera.global_position.is_equal_approx(Vector3(0, 1.12, -0.3)), "Câmera no SeatedEye")
-		cabin.player.unbuckle()
-		for i in 70:
-			await physics_frame
-		check(not cabin.player.seated, "Cinto solto")
 		var hud = cabin.hud
 		cabin.interact("food")
-		check(cabin.held == "food" and not cabin._done("food") and ms().food_eaten == 0, "Pegar a comida ainda não conclui a refeição")
-		cabin.interact("food")
-		while hud.modal_open():
-			hud._on_modal_button(0)
-		check(cabin.held == "" and cabin._done("food") and ms().food_eaten == 1, "Comer o item segurado conclui a refeição")
+		check(cabin.held == "food" and ms().food_eaten == 0, "Pegar a comida ainda não consome uma cota")
+		await finish_eating(cabin)
+		check(cabin.held == "" and ms().food_eaten == 1 and ms().intake_on(1, "food") == 1, "Comer o item segurado consome uma cota")
 		for day in [1, 2, 3]:
 			check(ms().day == day, "Dia %d" % day)
-			for task in cabin.day_tasks():
-				if task["id"] == "hatch" or task.get("optional", false):
-					continue
-				var guard := 0
-				while not (cabin._done(task["id"]) or ms().day > day) and guard < 4:
-					cabin.interact(task["id"])
-					while hud.modal_open():
-						if hud.minigame != null:
-							if hud.minigame.scene_file_path.ends_with("/antenna_minigame.tscn"):
-								var antenna: Node = hud.minigame
-								for step in range(23):
-									antenna.mira = antenna.terra
-									antenna.passo(0.1, Vector2.ZERO)
-								antenna.espera = 0.0
-								await process_frame
-							else:
-								await fly_trajectory(hud.minigame, 0)
-						elif hud._night != null:
-							hud._night_tween.custom_step(3.0)
-							await process_frame
-						else:
-							hud._on_modal_button(0)
-					guard += 1
-				check(cabin._done(task["id"]) or ms().day > day, "Dia %d: tarefa %s concluída" % [day, task["id"]])
-		check(ms().day == 3, "Chegou ao dia 3 (%s)" % event_id)
-		check(ms().food_eaten == 3 and ms().water_drunk == 3, "Comeu e bebeu 3 vezes")
-		check(ms().decisions.size() >= 3, "Registrou decisões (%d)" % ms().decisions.size())
-		check(ms().sps_fuel > 0.0, "Propelente do CSM positivo")
-		var all_correct := true
-		for d in ms().decisions:
-			all_correct = all_correct and d["correct"]
-		check(all_correct, "Opção 1 é a correta em todas as decisões (%s)" % event_id)
-		check(is_zero_approx(ms().trajectory_error), "Correção sem desvios zera o erro de trajetória")
-		check(hud.minigame == null and not cabin.player.frozen, "Minigame de trajetória fechado e jogador livre")
-		# Interação via raio: aponta a câmera para FOOD.
+			if cabin._has_task("water") and not cabin._done("water"):
+				cabin.interact("water")
+				while cabin.hud.modal_open():
+					cabin.hud._on_modal_button(0)
+				check(cabin._done("water") and ms().lost_water > 0.0, "Vazamento tratado antes de beber")
+			if day > 1:
+				await eat(cabin, "food")
+			await eat(cabin, "water")
+			check(ms().intake_on(day, "food") == 1 and ms().intake_on(day, "water") == 1, "Dia %d: uma cota de cada consumida" % day)
+			await do_tasks(cabin, day, ["hatch"])
+		check(ms().day == 3 and ms().sealed.size() == 2, "Chegou ao dia 3 com dois dias selados (%s)" % event_id)
+		check(is_equal_approx(ms().food_days, 5.0) and is_equal_approx(ms().water_days, 5.0 - ms().lost_water), "Saldo após os dias de ida (%s)" % event_id)
+		check(not cabin.day_tasks().any(func(t): return t["id"] in ["food", "water"] and t["text"].contains("do dia")), "Comida e água não são tarefas do checklist")
+		check(ms().decisions.size() >= 2, "Registrou decisões (%d)" % ms().decisions.size())
+		check(ms().decisions.all(func(d): return d["correct"]), "Opção 1 é a escolha adequada em todas as decisões (%s)" % event_id)
+		check(ms().decisions.all(func(d): return d["favorable"]), "Amostra 0,1 dá desfecho favorável a escolhas boas (%s)" % event_id)
+		await create_timer(1.0).timeout
 		var food: Node3D = cabin.cabin.get_node("EquipmentSlots/FoodStorage")
 		cabin.player.global_position = Vector3(-0.9, 0.6, 0.35)
 		cabin.player.camera.look_at(food.global_position + Vector3(0, 0.3, 0))
 		await physics_frame
 		await physics_frame
 		check(cabin.target_id == "food", "Raio de interação encontra FOOD (achou '%s')" % cabin.target_id)
-		var packs: Node = cabin.cabin.get_node_or_null("EquipmentSlots/FoodStorage/FoodRack/Packs")
-		var pouches: Node = cabin.cabin.get_node_or_null("EquipmentSlots/WaterStorage/WaterRack/Pouches")
-		check(packs != null and pouches != null and cabin.cabin.get_node_or_null("EquipmentSlots/MedicalStorage/MedicalRack/Bag") != null, "Modelos de comida, água e kit médico nos slots")
-		if packs != null and pouches != null:
-			var shown := 0
-			for pack in packs.get_children():
-				if pack.visible:
-					shown += 1
-			check(packs.get_child_count() == 8 and shown == mini(ceili(ms().food_days), 8), "Pacotes de comida visíveis acompanham a reserva (%d visíveis, %.1f dias)" % [shown, ms().food_days])
-			shown = 0
-			for pouch in pouches.get_children():
-				if pouch.visible:
-					shown += 1
-			check(shown == mini(ceili(ms().water_days), 8), "Bolsas de água visíveis acompanham a reserva (%d visíveis, %.1f dias)" % [shown, ms().water_days])
+		check_racks(cabin)
+		var paid: Dictionary = root.get_node("Game").confirm_jump("A")
+		check(paid["ok"] and ms().sealed.has("3") and is_equal_approx(ms().food_days, 4.0), "Salto A sela o Dia 3 e cobra 1 de cada")
+		check(root.get_node("Game").confirm_jump("A") == paid and is_equal_approx(ms().food_days, 4.0), "Salto A não cobra duas vezes")
 		cabin.queue_free()
 		await process_frame
+		ms().landing_result = {"success": true, "vy": 1.0, "vh": 0.3, "tilt": 2.0, "fuel_left": 20.0, "distance": 12.0}
+		var b: Dictionary = root.get_node("Game").confirm_jump("B")
+		var leak: bool = event_id == "water_leak"
+		check(b["ok"] and is_equal_approx(ms().food_days, 3.0), "Salto B cobra 1 de cada (%s)" % event_id)
+		check(ms().departure["ok"] != leak, "Reserva 3/3 aprovada sem vazamento e bloqueada com vazamento (%s)" % event_id)
+		if leak:
+			check(ms().departure_text().contains("Faltou") and ms().ended.get("stage", "") == "departure", "Partida bloqueada registra o déficit")
+			check(ms().verdict()["summary"].begins_with("Pouso lunar confirmado"), "Pouso seguro preservado com retorno bloqueado")
+			continue
+		ms().phase = "return"
+		ms().day = 4
+		ms().stage = "cabin"
+		ms().return_error = 0.3
+		cabin = await open_cabin_day()
+		hud = cabin.hud
+		for day in [4, 5]:
+			check(ms().day == day, "Dia %d" % day)
+			await eat(cabin, "food")
+			await eat(cabin, "water")
+			await do_tasks(cabin, day, ["console"])
+		check(ms().day == 5 and ms().sealed.has("4") and not ms().sealed.has("5"), "Dia 4 selado no descanso e Dia 5 aberto")
+		check(cabin._done("radio"), "Rádio do Dia 5 resolvido (%s)" % event_id)
+		check(ms().decisions.any(func(d): return d["id"] == "return_course"), "Correção de volta registrada")
+		check(is_zero_approx(ms().return_error), "Correção limpa zera o desvio de volta")
+		check(hud.minigame == null and not cabin.player.frozen, "Minigame de trajetória fechado e jogador livre")
+		var c: Dictionary = root.get_node("Game").confirm_jump("C")
+		check(c["ok"] and ms().sealed.has("5") and is_zero_approx(ms().food_days) and is_zero_approx(ms().water_days), "Missão exata termina em 0/0 depois do salto C")
+		check(ms().day_issues().is_empty(), "Nenhuma falta diária na missão exata")
+		ms().splashdown = true
+		check(ms().verdict()["success"], "Missão exata com amerissagem é concluída (%s)" % event_id)
+		cabin.queue_free()
+		await process_frame
+		root.get_node("Houston").clear()
 
 	# 4. Checkpoint do pouso restaura combustível e estado.
 	ms().reset("normal")
@@ -219,18 +278,21 @@ func run() -> void:
 	check(tolerances[0] > tolerances[1] and tolerances[1] > tolerances[2] and tolerances[2] > 0.0, "Tolerância da trajetória diminui com a dificuldade")
 	var decisions: GDScript = load("res://scripts/mission/mission_decisions.gd")
 	ms().reset("normal")
-	ms().trajectory_error = 0.3
-	decisions.apply("midcourse", 0, 0)
+	ms().return_error = 0.3
+	ms().test_samples = [0.1]
+	decisions.apply("return_course", 0, 0)
 	var clean_fuel: float = ms().sps_fuel
 	ms().reset("normal")
-	ms().trajectory_error = 0.3
-	var sloppy: Dictionary = decisions.apply("midcourse", 0, 3)
+	ms().return_error = 0.3
+	ms().test_samples = [0.1]
+	var sloppy: Dictionary = decisions.apply("return_course", 0, 3)
 	check(ms().sps_fuel < clean_fuel, "Desvios no minigame gastam mais propelente")
-	check(not sloppy["correct"] and ms().trajectory_error > 0.0, "Três desvios deixam a correção imprecisa")
+	check(sloppy["correct"] and ms().return_error > 0.0, "Três desvios deixam desvio residual, mas a escolha de corrigir continua adequada")
 	ms().reset("normal")
-	ms().trajectory_error = 1.0
-	decisions.apply("midcourse", 0, 99)
-	check(ms().sps_fuel >= 70.0, "Pior correção ainda deixa propelente para a órbita lunar (%.1f%%)" % ms().sps_fuel)
+	ms().return_error = 1.0
+	ms().test_samples = [0.99]
+	decisions.apply("return_course", 0, 99)
+	check(ms().sps_fuel >= 70.0, "Pior correção ainda deixa propelente (%.1f%%)" % ms().sps_fuel)
 	var minigame: Node = load("res://scenes/minigames/trajectory_minigame.tscn").instantiate()
 	root.add_child(minigame)
 	await process_frame

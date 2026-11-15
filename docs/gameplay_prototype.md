@@ -5,10 +5,37 @@
 ```text
 Menu (dificuldade) → Planejamento (orçamento, massa, energia)
 → Cutscenes de lançamento → TLI + separação do CSM [checkpoint "separation"]
-→ Cutscene de acoplamento → Cabine: 3 dias de viagem com tarefas, decisões e 1 evento aleatório
-→ Inserção em órbita lunar → Escotilha do LM [checkpoint "landing"]
-→ Pouso lunar (falha = repete só o pouso) → Relatório final
+→ Cutscene de acoplamento → Cabine Dias 1–3 (ida): tarefas, decisões e 1 evento aleatório
+→ Inserção em órbita lunar → Escotilha do LM → Transição A (cobra 1/1) [checkpoint "landing"]
+→ Pouso lunar (falha = repete só o pouso) → Transição B (cobra 1/1 e confere a reserva 3/3)
+→ Cartela do Dia 4 → Cabine Dias 4–5 (volta): correção de trajetória, M04 e M03
+→ Console do Dia 5 → Transição C (cobra 1/1) [checkpoint "reentry"]
+→ Reentrada com janela dos paraquedas (falha = repete só a reentrada) → Relatório final
 ```
+
+### Suprimentos
+
+- Unidade: cota. 1 cota = 1 dia de comida ou água para a tripulação.
+- Cada dia jogável pede 1 comida e 1 água. O dia é selado no descanso (Dias 1, 2 e 4) ou na transição (Dias 3 e 5). Consumo depois do selo conta para o dia seguinte.
+- Cada transição cobra 1 de cada uma só vez. Se faltar, a missão termina naquela etapa e o relatório diz quanto faltou.
+- Na transição B a nave precisa de 3/3 (Dias 4 e 5 mais a transição C). Plano exato 8/8 termina em 0/0.
+- Comer mais que 1 por dia é permitido e gasta estoque. Pular um dia com estoque vira falha diária no relatório.
+
+### Decisões
+
+Escolhas adequadas têm 95% de desfecho favorável e escolhas ruins têm 5%. O sorteio usa `MissionState.sample()`, que lê `test_samples` nos testes. Cada decisão é resolvida uma vez só.
+
+### Reentrada
+
+Os paraquedas de estabilização abrem a 7.300 m e a cápsula desce a 470 m/s. Ao cruzar 3.050 m abre uma janela de 2,0 s para apertar ESPAÇO. Toque antes só mostra aviso. Perder a janela leva à tela de falha, com opção de repetir só a reentrada sem perder o pouso, os suprimentos e as decisões.
+
+### Pouso
+
+ESPAÇO segurado sobe o motor aos poucos e soltar baixa aos poucos. WASD inclina e soltar nivela. O radar fica centrado no alvo, com +X à direita e a frente (−Z) para cima, e mostra a seta de deslizamento. Falhas listam as causas na ordem vertical, lateral, inclinação, área e propelente, cada uma com uma dica. O valor exato do limite ainda é aceito.
+
+### Corpo em primeira pessoa
+
+O jogador vê as duas mãos e, olhando para baixo, o corpo com o traje. ESPAÇO empurra uma vez por toque na direção do olhar, só encostado ou segurando um apoio. No ar a velocidade se conserva. O contato com superfícies perde 75% da velocidade normal. Ao comer, a mão leva o item à boca e a cota é gasta no meio da animação. No descanso o jogador flutua até a área REST antes da cartela da noite.
 
 A cena principal é `scenes/menu/main_menu.tscn`. `scenes/main.tscn` continua abrindo
 a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquitetura.
@@ -18,11 +45,13 @@ a cabine com o controlador de inspeção do Gustavo, útil para revisar a arquit
 | Etapa | Controles |
 | --- | --- |
 | Menu | Setas ou mouse escolhem · ENTER confirma · ←/→ mudam a dificuldade · ESC fecha o painel |
-| Cabine | Mouse olha · ESPAÇO solta o cinto/sobe · CTRL desce · WASD move · E interage · TAB checklist · ENTER pula fala/dica · ESC pausa |
-| Comida e água | E em FOOD ou WATER pega o item do suporte · E de novo come ou bebe |
+| Cabine | Mouse olha · ESPAÇO solta o cinto e empurra na direção do olhar · WASD dá impulsos curtos encostado · E interage · F tarefa · TAB checklist · ENTER pula fala/dica · ESC pausa |
+| Comida e água | E em FOOD ou WATER pega o item · E de novo come ou bebe · Q devolve sem gastar |
+| Transições | Botões liberam depois do tempo de leitura · VOLTAR À CABINE na transição A |
+| Reentrada | ESPAÇO dentro da janela de 2 s abre os paraquedas principais · ESC pausa |
 | Correção de rota | Clique na nave e arraste pela linha tracejada até a Lua · setas também movem · ESC pausa |
 | Separação | ESPAÇO desliga o motor · 1, 2, 3 ou clique nos interruptores |
-| Pouso | W/S potência · A/D e setas inclinam · sem teclas o módulo se nivela |
+| Pouso | ESPAÇO segurado acelera o motor · W/S/A/D e setas inclinam · sem teclas o módulo se nivela |
 | Cutscenes | ESPAÇO, ENTER, ESC ou clique pulam |
 
 ## Arquitetura
@@ -69,6 +98,8 @@ O 3D da cabine e do pouso é renderizado em um `SubViewport` com metade da resol
 (640×360) e filtro *nearest*, para o visual pixelado. A interface fica em resolução cheia.
 
 ## Correção de rota
+
+Na volta, no Dia 4, o painel NAVIGATION mostra o desvio da trajetória de retorno e o minigame leva a nave até a Terra. Na ida, a correção de meio de curso é só uma decisão. As regras abaixo valem para o minigame.
 
 No dia 1, o painel NAVIGATION mostra o desvio deixado pela TLI. Ao escolher corrigir
 agora, abre o minigame: o jogador arrasta a nave pela rota até a Lua. Sair da faixa
@@ -126,15 +157,20 @@ godot --headless --path . --script tests/cabin_layout_test.gd
 godot --headless --path . --script tests/flow_test.gd
 godot --headless --path . --script tests/scene_flow_test.gd
 godot --headless --path . --script tests/cabin_controls_test.gd
+godot --headless --path . --script tests/cabin_minigames_integration_test.gd
+godot --headless --path . --script tests/minigames_test.gd
+godot --headless --path . --script tests/mission_rules_test.gd
 ```
+
+`mission_rules_test` cobre os exemplos de suprimentos, saltos, reserva de partida, os quatro quadrantes das decisões com amostras controladas, a janela da reentrada (0; 1; 1,999; 2,000; 2,001 s, toque antecipado e cruzamento dentro de um quadro), as causas do pouso nos limites e a projeção do radar.
 
 `cabin_controls_test` cobre regressões de controle: o jogador em microgravidade não sai
 pela escotilha aberta e continua mirando nela encostado no teto, o Enter do teclado
 numérico funciona na cena de inspeção e um segundo ESPAÇO após o corte da TLI não aciona
-interruptores da separação. `flow_test` verifica o planejamento, os 3 dias com cada evento, o raio de interação,
+interruptores da separação. Também cobre o empurrão por toque, a deriva sem perda a 30, 60 e 120 FPS e a ajuda quando o jogador para no ar. `flow_test` verifica o planejamento, os 5 dias com cada evento e o saldo exato, o raio de interação,
 o minigame de correção de rota, os checkpoints e se um piloto automático simples
 consegue pousar em todas as dificuldades sem a reserva de propelente. `scene_flow_test` percorre as trocas de cena
-reais, inclusive falha e repetição da separação e do pouso.
+reais do menu ao relatório, inclusive voltar da transição A, falha e repetição da separação, do pouso e da reentrada, e o saldo 8/8 → 0/0.
 
 ## Pendências conhecidas
 

@@ -42,14 +42,15 @@ func open(path: String, scene_name: String) -> Node:
 
 func run() -> void:
 	await zero_g_stays_inside()
+	await zero_g_drift()
 	await preview_keypad_enter()
 	await separation_second_space()
 	print("CONTROLS CHECKS: ", failures.size(), " failures")
 	quit(0 if failures.is_empty() else 1)
 
 
-## Em microgravidade, segurar ESPAÇO depois de soltar o cinto não pode tirar o jogador
-## da nave pelo vão aberto da escotilha, e a escotilha continua alvo encostado no teto.
+## Em microgravidade, ESPAÇO empurra uma vez por toque, a deriva conserva a velocidade e o
+## contato com o teto dissipa energia. O jogador não sai pelo vão da escotilha.
 func zero_g_stays_inside() -> void:
 	var ms := root.get_node("MissionState")
 	ms.reset("normal")
@@ -59,19 +60,81 @@ func zero_g_stays_inside() -> void:
 	var player: CharacterBody3D = game.player
 	player.unbuckle()
 	await create_timer(1.2).timeout
-	check(not player.seated and not player.frozen, "Jogador solto e livre após o cinto")
+	check(not player.seated and not player.frozen and player.grabbing, "Jogador solto e segurando o apoio após o cinto")
 	player.set_physics_process(false)
+	player.pitch = 0.0
+	player.look(Vector2(0, -2000))
 	Input.action_press("move_up")
+	player._physics_process(DT)
+	var pushed: Vector3 = player.velocity
+	check(pushed.length() > 1.0 and pushed.y > 1.0, "ESPAÇO segurando o apoio empurra na direção do olhar (%.2f m/s)" % pushed.length())
+	player._physics_process(DT)
+	check(player.velocity.is_equal_approx(pushed), "ESPAÇO mantido não empurra de novo")
+	Input.action_release("move_up")
+	player.velocity = Vector3.UP * 1.4
 	var max_y := -INF
+	var impacts := 0
+	var first := {}
 	for i in 600:
+		var before: Dictionary = player.last_impact
 		player._physics_process(DT)
 		max_y = maxf(max_y, player.global_position.y)
-	Input.action_release("move_up")
+		if player.last_impact != before:
+			impacts += 1
+			if first.is_empty():
+				first = player.last_impact
 	check(max_y < 2.6, "Subir sob a escotilha deve parar no teto (y máximo %.2f)" % max_y)
+	check(impacts >= 1 and first.get("speed_out", 9.0) < first.get("speed_in", 0.0), "Contato com o teto dissipa velocidade (%.2f → %.2f m/s)" % [first.get("speed_in", 0.0), first.get("speed_out", 0.0)])
+	check(first.get("normal", Vector3.ZERO).y < -0.5, "A normal do teto aponta para baixo")
 	player.pitch = 0.0
 	player.look(Vector2(0, -2000))
 	game._physics_process(DT)
 	check(game.target_id == "hatch", "Encostado na escotilha, olhando para o vão, o alvo é a escotilha (alvo '%s')" % game.target_id)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func zero_g_drift() -> void:
+	var ms := root.get_node("MissionState")
+	ms.reset("normal")
+	var game: Node = await open("res://scenes/spacecraft/cabin_game.tscn", "CabinGame")
+	if game == null:
+		return
+	var player: CharacterBody3D = game.player
+	player.unbuckle()
+	await create_timer(1.2).timeout
+	player.set_physics_process(false)
+	player.global_position = Vector3(0, 1.3, 0.55)
+	player.grabbing = false
+	player.contact_time = 99.0
+	player.velocity = Vector3(0, 0, 0.2)
+	for fps in [30.0, 60.0, 120.0]:
+		player.global_position = Vector3(0, 1.3, 0.55)
+		player.velocity = Vector3(0, 0, 0.2)
+		var start: Vector3 = player.global_position
+		for i in int(fps):
+			player._physics_process(1.0 / fps)
+		check(player.velocity.is_equal_approx(Vector3(0, 0, 0.2)), "Deriva conserva a velocidade a %d FPS" % fps)
+		check(absf(player.global_position.z - start.z - 0.2) < 0.01, "Deriva percorre 0,2 m em 1 s a %d FPS (%.3f)" % [fps, player.global_position.z - start.z])
+	player.global_position = Vector3(0, 1.3, 0.55)
+	player.velocity = Vector3(0, 0, 0.2)
+	Input.action_press("move_forward")
+	Input.action_press("move_up")
+	for i in 30:
+		player._physics_process(DT)
+	Input.action_release("move_forward")
+	Input.action_release("move_up")
+	check(player.velocity.is_equal_approx(Vector3(0, 0, 0.2)), "WASD e ESPAÇO no ar não mudam a deriva")
+	player.yaw = 1.0
+	player.look(Vector2(300, 100))
+	player._physics_process(DT)
+	check(player.velocity.is_equal_approx(Vector3(0, 0, 0.2)), "Olhar para outro lado não muda a deriva")
+	player.velocity = Vector3.ZERO
+	player.still_time = 3.0
+	check(player.needs_help(), "Parado no ar sem apoio, o jogo oferece a ajuda do apoio")
+	Input.action_press("move_up")
+	player._physics_process(DT)
+	Input.action_release("move_up")
+	check(player.velocity.length() > 0.3, "Ajuda puxa o jogador em direção ao apoio")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 

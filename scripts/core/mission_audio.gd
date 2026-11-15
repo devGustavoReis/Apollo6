@@ -8,7 +8,7 @@ const CHANNELS := ["Master", "Music", "Voice", "SFX", "Ambience"]
 const RATE := 22050
 const MUSIC_LEVELS := {
 	"menu": -2.0, "planning": -10.0, "cutscene": -12.0, "separation": -18.0,
-	"cabin": -16.0, "landing": -19.0, "report": -7.0,
+	"cabin": -16.0, "landing": -19.0, "report": -7.0, "transition": -10.0, "reentry": -22.0,
 }
 # Frequências em sequência, duração e contribuição de ruído das sínteses originais.
 const CUES := {
@@ -210,7 +210,7 @@ func _process(delta: float) -> void:
 	var priority := Houston.is_busy() or _priority_time > 0.0
 	_music_wait = maxf(0.0, _music_wait - delta)
 	_report_wait = maxf(0.0, _report_wait - delta)
-	if not paused and _theme_player.stream != null and not _theme_has_started and _music_wait == 0.0 and _report_wait == 0.0 and _scene in ["menu", "planning", "cutscene", "report"]:
+	if not paused and _theme_player.stream != null and not _theme_has_started and _music_wait == 0.0 and _report_wait == 0.0 and _scene in ["menu", "planning", "cutscene", "report", "transition"]:
 		_theme_has_started = true
 		_theme_player.play()
 	var music_db := (-33.0 if _report_wait > 0.0 else _music_level) - (12.0 if priority else 0.0) - (8.0 if _risk else 0.0)

@@ -9,6 +9,8 @@
 - No pouso, o alerta e o pulso entram abaixo de 20% de combustível. O nível de recuperação é 25%, e o pulso termina ao concluir ou abortar a manobra. Rádio e alertas reduzem temporariamente música e sons contínuos.
 - Com microgravidade na cabine, o contato com superfícies usa o movimento e a colisão do corpo. O áudio não imita passos de caminhada quando o personagem flutua.
 
+- Transições usam o nível de interface e mantêm o tema. A reentrada tem nível próprio: o motor sintetizado marca o plasma e os estabilizadores, e alertas e cues de sucesso ou aborto marcam a janela dos paraquedas.
+
 ## Trilha da descida lunar
 
 Cosmic Ascent — Apollo 13 — Treblo foi fornecida pelo projeto e convertida de Ogg Opus para Vorbis. A música entra ao iniciar a descida pilotada, volta ao começo a cada tentativa e sai após o toque ou aborto. A faixa termina naturalmente em descidas longas. Vozes e alertas mantêm prioridade na mixagem. Descent to Tranquility continua como tema das demais etapas.

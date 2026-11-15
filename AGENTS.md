@@ -10,7 +10,7 @@
 
 ## Ferramentas e minigames da cabine
 
-- Mantenha o catálogo de assistência em `data/equipment/equipment.json` e siga a associação de M01 a M06 descrita no README. As seis tarefas opcionais estão ligadas aos três dias da missão.
+- Mantenha o catálogo de assistência em `data/equipment/equipment.json` e siga a associação de M01 a M06 descrita no README. As seis tarefas opcionais estão ligadas aos cinco dias jogáveis: M01 e M02 no Dia 1, M05 no Dia 2, M06 no Dia 3, M04 no Dia 4 e M03 no Dia 5.
 - Permita concluir qualquer minigame sem ferramenta. Ao finalizar uma tentativa, use `MissionState.resolve_minigame_attempt` com o mesmo ID quando o evento se repetir. A ferramenta correspondente dá 80% de chance de recuperar cada tentativa legítima que terminar em erro. Uma tarefa concluída mantém seu desfecho.
 - Apresente `title` e `message` em uma nova tentativa resolvida. Use `new_completion` para registrar a conclusão uma vez. Exiba o nome da ferramenta em conclusões assistidas e preserve a distinção entre acerto direto e assistência em qualquer relatório.
 - Ao mudar a assistência, teste erro sem ferramenta, ferramenta incompatível, recuperação, falha da assistência, acerto direto, repetição do sinal e restauração de checkpoint.

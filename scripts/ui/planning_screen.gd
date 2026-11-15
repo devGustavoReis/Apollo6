@@ -18,7 +18,7 @@ const ASSIST_SPRITES := {
 }
 const CATEGORIES := {
 	"science": ["Instrumentos", "Leve pelo menos um instrumento científico."],
-	"supply": ["Suprimentos", "Garanta comida e água para os %d dias da missão."],
+	"supply": ["Suprimentos", "Leve ao menos %d cotas de comida e de água: 5 dias jogáveis e 3 saltos."],
 	"reserve": ["Reservas", "Leve reservas para lidar com imprevistos na viagem e no pouso."],
 	"assist": ["Ferramentas", "Ferramentas opcionais: %d%% de chance de recuperar um erro na tarefa correspondente."],
 }
@@ -431,7 +431,7 @@ func _set_meter(id: String, text: String, value: float, limit: float, over_color
 
 func _show_days(label: Label, days: int) -> void:
 	var minimum := MissionState.MISSION_DAYS
-	label.text = "%d / %d dias" % [days, minimum]
+	label.text = "%d / %d cotas" % [days, minimum]
 	label.add_theme_color_override("font_color", RED if days < minimum else AMBER if days == minimum else MINT)
 
 
@@ -459,11 +459,11 @@ func _show_item_info(item: Dictionary) -> void:
 func _show_help() -> void:
 	_open_info("Como planejar a missão", (
 		"1. Adicione um instrumento científico para coletar dados na Lua.\n\n"
-		+ "2. Confira se há comida e água para %d dias e se a carga está dentro do orçamento e da massa permitida.\n\n"
+		+ "2. Leve ao menos %d cotas de comida e %d de água: uma por dia nos 5 dias jogáveis e mais uma em cada um dos 3 saltos (órbita lunar, operações na Lua e aproximação da Terra). Com 8 exatas, não sobra margem para consumo extra ou perda. Confira também o orçamento e a massa.\n\n"
 		+ "3. Se quiser, leve bateria, propelente ou ferramentas para lidar com imprevistos. "
 		+ "Use o resumo para comparar os limites e os alertas antes de lançar.\n\n"
 		+ "A aba Ferramentas mostra a assistência disponível para as tarefas da cabine."
-	) % MissionState.MISSION_DAYS)
+	) % [MissionState.MISSION_DAYS, MissionState.MISSION_DAYS])
 
 
 func _open_info(title: String, body: String) -> void:

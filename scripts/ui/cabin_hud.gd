@@ -21,6 +21,8 @@ var minigame: Control
 var _minigame_cancel: Callable
 var _night: ColorRect
 var _night_tween: Tween
+var _note: Label
+var _note_time := 0.0
 
 
 func _ready() -> void:
@@ -127,8 +129,33 @@ func _ready() -> void:
 		b.pressed.connect(entry[1])
 		pbox.add_child(b)
 
+	_note = Game.make_label("", 18, Game.CREAM)
+	_note.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_note.size = Vector2(760, 30)
+	_note.position = Vector2(-380, -190)
+	_note.add_theme_color_override("font_outline_color", Color.BLACK)
+	_note.add_theme_constant_override("outline_size", 6)
+	add_child(_note)
+
 	MissionState.changed.connect(refresh_status)
 	refresh_status()
+
+
+func show_note(text: String, seconds := 3.0) -> void:
+	_note.text = text
+	_note_time = seconds
+
+
+func note_text() -> String:
+	return _note.text if _note_time > 0.0 else ""
+
+
+func _process(delta: float) -> void:
+	if _note_time > 0.0:
+		_note_time -= delta
+		if _note_time <= 0.0:
+			_note.text = ""
 
 
 func set_prompt(text: String) -> void:
@@ -147,10 +174,9 @@ func set_tutorial(text: String) -> void:
 
 func refresh_status() -> void:
 	var ms := MissionState
-	var needed := ms.days_still_needed()
-	var lines := "[color=#f5bd5c]DIA %d/%d · VIAGEM À LUA[/color]\n" % [ms.day, ms.TRAVEL_DAYS]
-	lines += _line("COMIDA", "%.1f dias" % ms.food_days, ms.food_days < needed, ms.food_days < needed + 1)
-	lines += _line("ÁGUA", "%.1f dias" % ms.water_days, ms.water_days < needed, ms.water_days < needed + 1)
+	var lines := "[color=#f5bd5c]DIA %d/%d · %s[/color]\n" % [ms.day, ms.PLAY_DAYS, ms.phase_title()]
+	lines += _line("COMIDA", "%s cotas" % ms.amount_text(ms.food_days), not ms.can_consume("food"), ms.food_days < 3.0)
+	lines += _line("ÁGUA", "%s cotas" % ms.amount_text(ms.water_days), not ms.can_consume("water"), ms.water_days < 3.0)
 	var use := ms.power_use()
 	lines += _line("ENERGIA", "%.0f/%.0f W" % [use, ms.power_capacity], use > ms.power_capacity, use > ms.power_capacity * 0.8)
 	lines += _line("PROPEL. CSM", "%.0f%%" % ms.sps_fuel, ms.sps_fuel < 45, ms.sps_fuel < 70)
@@ -255,7 +281,7 @@ func show_night(next_day: int, camera: Camera3D, on_next_day: Callable, on_finis
 	_night.color = Color(0.0, 0.0, 0.0, 0.0)
 	_night.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_night)
-	var title := Game.make_label("Dia %d" % next_day, 36, Game.CREAM)
+	var title := Game.make_label("Dia %d · Volta à Terra" % next_day if next_day >= 4 else "Dia %d" % next_day, 36, Game.CREAM)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -268,7 +294,7 @@ func show_night(next_day: int, camera: Camera3D, on_next_day: Callable, on_finis
 	_night_tween.parallel().tween_property(camera, "rotation", original_rotation + Vector3(-0.14, 0.0, 0.09), 0.5)
 	_night_tween.parallel().tween_property(camera, "position", original_position + Vector3(0.0, -0.06, 0.0), 0.5)
 	_night_tween.tween_property(title, "modulate:a", 1.0, 0.25)
-	_night_tween.tween_interval(1.0)
+	_night_tween.tween_interval(1.4)
 	_night_tween.tween_property(title, "modulate:a", 0.0, 0.2)
 	_night_tween.tween_callback(func():
 		camera.rotation = original_rotation

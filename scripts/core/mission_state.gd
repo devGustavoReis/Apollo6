@@ -5,19 +5,31 @@ extends Node
 signal changed
 
 const EQUIPMENT_PATH := "res://data/equipment/equipment.json"
-## Apollo 11 durou 8 dias, 3 h e 18 min (NASA). Arredondado para 8 dias de suprimentos.
+## Apollo 11 durou 8 dias, 3 h e 19 min (NASA). O jogo usa 5 dias jogáveis e 3 saltos.
+## Cada dia jogável pede 1 cota de comida e 1 de água; cada salto cobra mais 1 de cada.
 const MISSION_DAYS := 8
-## Dias jogáveis da viagem até a Lua (a Apollo 11 levou cerca de 3 dias).
+const PLAY_DAYS := 5
 const TRAVEL_DAYS := 3
+const DEPARTURE_RESERVE := 3
+const REFERENCE_DURATION := "8 dias, 3 h e 19 min"
+const SUPPLY_KINDS := ["food", "water"]
+const JUMPS := {
+	"A": {"title": "Órbita lunar", "short": "Órbita lunar"},
+	"B": {"title": "Operações lunares", "short": "Operações lunares"},
+	"C": {"title": "Aproximação da Terra", "short": "Aproximação da Terra"},
+}
+const PHASE_TITLES := {
+	"outbound": "VIAGEM À LUA", "lunar": "NA LUA", "return": "VOLTA À TERRA", "earth": "REENTRADA",
+}
 const MINIGAME_ASSIST_CHANCE := 0.8
 const CABIN_MINIGAME_POINTS := 100
 const CABIN_MINIGAMES := {
 	"M01": {"day": 1, "station": "storage", "title": "Prender objetos soltos", "scene": "res://scenes/minigames/loose_objects_minigame.tscn"},
 	"M02": {"day": 1, "station": "water", "title": "Abastecer a bolsa de água", "scene": "res://scenes/minigames/water_fill_minigame.tscn"},
-	"M03": {"day": 2, "station": "radio", "title": "Recuperar o sinal da antena", "scene": "res://scenes/minigames/antenna_minigame.tscn"},
 	"M05": {"day": 2, "station": "rest", "title": "Preparar a cabine para descanso", "scene": "res://scenes/minigames/rest_prep_minigame.tscn"},
 	"M06": {"day": 3, "station": "disposal", "title": "Guardar embalagens da refeição", "scene": "res://scenes/minigames/meal_stowage_minigame.tscn"},
-	"M04": {"day": 3, "station": "tools", "title": "Encaixar o conector do traje", "scene": "res://scenes/minigames/suit_connector_minigame.tscn"},
+	"M04": {"day": 4, "station": "tools", "title": "Encaixar o conector do traje", "scene": "res://scenes/minigames/suit_connector_minigame.tscn"},
+	"M03": {"day": 5, "station": "radio", "title": "Recuperar o sinal da antena", "scene": "res://scenes/minigames/antenna_minigame.tscn"},
 }
 ## Velocidade aproximada da Apollo 11 ao fim da injeção translunar: 35.545,6 ft/s (NASA SP-4029).
 const TLI_TARGET_KMS := 10.83
@@ -52,6 +64,8 @@ const SAVED_FIELDS := [
 	"science_multiplier", "science_collected", "trajectory_error", "stage", "day",
 	"tasks_done", "events", "decisions", "random_event", "separation_mistakes",
 	"minigame_attempts", "minigame_completions",
+	"phase", "intake", "sealed", "losses", "jumps", "jump_food", "jump_water",
+	"lost_food", "lost_water", "departure", "return_error",
 ]
 
 var catalog: Array = []
@@ -88,6 +102,25 @@ var decisions: Array = []
 var random_event := ""
 var separation_mistakes := 0
 
+var phase := "outbound"
+var intake: Dictionary = {}
+var sealed: Dictionary = {}
+var losses: Array = []
+var jumps: Dictionary = {}
+var jump_food := 0.0
+var jump_water := 0.0
+var lost_food := 0.0
+var lost_water := 0.0
+var departure: Dictionary = {}
+var return_error := 0.0
+var ended: Dictionary = {}
+var landing_history: Array = []
+var reentry_result: Dictionary = {}
+var reentry_history: Array = []
+var reentry_attempts := 0
+var splashdown := false
+var test_samples: Array = []
+
 var checkpoints: Dictionary = {}
 var current_checkpoint := ""
 var separation_attempts := 0
@@ -120,6 +153,24 @@ func _load_catalog() -> void:
 func reset(new_difficulty: String) -> void:
 	difficulty = new_difficulty if DIFFICULTIES.has(new_difficulty) else "normal"
 	cargo = {"food_day": MISSION_DAYS, "water_day": MISSION_DAYS}
+	phase = "outbound"
+	intake = {}
+	sealed = {}
+	losses = []
+	jumps = {}
+	jump_food = 0.0
+	jump_water = 0.0
+	lost_food = 0.0
+	lost_water = 0.0
+	departure = {}
+	return_error = 0.0
+	ended = {}
+	landing_history = []
+	reentry_result = {}
+	reentry_history = []
+	reentry_attempts = 0
+	splashdown = false
+	test_samples = []
 	food_days = 0.0
 	water_days = 0.0
 	food_eaten = 0.0
@@ -216,15 +267,15 @@ func validate_plan() -> Dictionary:
 	if plan_mass() > s["mass_limit"] + 0.001:
 		errors.append("Massa acima do limite do foguete em %.0f kg." % (plan_mass() - s["mass_limit"]))
 	if qty("food_day") < MISSION_DAYS:
-		errors.append("Comida insuficiente: a missão dura %d dias." % MISSION_DAYS)
+		errors.append("Comida insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos)." % [qty("food_day"), MISSION_DAYS])
 	if qty("water_day") < MISSION_DAYS:
-		errors.append("Água insuficiente: a missão dura %d dias." % MISSION_DAYS)
+		errors.append("Água insuficiente: %d de %d cotas (5 dias jogáveis + 3 saltos)." % [qty("water_day"), MISSION_DAYS])
 	if plan_science() <= 0:
 		errors.append("Leve ao menos um instrumento científico: é o objetivo da missão.")
 	if qty("food_day") == MISSION_DAYS:
-		warnings.append("Comida sem nenhuma margem de reserva.")
+		warnings.append("Comida exata: margem zero para consumo extra ou perda.")
 	if qty("water_day") == MISSION_DAYS:
-		warnings.append("Água sem margem: um vazamento deixaria a tripulação racionando.")
+		warnings.append("Água exata: margem zero. Um vazamento impediria a volta.")
 	if plan_power() > plan_power_capacity():
 		warnings.append("Instrumentos consomem %.0f W, acima dos %.0f W disponíveis. Espere alertas de energia." % [plan_power(), plan_power_capacity()])
 	if qty("propellant_reserve") == 0:
@@ -335,21 +386,214 @@ func science_potential() -> float:
 	return total * science_multiplier
 
 
-func days_still_needed() -> int:
-	## Dias de suprimento necessários depois das refeições do dia atual.
-	return MISSION_DAYS - day
+func sample() -> float:
+	if not test_samples.is_empty():
+		return test_samples.pop_front()
+	return randf()
 
 
-func eat() -> void:
-	food_days = maxf(0.0, food_days - 1.0)
-	food_eaten += 1.0
+func phase_title() -> String:
+	return PHASE_TITLES.get(phase, "")
+
+
+func stock(kind: String) -> float:
+	return food_days if kind == "food" else water_days
+
+
+func _set_stock(kind: String, value: float) -> void:
+	if kind == "food":
+		food_days = maxf(value, 0.0)
+	else:
+		water_days = maxf(value, 0.0)
+
+
+func can_consume(kind: String) -> bool:
+	return stock(kind) >= 1.0 - 0.0001
+
+
+func amount_text(value: float) -> String:
+	if absf(value - roundf(value)) < 0.01:
+		return "%d" % int(roundf(value))
+	return ("%.1f" % value).replace(".", ",")
+
+
+func kind_name(kind: String, value: float) -> String:
+	if kind == "food":
+		return "comida" if absf(value - 1.0) < 0.01 else "comidas"
+	return "água" if absf(value - 1.0) < 0.01 else "águas"
+
+
+func intake_on(day_number: int, kind: String) -> int:
+	return int(intake.get(str(day_number), {}).get(kind, 0))
+
+
+func consume(kind: String) -> bool:
+	if not can_consume(kind):
+		return false
+	_set_stock(kind, stock(kind) - 1.0)
+	var key := str(day)
+	var today: Dictionary = intake.get(key, {"food": 0, "water": 0})
+	today[kind] = int(today.get(kind, 0)) + 1
+	intake[key] = today
+	if kind == "food":
+		food_eaten += 1.0
+	else:
+		water_drunk += 1.0
+	changed.emit()
+	return true
+
+
+func eat() -> bool:
+	return consume("food")
+
+
+func drink() -> bool:
+	return consume("water")
+
+
+func lose(kind: String, amount: float, cause: String) -> float:
+	var applied := minf(amount, stock(kind))
+	_set_stock(kind, stock(kind) - applied)
+	if kind == "food":
+		lost_food += applied
+	else:
+		lost_water += applied
+	losses.append({"kind": kind, "amount": applied, "asked": amount, "cause": cause, "day": day})
+	changed.emit()
+	return applied
+
+
+func seal_day(day_number: int) -> Dictionary:
+	var key := str(day_number)
+	if sealed.has(key):
+		return sealed[key]
+	var result := {"food": intake_on(day_number, "food"), "water": intake_on(day_number, "water"),
+		"food_left": food_days, "water_left": water_days, "missing": [], "no_stock": []}
+	for kind: String in SUPPLY_KINDS:
+		if result[kind] < 1:
+			result["missing"].append(kind)
+			if not can_consume(kind):
+				result["no_stock"].append(kind)
+	sealed[key] = result
+	changed.emit()
+	return result
+
+
+func jump_preview(id: String) -> Dictionary:
+	var result := {"id": id, "food_before": food_days, "water_before": water_days, "deficits": {}, "ok": true}
+	for kind: String in SUPPLY_KINDS:
+		if not can_consume(kind):
+			result["deficits"][kind] = 1.0 - stock(kind)
+			result["ok"] = false
+	result["food_after"] = food_days - 1.0 if result["ok"] else food_days
+	result["water_after"] = water_days - 1.0 if result["ok"] else water_days
+	return result
+
+
+func pay_jump(id: String) -> Dictionary:
+	if jumps.has(id):
+		return jumps[id]
+	var result := jump_preview(id)
+	if result["ok"]:
+		food_days -= 1.0
+		water_days -= 1.0
+		jump_food += 1.0
+		jump_water += 1.0
+	jumps[id] = result
+	add_event("jump_" + id, JUMPS[id]["title"], jump_text(id))
+	return result
+
+
+func jump_text(id: String) -> String:
+	var j: Dictionary = jumps[id]
+	if j["ok"]:
+		return "1 comida e 1 água cobradas. Saldo: %s comida · %s água." % [amount_text(j["food_after"]), amount_text(j["water_after"])]
+	var parts := []
+	for kind: String in j["deficits"]:
+		var missing: float = j["deficits"][kind]
+		parts.append("%s cota de %s" % [amount_text(missing), "comida" if kind == "food" else "água"])
+	return "Faltou %s para avançar." % " e ".join(PackedStringArray(parts))
+
+
+func check_departure() -> Dictionary:
+	if not departure.is_empty():
+		return departure
+	var result := {"food": food_days, "water": water_days, "deficits": {}, "ok": true}
+	for kind: String in SUPPLY_KINDS:
+		if stock(kind) < DEPARTURE_RESERVE - 0.0001:
+			result["deficits"][kind] = DEPARTURE_RESERVE - stock(kind)
+			result["ok"] = false
+	departure = result
+	changed.emit()
+	return result
+
+
+func departure_text() -> String:
+	var d := departure
+	var text := "Havia %s %s e %s %s." % [amount_text(d["food"]), kind_name("food", d["food"]),
+		amount_text(d["water"]), kind_name("water", d["water"])]
+	var parts := []
+	for kind: String in d["deficits"]:
+		var missing: float = d["deficits"][kind]
+		parts.append("%s %s" % [amount_text(missing), kind_name(kind, missing)])
+	if not parts.is_empty():
+		text += " Faltou %s." % " e ".join(PackedStringArray(parts))
+	return text
+
+
+func end_mission(where: String, reason: String) -> void:
+	if ended.is_empty():
+		ended = {"stage": where, "reason": reason}
+	stage = "report"
 	changed.emit()
 
 
-func drink() -> void:
-	water_days = maxf(0.0, water_days - 1.0)
-	water_drunk += 1.0
-	changed.emit()
+func day_issues() -> Array:
+	var issues := []
+	for d in range(1, PLAY_DAYS + 1):
+		var key := str(d)
+		if not sealed.has(key):
+			continue
+		var s: Dictionary = sealed[key]
+		for kind: String in s["missing"]:
+			var noun := "comida" if kind == "food" else "água"
+			if kind in s["no_stock"]:
+				issues.append("Dia %d · Faltou %s para o consumo diário." % [d, noun])
+			elif kind == "food":
+				issues.append("Dia %d · Nenhuma ração foi consumida, apesar de haver estoque." % d)
+			else:
+				issues.append("Dia %d · Nenhuma água foi consumida, apesar de haver estoque." % d)
+	return issues
+
+
+func verdict() -> Dictionary:
+	var causes := day_issues()
+	for id: String in ["A", "B", "C"]:
+		if jumps.has(id) and not jumps[id]["ok"]:
+			causes.append("%s · %s" % [JUMPS[id]["title"], jump_text(id)])
+	if not departure.is_empty() and not departure["ok"]:
+		causes.append("Partida para a Terra · " + departure_text())
+	if ended.get("stage", "") == "reentry":
+		causes.append("Reentrada · Janela de abertura dos paraquedas perdida.")
+	var landed: bool = landing_result.get("success", false)
+	var all_sealed := sealed.size() == PLAY_DAYS
+	var all_paid: bool = jumps.size() == 3 and jumps.values().all(func(j): return j["ok"])
+	var success: bool = landed and splashdown and all_sealed and all_paid and bool(departure.get("ok", false)) and causes.is_empty()
+	if not success and causes.is_empty():
+		causes.append("Missão incompleta · Nem todas as etapas da missão foram cumpridas.")
+	var summary := ""
+	if success:
+		summary = "Pouso lunar seguro e tripulação de volta à Terra."
+	elif landed and splashdown:
+		summary = "Amerissagem confirmada. Missão falhou: %s" % causes[0]
+	elif landed and not causes.is_empty():
+		summary = "Pouso lunar confirmado. %s" % causes[0]
+	elif not causes.is_empty():
+		summary = causes[0]
+	else:
+		summary = "A missão não chegou ao fim."
+	return {"success": success, "title": "Missão concluída" if success else "Missão falhou",
+		"summary": summary, "causes": causes, "landed": landed}
 
 
 func add_event(id: String, title: String, outcome: String) -> void:
@@ -369,6 +613,8 @@ func clamp_resources() -> void:
 	science_multiplier = clampf(science_multiplier, 0.2, 1.0)
 	water_days = maxf(water_days, 0.0)
 	food_days = maxf(food_days, 0.0)
+	return_error = clampf(return_error, 0.0, 1.0)
+	trajectory_error = clampf(trajectory_error, 0.0, 1.0)
 	changed.emit()
 
 

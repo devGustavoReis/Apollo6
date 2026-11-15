@@ -5,7 +5,9 @@
 | Dado no jogo | Valor | Fonte |
 | --- | --- | --- |
 | Duração da missão (suprimentos) | 8 dias (Apollo 11: 8 d 3 h 18 min) | [NASA — Apollo 11 Mission Overview](https://www.nasa.gov/missions/apollo-11-mission-overview/) |
-| Viagem até a Lua | 3 dias jogáveis | NASA — Apollo 11 Mission Overview |
+| Viagem até a Lua e volta | 5 dias jogáveis e 3 transições; duração de referência 8 d 3 h 19 min | NASA — Apollo 11 Mission Overview |
+| Inserção em órbita lunar perto de 3 dias e 4 horas; separação do LM perto de 4 dias e 6 horas; cerca de 21 h e 36 min na superfície | Textos das transições A e B | NASA — Apollo 11 Mission Overview e NASA SP-4029 — Apollo 11 Timeline |
+| Paraquedas de estabilização a cerca de 7.300 m (24.000 ft) e principais a cerca de 3.050 m (10.000 ft) | Janela da reentrada | NASA SP-4029 — Apollo 11 Timeline |
 | Ordem TLI → separação do CSM → acoplamento ao LM | Sequência da separação | [NASA SP-4029 — Apollo 11 Timeline](https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11i_Timeline.htm) |
 | Velocidade alvo da TLI | 10,83 km/s (35.545,6 ft/s) | [NASA SP-4029 — Apollo 11 Summary](https://www.nasa.gov/wp-content/uploads/static/history/SP-4029/Apollo_11a_Summary.htm) |
 | Duração real da queima da TLI | cerca de 6 min (o jogo acelera o tempo) | NASA — Apollo 11 Mission Overview |
@@ -34,4 +36,8 @@
 - Minigames de cabine (M01 a M06): mecânicas, tempos e limites são abstrações de jogo. A fonte de M04 descreve os conectores
   do traje Gemini; o jogo usa o mesmo código de cores no traje da missão fictícia. As explicações educativas mostradas depois
   de cada conclusão (`scripts/mission/cabin_briefings.gd`) usam só as fontes públicas acima, sem citar entrevistas.
+- Suprimentos em cotas inteiras (1 por dia e 1 por transição) e a reserva 3/3 para sair da Lua são regras de jogo, não o consumo real da Apollo.
+- Decisões com 95%/5% de desfecho favorável são uma abstração da incerteza operacional.
+- A descida com paraquedas é acelerada (470 m/s depois dos estabilizadores) e a janela de 2 s é uma regra de jogo.
+- Física da cabine: empurrões de 1,4 m/s e perda de energia no contato são valores de jogabilidade.
 - Diálogos de Houston são fictícios e não reproduzem registros históricos.
